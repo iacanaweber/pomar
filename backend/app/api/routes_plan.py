@@ -56,7 +56,16 @@ async def plan(req: PlanRequest) -> PlanResponse:
         warnings.append(f"Dados defasados (cache) para: {', '.join(stale[:8])}.")
     no_data = [a.ticker for a in assets if "all" in a.missing]
     if no_data:
-        warnings.append(f"Sem dados da brapi para: {', '.join(no_data[:8])}.")
+        extra = f" (e mais {len(no_data) - 8})" if len(no_data) > 8 else ""
+        warnings.append(f"Sem dados da brapi para: {', '.join(no_data[:8])}{extra}.")
+        # heurística: se quase tudo falhou, o token provavelmente não está configurado
+        free = {"PETR4", "VALE3", "ITUB4", "MGLU3"}
+        got = [a.ticker for a in assets if a.price]
+        if len(no_data) > 4 and all(t in free for t in got):
+            warnings.append(
+                "Parece que só os tickers gratuitos funcionam — verifique se BRAPI_TOKEN "
+                "está configurado no .env (token grátis em brapi.dev/dashboard) e reinicie."
+            )
 
     # 3) score
     ranking = score_assets(assets, portfolio, targets, weights)

@@ -14,6 +14,7 @@ class Position(BaseModel):
     value: float = Field(..., description="Valor de mercado da posição (BRL).")
     weight: float = Field(..., description="Peso na carteira (0..1).")
     quantity: Optional[float] = Field(None, description="Quantidade de cotas/ações.")
+    tags: List[str] = Field(default_factory=list, description="Tags do Ghostfolio nesta posição.")
     source: str = Field("ghostfolio:holdings", description="Origem do dado.")
 
 

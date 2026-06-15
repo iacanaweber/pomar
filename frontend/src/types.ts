@@ -67,6 +67,31 @@ export interface StrategiesResponse {
   default_targets: Record<string, number>;
 }
 
+export interface Position {
+  ticker: string;
+  name: string | null;
+  asset_class: string;
+  sector: string | null;
+  value: number;
+  weight: number;
+  quantity: number | null;
+  tags: string[];
+  source: string;
+}
+
+export interface Portfolio {
+  total_value: number;
+  currency: string;
+  positions: Position[];
+  allocations: {
+    by_class: Record<string, number>;
+    by_sector: Record<string, number>;
+  };
+  as_of: string;
+  source: string;
+  warnings: string[];
+}
+
 export interface PlanRequest {
   aporte: number;
   strategy: string;

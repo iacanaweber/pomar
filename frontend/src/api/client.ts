@@ -1,4 +1,10 @@
-import type { Glossary, PlanRequest, PlanResponse, StrategiesResponse } from "../types";
+import type {
+  Glossary,
+  PlanRequest,
+  PlanResponse,
+  Portfolio,
+  StrategiesResponse,
+} from "../types";
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(path);
@@ -9,6 +15,7 @@ async function get<T>(path: string): Promise<T> {
 export const api = {
   glossary: () => get<Glossary>("/api/glossary"),
   strategies: () => get<StrategiesResponse>("/api/strategies"),
+  portfolio: () => get<Portfolio>("/api/portfolio"),
   health: () => get<{ ghostfolio: boolean; brapi: boolean }>("/api/health"),
   plan: async (req: PlanRequest): Promise<PlanResponse> => {
     const res = await fetch("/api/plan", {

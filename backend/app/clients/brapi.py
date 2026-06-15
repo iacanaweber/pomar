@@ -72,8 +72,11 @@ class BrapiClient:
         self._sem = asyncio.Semaphore(3)  # limita concorrência
 
     async def health(self) -> bool:
+        # Usa um ticker que EXIGE token (BBAS3). Assim `brapi: true` significa que o
+        # token está válido — PETR4/VALE3/ITUB4/MGLU3 funcionam mesmo sem token e
+        # mascarariam um token ausente.
         try:
-            assets = await self.get_assets(["PETR4"])
+            assets = await self.get_assets(["BBAS3"])
             return bool(assets and assets[0].price)
         except Exception:
             return False
