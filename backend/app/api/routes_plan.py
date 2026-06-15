@@ -10,6 +10,7 @@ from app.deps import get_brapi, get_cache, get_ghostfolio
 from app.models.portfolio import Allocations, Portfolio
 from app.models.scoring import PlanRequest, PlanResponse
 from app.services.allocation import allocate
+from app.services.portfolio_service import get_enriched_portfolio
 from app.services.scoring import score_assets
 from app.services.universe import build_universe
 
@@ -30,7 +31,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
 
     # 1) carteira atual (degrada para carteira vazia se o Ghostfolio falhar)
     try:
-        portfolio = await get_ghostfolio().get_portfolio()
+        portfolio = await get_enriched_portfolio(get_ghostfolio(), get_cache())
     except Exception as exc:  # noqa: BLE001
         warnings.append(
             f"Não consegui ler o Ghostfolio ({exc}); seguindo com carteira vazia. "

@@ -10,7 +10,7 @@ from __future__ import annotations
 # Ações — foco em dividendos / setores perenes (Bancos, Energia, Saneamento, Seguros, Telecom)
 STOCKS = [
     "BBAS3", "ITSA4", "ITUB4", "BBDC4", "SANB11",        # Bancos / financeiro
-    "TAEE11", "TRPL4", "EGIE3", "CMIG4", "CPLE6", "ELET3",  # Energia
+    "TAEE11", "ISAE4", "EGIE3", "CMIG4", "CPLE6", "ELET3",  # Energia (ISAE4 = ex-TRPL4)
     "SBSP3", "SAPR11", "CSMG3",                            # Saneamento
     "BBSE3", "PSSA3", "CXSE3",                             # Seguros
     "VIVT3", "TIMS3",                                      # Telecom

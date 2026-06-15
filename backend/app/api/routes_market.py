@@ -7,6 +7,7 @@ from fastapi import APIRouter, HTTPException
 
 from app.deps import get_brapi, get_cache, get_ghostfolio
 from app.models.portfolio import Allocations, Portfolio
+from app.services.portfolio_service import get_enriched_portfolio
 from app.services.universe import build_universe
 
 router = APIRouter()
@@ -15,7 +16,7 @@ router = APIRouter()
 @router.get("/universe")
 async def universe() -> dict:
     try:
-        portfolio = await get_ghostfolio().get_portfolio()
+        portfolio = await get_enriched_portfolio(get_ghostfolio(), get_cache())
     except Exception:  # noqa: BLE001
         portfolio = Portfolio(
             total_value=0.0, as_of=datetime.now(timezone.utc).isoformat(), allocations=Allocations()
