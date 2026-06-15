@@ -14,6 +14,7 @@ import httpx
 from app.cache.store import Cache
 
 _TTL = 86400  # 24h
+_CLASS_TTL = 7 * 86400  # 7 dias (tipo do ativo muda raramente)
 _WINDOW = 5  # anos completos considerados (média de Bazin / consistência)
 _UA = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -42,6 +43,47 @@ def _windowed(payments: list) -> Dict[str, float]:
     for y in range(start, current_year):  # exclui o ano corrente (incompleto)
         out[str(y)] = round(by_year.get(y, 0.0), 4)
     return out
+
+
+def _url_to_class(url: str) -> str:
+    u = (url or "").lower()
+    if "/fundos-imobiliarios/" in u or "/fundos-de-investimento/" in u:
+        return "FII"
+    if "/etfs/" in u:
+        return "ETF"
+    if "/bdrs/" in u or "/bdr/" in u:
+        return "BDR"
+    if "/acoes/" in u:
+        return "STOCK"
+    return ""
+
+
+async def classify(ticker: str, cache: Cache) -> str | None:
+    """Descobre a classe do ativo (STOCK/FII/ETF/BDR) pela categoria do StatusInvest.
+
+    Fonte confiável — evita adivinhar pelo sufixo (ex: AUVP11 é ETF, TAEE11 é ação,
+    KNCR11 é FII, todos terminando em 11). Retorna None se não encontrar.
+    """
+    key = f"statusinvest:class:{ticker}"
+    cached = cache.get(key)
+    if cached is not None:
+        return cached or None
+    cls = ""
+    try:
+        async with httpx.AsyncClient(timeout=12.0, headers=_UA) as client:
+            resp = await client.get(
+                "https://statusinvest.com.br/home/mainsearchquery", params={"q": ticker}
+            )
+            items = resp.json()
+        if isinstance(items, list):
+            for it in items:
+                if str(it.get("code", "")).upper() == ticker.upper():
+                    cls = _url_to_class(it.get("url", ""))
+                    break
+    except Exception:
+        return None
+    cache.set(key, cls, _CLASS_TTL)
+    return cls or None
 
 
 async def fetch(ticker: str, cache: Cache, asset_class: str = "STOCK") -> Dict[str, float]:

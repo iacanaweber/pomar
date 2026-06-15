@@ -15,20 +15,12 @@ from typing import Dict, List, Optional
 
 from app.cache.store import Cache
 from app.clients.brapi import BrapiClient
-from app.data.watchlist import CLASS_BY_TICKER
 from app.models.market import Asset, Fundamentals
 from app.providers import fundamentus, statusinvest
+from app.services.classify import classify_ticker
 from app.util import normalize_ticker
 
 _sem = asyncio.Semaphore(6)  # educado com os sites (não martelar)
-
-
-def _infer_class(ticker: str) -> str:
-    if ticker.endswith(("34", "35", "32", "33")):
-        return "BDR"
-    if ticker.endswith("11"):
-        return "FII"  # heurística de fallback (Units conhecidos vêm por class_hints)
-    return "STOCK"
 
 
 async def build_assets(
@@ -41,7 +33,7 @@ async def build_assets(
     hints = class_hints or {}
 
     async def one(t: str) -> Asset:
-        cls = hints.get(t) or CLASS_BY_TICKER.get(t) or _infer_class(t)
+        cls = hints.get(t) or await classify_ticker(t, cache)
         async with _sem:
             fund = await fundamentus.fetch(t, cache)
             divs = await statusinvest.fetch(t, cache, cls)
