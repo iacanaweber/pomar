@@ -48,7 +48,15 @@ def allocate(
     if aporte <= 0 or not ranking:
         return aporte
 
-    classes_present = {r.asset_class for r in ranking}
+    # Só distribui orçamento para classes que TÊM candidatos investíveis (com cotação
+    # e score > 0). Assim o orçamento de classes sem dados (ex: ETF/BDR ausentes no
+    # Fundamentus) é redistribuído para quem dá pra comprar, em vez de virar sobra.
+    investable = {
+        r.asset_class
+        for r in ranking
+        if (prices.get(r.ticker) or 0) > 0 and r.composite_score > 0
+    }
+    classes_present = investable or {r.asset_class for r in ranking}
     class_budget = _class_budget(aporte, targets, portfolio, classes_present)
     total_after = portfolio.total_value + aporte
 
