@@ -20,6 +20,16 @@ from app.util import normalize_ticker
 _QUOTE_TTL = 3600  # 1h (cotação + fundamentos para uso diário de aporte)
 _MODULES = "summaryProfile,defaultKeyStatistics,financialData"
 
+# Conjuntos de parâmetros do mais rico (PRO) ao mínimo. Descobrimos uma vez qual o
+# plano aceita e reusamos para todos os tickers (evita 403 repetido e timeouts).
+_CANDIDATE_PARAMS = [
+    {"range": "1d", "fundamental": "true", "dividends": "true", "modules": _MODULES},
+    {"range": "1d", "fundamental": "true", "dividends": "true"},
+    {"range": "1d", "fundamental": "true"},
+    {"range": "1d"},
+    {},
+]
+
 
 def _dig(d: dict, *keys) -> Optional[float]:
     """Procura a primeira chave existente (em vários níveis comuns da brapi)."""
@@ -71,6 +81,7 @@ class BrapiClient:
         self.batch_size = max(1, batch_size)
         self._sem = asyncio.Semaphore(3)  # limita concorrência
         self.last_diagnostic: dict = {}
+        self._working_params: dict | None = None  # combinação de params que o plano aceita
 
     async def health(self) -> bool:
         # Usa um ticker que EXIGE token (BBAS3). Assim `brapi: true` significa que o
@@ -133,47 +144,56 @@ class BrapiClient:
                 data = None
             return resp.status_code, data, resp.text
 
-    async def _fetch_quote(self, tickers_csv: str, headers: dict):
-        """Busca cotação tentando do mais completo ao mínimo.
+    async def _resolve_params(self, headers: dict) -> dict:
+        """Descobre uma vez qual conjunto de parâmetros o plano da brapi aceita.
 
-        O plano grátis da brapi pode não liberar os `modules` (dados financeiros
-        profundos); nesse caso a requisição completa falha e caímos para uma versão
-        sem módulos. Retorna (data, diagnóstico) — sem nunca lançar exceção.
+        Vai do mais rico (PRO) ao mínimo, sondando um ticker, e memoriza o primeiro
+        que retorna dados. Evita repetir requisições 403 para cada ticker.
         """
-        base = {"range": "1d", "fundamental": "true", "dividends": "true"}
-        attempts = [
-            {**base, "modules": _MODULES},  # completo (ideal)
-            base,  # sem módulos (provável no plano grátis)
-            {"fundamental": "true", "dividends": "true"},  # mínimo
-        ]
-        url = f"{self.base_url}/quote/{tickers_csv}"
-        diag: dict = {}
-        for i, params in enumerate(attempts):
-            delay = 1.0
-            status, data, text = 0, None, ""
-            for _ in range(2):
-                try:
-                    status, data, text = await self._raw_get(url, params, headers)
-                except Exception as exc:  # noqa: BLE001
-                    status, data, text = -1, None, repr(exc)
-                if status == 429:
-                    await asyncio.sleep(delay)
-                    delay *= 2
-                    continue
-                break
-            diag = {
-                "attempt": i,
-                "status": status,
-                "params": list(params.keys()),
-                "body_snippet": (text or "")[:280],
-            }
+        if self._working_params is not None:
+            return self._working_params
+        probe = "BBAS3" if self.token else "PETR4"
+        url = f"{self.base_url}/quote/{probe}"
+        for params in _CANDIDATE_PARAMS:
+            try:
+                status, data, text = await self._raw_get(url, params, headers)
+            except Exception:
+                continue
             if status == 200 and data and data.get("results"):
-                return data, diag
-        return None, diag
+                self._working_params = params
+                return params
+        self._working_params = {}
+        return {}
+
+    async def _fetch_quote(self, tickers_csv: str, headers: dict):
+        """Busca cotação usando o conjunto de parâmetros suportado pelo plano."""
+        params = await self._resolve_params(headers)
+        url = f"{self.base_url}/quote/{tickers_csv}"
+        delay = 1.0
+        status, data, text = 0, None, ""
+        for _ in range(3):
+            try:
+                status, data, text = await self._raw_get(url, params, headers)
+            except Exception as exc:  # noqa: BLE001
+                status, data, text = -1, None, repr(exc)
+            if status == 429:
+                await asyncio.sleep(delay)
+                delay *= 2
+                continue
+            break
+        diag = {
+            "status": status,
+            "params": list(params.keys()),
+            "body_snippet": (text or "")[:280],
+        }
+        return (data if status == 200 else None), diag
 
     async def diagnose(self, ticker: str = "BBAS3") -> dict:
         """Diagnóstico de conectividade/token (sem expor o token em si)."""
         headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+        # zera o cache de capacidade para sondar do zero a cada diagnóstico
+        self._working_params = None
+        params = await self._resolve_params(headers)
         data, diag = await self._fetch_quote(normalize_ticker(ticker), headers)
         results = (data or {}).get("results") or []
         return {
@@ -182,6 +202,7 @@ class BrapiClient:
             "token_len": len(self.token or ""),
             "base_url": self.base_url,
             "auth_method": "Authorization: Bearer" if self.token else "nenhum",
+            "plan_params_aceitos": list(params.keys()) or ["(nenhum/só cotação básica)"],
             "got_price": bool(results and results[0].get("regularMarketPrice") is not None),
             **diag,
         }
