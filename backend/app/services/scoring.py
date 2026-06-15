@@ -252,14 +252,14 @@ def score_assets(
 
 def _source_for(key: str) -> str:
     return {
-        "pvp": "brapi:priceToBook",
-        "pl": "brapi:priceEarnings",
+        "pvp": "Fundamentus (P/VP)",
+        "pl": "Fundamentus (P/L)",
         "graham": "calculado: P/L × P/VP vs 22,5 (Graham)",
-        "div_yield": "brapi:dividendYield",
-        "bazin_ceiling": "calculado: preço-teto = dividendo ÷ 6% (Bazin)",
-        "dividend_consistency": "calculado: anos pagos ÷ anos analisados",
+        "div_yield": "calculado: últ. ano de proventos (StatusInvest) ÷ preço",
+        "bazin_ceiling": "calculado: preço-teto = média de proventos ÷ 6% (Bazin/StatusInvest)",
+        "dividend_consistency": "calculado: anos pagos ÷ anos analisados (StatusInvest)",
         "rebalance_gap": "calculado: alvo − atual (Ghostfolio)",
-        "sector_besst": "calculado: setor ∈ BESST (Barsi)",
+        "sector_besst": "calculado: setor (Fundamentus) ∈ BESST (Barsi)",
     }.get(key, "calculado")
 
 

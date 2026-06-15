@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
-from app.deps import get_brapi, get_ghostfolio
+from app.deps import get_brapi, get_cache, get_ghostfolio
 from app.models.portfolio import Allocations, Portfolio
 from app.services.universe import build_universe
 
@@ -20,7 +20,7 @@ async def universe() -> dict:
         portfolio = Portfolio(
             total_value=0.0, as_of=datetime.now(timezone.utc).isoformat(), allocations=Allocations()
         )
-    assets = await build_universe(portfolio, get_brapi())
+    assets = await build_universe(portfolio, get_cache(), get_brapi())
     return {"count": len(assets), "assets": [a.model_dump() for a in assets]}
 
 

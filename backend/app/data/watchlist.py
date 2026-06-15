@@ -32,3 +32,14 @@ BDRS = ["AAPL34", "MSFT34", "GOGL34", "AMZO34", "ROXO34"]
 
 def default_universe() -> list[str]:
     return STOCKS + FIIS + ETFS + BDRS
+
+
+# Classe conhecida de cada ticker da watchlist (mais confiável que adivinhar pelo sufixo,
+# já que Units como TAEE11/SAPR11 terminam em 11 mas são ações, não FIIs).
+CLASS_BY_TICKER: dict[str, str] = {
+    **{t: "STOCK" for t in STOCKS},
+    **{t: "FII" for t in FIIS},
+    **{t: "ETF" for t in ETFS},
+    **{t: "BDR" for t in BDRS},
+}
+

@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter
 
 from app.config import STRATEGY_PRESETS, get_settings
-from app.deps import get_brapi, get_ghostfolio
+from app.deps import get_brapi, get_cache, get_ghostfolio
 from app.models.portfolio import Allocations, Portfolio
 from app.models.scoring import PlanRequest, PlanResponse
 from app.services.allocation import allocate
@@ -46,7 +46,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
 
     # 2) universo + dados de mercado
     try:
-        assets = await build_universe(portfolio, get_brapi())
+        assets = await build_universe(portfolio, get_cache(), get_brapi())
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"Falha ao buscar dados de mercado na brapi ({exc}).")
         assets = []
@@ -57,15 +57,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
     no_data = [a.ticker for a in assets if "all" in a.missing]
     if no_data:
         extra = f" (e mais {len(no_data) - 8})" if len(no_data) > 8 else ""
-        warnings.append(f"Sem dados da brapi para: {', '.join(no_data[:8])}{extra}.")
-        # heurística: se quase tudo falhou, o token provavelmente não está configurado
-        free = {"PETR4", "VALE3", "ITUB4", "MGLU3"}
-        got = [a.ticker for a in assets if a.price]
-        if len(no_data) > 4 and all(t in free for t in got):
-            warnings.append(
-                "Parece que só os tickers gratuitos funcionam — verifique se BRAPI_TOKEN "
-                "está configurado no .env (token grátis em brapi.dev/dashboard) e reinicie."
-            )
+        warnings.append(f"Sem cotação para: {', '.join(no_data[:8])}{extra}.")
 
     # 3) score
     ranking = score_assets(assets, portfolio, targets, weights)
