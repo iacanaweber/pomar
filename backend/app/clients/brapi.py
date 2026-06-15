@@ -106,12 +106,13 @@ class BrapiClient:
             "dividends": "true",
             "modules": _MODULES,
         }
-        if self.token:
-            params["token"] = self.token
+        # A brapi exige o token no header Authorization: Bearer (o ?token= não é
+        # honrado nesta versão). Mantemos o header como forma autoritativa.
+        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
         url = f"{self.base_url}/quote/{','.join(chunk)}"
         try:
             async with self._sem:
-                data = await self._request_with_backoff(url, params)
+                data = await self._request_with_backoff(url, params, headers)
             nodes = {n.get("symbol", "").upper(): n for n in data.get("results", [])}
         except Exception:
             nodes = {}
@@ -132,11 +133,13 @@ class BrapiClient:
             out.append(asset)
         return out
 
-    async def _request_with_backoff(self, url: str, params: dict, retries: int = 3) -> dict:
+    async def _request_with_backoff(
+        self, url: str, params: dict, headers: dict | None = None, retries: int = 3
+    ) -> dict:
         delay = 1.0
         async with httpx.AsyncClient(timeout=20.0) as client:
             for attempt in range(retries):
-                resp = await client.get(url, params=params)
+                resp = await client.get(url, params=params, headers=headers or {})
                 if resp.status_code == 429:
                     await asyncio.sleep(delay)
                     delay *= 2
