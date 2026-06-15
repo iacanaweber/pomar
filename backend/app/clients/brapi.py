@@ -122,6 +122,10 @@ class BrapiClient:
         out: List[Asset] = []
         for t in chunk:
             node = nodes.get(t)
+            # resiliência a renomeações (ex: ELET3 -> AXIA3): se pedimos 1 ticker e veio
+            # 1 resultado com símbolo diferente, usa esse resultado mesmo assim.
+            if node is None and len(chunk) == 1 and len(nodes) == 1:
+                node = next(iter(nodes.values()))
             if node and node.get("regularMarketPrice") is not None:
                 asset = self._parse(t, node)
                 self.cache.set(f"brapi:asset:{t}", asset.model_dump(), _QUOTE_TTL)
