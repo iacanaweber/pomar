@@ -70,6 +70,7 @@ class BrapiClient:
         self.cache = cache
         self.batch_size = max(1, batch_size)
         self._sem = asyncio.Semaphore(3)  # limita concorrência
+        self.last_diagnostic: dict = {}
 
     async def health(self) -> bool:
         # Usa um ticker que EXIGE token (BBAS3). Assim `brapi: true` significa que o
@@ -100,27 +101,17 @@ class BrapiClient:
         return result
 
     async def _fetch_chunk(self, chunk: List[str]) -> List[Asset]:
-        params = {
-            "range": "1d",
-            "fundamental": "true",
-            "dividends": "true",
-            "modules": _MODULES,
-        }
-        # A brapi exige o token no header Authorization: Bearer (o ?token= não é
-        # honrado nesta versão). Mantemos o header como forma autoritativa.
         headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
-        url = f"{self.base_url}/quote/{','.join(chunk)}"
-        try:
-            async with self._sem:
-                data = await self._request_with_backoff(url, params, headers)
-            nodes = {n.get("symbol", "").upper(): n for n in data.get("results", [])}
-        except Exception:
-            nodes = {}
+        async with self._sem:
+            data, diag = await self._fetch_quote(",".join(chunk), headers)
+        self.last_diagnostic = diag
+        results = data.get("results") if data else None
+        nodes = {n.get("symbol", "").upper(): n for n in (results or [])}
 
         out: List[Asset] = []
         for t in chunk:
             node = nodes.get(t)
-            if node:
+            if node and node.get("regularMarketPrice") is not None:
                 asset = self._parse(t, node)
                 self.cache.set(f"brapi:asset:{t}", asset.model_dump(), _QUOTE_TTL)
             else:
@@ -133,21 +124,67 @@ class BrapiClient:
             out.append(asset)
         return out
 
-    async def _request_with_backoff(
-        self, url: str, params: dict, headers: dict | None = None, retries: int = 3
-    ) -> dict:
-        delay = 1.0
+    async def _raw_get(self, url: str, params: dict, headers: dict):
         async with httpx.AsyncClient(timeout=20.0) as client:
-            for attempt in range(retries):
-                resp = await client.get(url, params=params, headers=headers or {})
-                if resp.status_code == 429:
+            resp = await client.get(url, params=params, headers=headers or {})
+            try:
+                data = resp.json()
+            except Exception:
+                data = None
+            return resp.status_code, data, resp.text
+
+    async def _fetch_quote(self, tickers_csv: str, headers: dict):
+        """Busca cotação tentando do mais completo ao mínimo.
+
+        O plano grátis da brapi pode não liberar os `modules` (dados financeiros
+        profundos); nesse caso a requisição completa falha e caímos para uma versão
+        sem módulos. Retorna (data, diagnóstico) — sem nunca lançar exceção.
+        """
+        base = {"range": "1d", "fundamental": "true", "dividends": "true"}
+        attempts = [
+            {**base, "modules": _MODULES},  # completo (ideal)
+            base,  # sem módulos (provável no plano grátis)
+            {"fundamental": "true", "dividends": "true"},  # mínimo
+        ]
+        url = f"{self.base_url}/quote/{tickers_csv}"
+        diag: dict = {}
+        for i, params in enumerate(attempts):
+            delay = 1.0
+            status, data, text = 0, None, ""
+            for _ in range(2):
+                try:
+                    status, data, text = await self._raw_get(url, params, headers)
+                except Exception as exc:  # noqa: BLE001
+                    status, data, text = -1, None, repr(exc)
+                if status == 429:
                     await asyncio.sleep(delay)
                     delay *= 2
                     continue
-                resp.raise_for_status()
-                return resp.json()
-        resp.raise_for_status()
-        return {}
+                break
+            diag = {
+                "attempt": i,
+                "status": status,
+                "params": list(params.keys()),
+                "body_snippet": (text or "")[:280],
+            }
+            if status == 200 and data and data.get("results"):
+                return data, diag
+        return None, diag
+
+    async def diagnose(self, ticker: str = "BBAS3") -> dict:
+        """Diagnóstico de conectividade/token (sem expor o token em si)."""
+        headers = {"Authorization": f"Bearer {self.token}"} if self.token else {}
+        data, diag = await self._fetch_quote(normalize_ticker(ticker), headers)
+        results = (data or {}).get("results") or []
+        return {
+            "ticker": normalize_ticker(ticker),
+            "token_present": bool(self.token),
+            "token_len": len(self.token or ""),
+            "base_url": self.base_url,
+            "auth_method": "Authorization: Bearer" if self.token else "nenhum",
+            "got_price": bool(results and results[0].get("regularMarketPrice") is not None),
+            **diag,
+        }
 
     def _parse(self, ticker: str, node: dict) -> Asset:
         price = _dig(node, "regularMarketPrice", "regularMarketPreviousClose")

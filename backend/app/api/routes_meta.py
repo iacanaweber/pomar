@@ -22,6 +22,15 @@ async def glossary() -> dict:
     return get_glossary()
 
 
+@router.get("/debug/brapi")
+async def debug_brapi(ticker: str = "BBAS3") -> dict:
+    """Diagnóstico da conexão com a brapi (status HTTP, token presente, resposta crua).
+
+    NÃO expõe o token — só o tamanho. Útil para descobrir por que um ticker falha.
+    """
+    return await get_brapi().diagnose(ticker)
+
+
 @router.get("/strategies")
 async def strategies() -> dict:
     return {
