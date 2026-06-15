@@ -15,9 +15,9 @@ import httpx
 
 from app.cache.store import Cache
 from app.models.market import Asset, Fundamentals
+from app.util import normalize_ticker
 
 _QUOTE_TTL = 3600  # 1h (cotação + fundamentos para uso diário de aporte)
-_BATCH = 10  # tickers por requisição
 _MODULES = "summaryProfile,defaultKeyStatistics,financialData"
 
 
@@ -64,10 +64,11 @@ def _sector(node: dict) -> Optional[str]:
 
 
 class BrapiClient:
-    def __init__(self, base_url: str, token: str, cache: Cache) -> None:
+    def __init__(self, base_url: str, token: str, cache: Cache, batch_size: int = 1) -> None:
         self.base_url = base_url.rstrip("/")
         self.token = token
         self.cache = cache
+        self.batch_size = max(1, batch_size)
         self._sem = asyncio.Semaphore(3)  # limita concorrência
 
     async def health(self) -> bool:
@@ -79,7 +80,8 @@ class BrapiClient:
 
     async def get_assets(self, tickers: List[str]) -> List[Asset]:
         """Retorna Assets para os tickers, usando cache quando possível."""
-        tickers = [t.upper() for t in dict.fromkeys(tickers) if t]
+        # normaliza (remove .SA do Ghostfolio) e remove duplicatas preservando ordem
+        tickers = [t for t in dict.fromkeys(normalize_ticker(t) for t in tickers) if t]
         result: List[Asset] = []
         to_fetch: List[str] = []
         for t in tickers:
@@ -89,8 +91,8 @@ class BrapiClient:
             else:
                 to_fetch.append(t)
 
-        for i in range(0, len(to_fetch), _BATCH):
-            chunk = to_fetch[i : i + _BATCH]
+        for i in range(0, len(to_fetch), self.batch_size):
+            chunk = to_fetch[i : i + self.batch_size]
             result.extend(await self._fetch_chunk(chunk))
         return result
 

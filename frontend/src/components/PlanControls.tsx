@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { StrategiesResponse } from "../types";
+import type { StrategiesResponse, StrategyPreset } from "../types";
 import { Tooltip } from "./Tooltip";
 
 interface Props {
@@ -8,10 +8,38 @@ interface Props {
   onSubmit: (aporte: number, strategy: string) => void;
 }
 
+// Lista embutida: garante que o seletor SEMPRE apareça, mesmo que o fetch ao
+// backend falhe ou demore. O backend, quando responde, sobrepõe esta lista.
+const FALLBACK_PRESETS: Record<string, StrategyPreset> = {
+  equilibrado: {
+    label: "Equilibrado",
+    description: "Mistura desconto, dividendos, rebalanceamento e setores perenes.",
+    weights: { valuation: 0.3, dividend: 0.35, rebalance: 0.2, sector: 0.15 },
+  },
+  barsi: {
+    label: "Barsi (dividendos perenes)",
+    description: "Foco em pagadoras consistentes de setores essenciais (BESST), buy & hold.",
+    weights: { valuation: 0.2, dividend: 0.4, rebalance: 0.15, sector: 0.25 },
+  },
+  bazin: {
+    label: "Bazin (preço-teto)",
+    description: "Comprar com margem sobre o preço-teto (DY-alvo de 6%) e dividendos recorrentes.",
+    weights: { valuation: 0.25, dividend: 0.5, rebalance: 0.2, sector: 0.05 },
+  },
+  graham: {
+    label: "Graham (valor)",
+    description: "Margem de segurança no preço: P/VP e P/L baixos, P/L×P/VP ≤ 22,5.",
+    weights: { valuation: 0.55, dividend: 0.2, rebalance: 0.25, sector: 0.0 },
+  },
+};
+
 export function PlanControls({ strategies, loading, onSubmit }: Props) {
   const [aporte, setAporte] = useState("");
   const [strategy, setStrategy] = useState("equilibrado");
-  const presets = strategies?.presets ?? {};
+  const presets =
+    strategies?.presets && Object.keys(strategies.presets).length
+      ? strategies.presets
+      : FALLBACK_PRESETS;
   const weights = presets[strategy]?.weights;
 
   return (

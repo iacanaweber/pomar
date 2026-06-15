@@ -23,4 +23,4 @@ def get_ghostfolio() -> GhostfolioClient:
 @lru_cache
 def get_brapi() -> BrapiClient:
     s = get_settings()
-    return BrapiClient(s.brapi_base_url, s.brapi_token, get_cache())
+    return BrapiClient(s.brapi_base_url, s.brapi_token, get_cache(), batch_size=s.brapi_batch)

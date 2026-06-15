@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     # brapi.dev
     brapi_token: str = Field("", alias="BRAPI_TOKEN")
     brapi_base_url: str = Field("https://brapi.dev/api", alias="BRAPI_BASE_URL")
+    # Tickers por requisição. O plano GRÁTIS da brapi aceita só 1 por chamada
+    # (multi-ticker é recurso PRO). Aumente se você tiver um plano pago.
+    brapi_batch: int = Field(1, alias="BRAPI_BATCH")
 
     # Cache
     redis_url: str = Field("", alias="REDIS_URL")
