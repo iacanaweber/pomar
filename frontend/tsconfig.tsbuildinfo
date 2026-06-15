@@ -1,0 +1,1 @@
+{"root":["./src/App.tsx","./src/main.tsx","./src/types.ts","./src/api/client.ts","./src/components/AllocationSummary.tsx","./src/components/MetricValue.tsx","./src/components/PlanControls.tsx","./src/components/RankedList.tsx","./src/components/ScoreBreakdown.tsx","./src/components/Tooltip.tsx","./src/hooks/useGlossary.ts","./src/pages/PlanPage.tsx"],"version":"5.9.3"}

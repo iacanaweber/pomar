@@ -1,0 +1,31 @@
+# Pomar 🌳 — sobe com `docker compose up -d`
+# A interface fica em http://<ip-do-servidor>:${WEB_PORT} (padrão 3334).
+services:
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      # permite alcançar um Ghostfolio que roda no host (fora deste compose)
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${WEB_PORT:-3334}:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+
+volumes:
+  redis-data:
