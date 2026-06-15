@@ -12,6 +12,7 @@ from typing import Optional
 import httpx
 
 from app.models.portfolio import Allocations, Portfolio, Position
+from app.util import normalize_ticker
 
 # Mapeia tipos do Ghostfolio para as classes que o Pomar usa.
 _CLASS_MAP = {
@@ -69,7 +70,7 @@ class GhostfolioClient:
             weight = value / total if total else 0.0
             positions.append(
                 Position(
-                    ticker=h.get("symbol", "?"),
+                    ticker=normalize_ticker(h.get("symbol", "?")),
                     name=h.get("name"),
                     asset_class=cls,
                     sector=sector,
