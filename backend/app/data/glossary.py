@@ -13,7 +13,7 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "definition": "Preço sobre Valor Patrimonial. Compara o preço do ativo com o valor "
         "contábil do patrimônio dele. Abaixo de 1 sugere que o mercado paga menos do que o "
         "patrimônio 'vale no papel' — possível desconto.",
-        "source": "brapi.dev, campo priceToBook",
+        "source": "Fundamentus (indicador P/VP)",
         "interpretation": "Quanto menor, mais 'barato' em relação ao patrimônio. Compare sempre "
         "com pares do mesmo setor.",
     },
@@ -21,7 +21,7 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "label": "P/L",
         "definition": "Preço sobre Lucro. Quantos anos de lucro atual seriam necessários para "
         "'pagar' o preço da ação. Não faz sentido para FIIs.",
-        "source": "brapi.dev, campo priceEarnings",
+        "source": "Fundamentus (indicador P/L)",
         "interpretation": "Menor costuma indicar ação mais barata frente ao lucro — mas lucro "
         "baixo/negativo distorce o número.",
     },
@@ -29,7 +29,7 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "label": "Dividend Yield",
         "definition": "Quanto o ativo pagou em dividendos nos últimos 12 meses dividido pelo "
         "preço atual. É a 'renda' que o ativo gera por reais investidos.",
-        "source": "brapi.dev, campo dividendYield / histórico de dividendos",
+        "source": "calculado: último ano de proventos (StatusInvest) ÷ preço",
         "interpretation": "Maior é melhor para renda, mas yields muito altos podem ser "
         "pontuais (não se repetem) — por isso penalizamos os que parecem não recorrentes.",
     },

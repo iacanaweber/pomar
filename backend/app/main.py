@@ -6,16 +6,39 @@ busca dados de mercado na brapi e recomenda compras com base em estratégias con
 """
 from __future__ import annotations
 
+import asyncio
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import routes_market, routes_meta, routes_plan, routes_portfolio
 from app.config import get_settings
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Pré-aquece o cache do universo no boot, para o primeiro plano não estourar timeout."""
+
+    async def warm() -> None:
+        try:
+            from app.data.watchlist import default_universe
+            from app.deps import get_brapi, get_cache
+            from app.services import market_data
+
+            await market_data.build_assets(default_universe(), get_cache(), get_brapi())
+        except Exception:
+            pass
+
+    asyncio.create_task(warm())
+    yield
+
+
 app = FastAPI(
     title="Pomar",
     description="Plante seus aportes, colha dividendos. Recomendações transparentes para a B3.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 settings = get_settings()
