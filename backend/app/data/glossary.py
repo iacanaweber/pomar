@@ -27,8 +27,8 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     },
     "div_yield": {
         "label": "Dividend Yield",
-        "definition": "Quanto o ativo pagou em dividendos nos últimos 12 meses dividido pelo "
-        "preço atual. É a 'renda' que o ativo gera por reais investidos.",
+        "definition": "Quanto o ativo pagou em dividendos no último ano de proventos disponível, "
+        "dividido pelo preço atual. É a 'renda' que o ativo gera por reais investidos.",
         "source": "calculado: último ano de proventos (StatusInvest) ÷ preço",
         "interpretation": "Maior é melhor para renda, mas yields muito altos podem ser "
         "pontuais (não se repetem) — por isso penalizamos os que parecem não recorrentes.",
@@ -38,9 +38,18 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "definition": "Critério de valor de Benjamin Graham: uma ação 'barata' tende a ter "
         "P/L e P/VP baixos. A regra clássica diz que o produto P/L × P/VP deve ficar até 22,5 "
         "(equivale a P/L 15 e P/VP 1,5). Quanto menor o produto, maior a margem de segurança.",
-        "source": "calculado: P/L × P/VP (brapi) comparado ao teto 22,5 de Graham",
+        "source": "calculado: distância de P/L × P/VP (Fundamentus) ao teto 22,5 de Graham",
         "interpretation": "Produto bem abaixo de 22,5 sugere preço com desconto e margem de "
-        "segurança. Aplica-se a ações, não a FIIs.",
+        "segurança; acima do teto, a margem é zero. Aplica-se a ações, não a FIIs.",
+    },
+    "graham_intrinsic": {
+        "label": "Margem (Número de Graham)",
+        "definition": "Valor intrínseco aproximado de Graham = √(22,5 × LPA × VPA), onde LPA é o "
+        "lucro por ação e VPA o valor patrimonial por ação. A margem mostra o quanto o preço "
+        "está abaixo (positivo) desse valor justo.",
+        "source": "calculado: √(22,5 × LPA × VPA) vs preço (LPA/VPA do Fundamentus)",
+        "interpretation": "Margem positiva = preço abaixo do valor intrínseco de Graham. Exige "
+        "lucro e patrimônio positivos; indisponível para empresas com prejuízo.",
     },
     "bazin_ceiling": {
         "label": "Margem Bazin (preço-teto)",
@@ -55,7 +64,7 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "label": "Consistência de dividendos",
         "definition": "Há quantos dos últimos anos o ativo pagou dividendos de forma recorrente. "
         "Recompensa pagadoras regulares (estilo Barsi/Bazin) e desconfia de proventos pontuais.",
-        "source": "calculado: anos com pagamento ÷ anos analisados (histórico brapi)",
+        "source": "calculado: anos com pagamento ÷ anos analisados (StatusInvest)",
         "interpretation": "Perto de 1 = paga quase todo ano. Baixo = renda irregular, menos "
         "confiável para viver de dividendos.",
     },
@@ -64,7 +73,7 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "definition": "Afinidade do setor do ativo com os setores essenciais que Luiz Barsi "
         "prioriza: Bancos, Energia, Saneamento, Seguros e Telecomunicações (BESST). São setores "
         "de demanda estável, que costumam sustentar dividendos no longo prazo.",
-        "source": "calculado: setor (Ghostfolio/brapi) cruzado com a lista BESST",
+        "source": "calculado: setor (Fundamentus) cruzado com a lista BESST",
         "interpretation": "1 = setor perene clássico de dividendos. Não exclui outros setores, "
         "só dá preferência aos mais defensivos.",
     },

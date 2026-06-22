@@ -51,10 +51,79 @@ def test_missing_data_redistributes_weight_and_reports_completeness():
 
 
 def test_bazin_margin_positive_when_cheap_relative_to_dividends():
-    # dividendo médio 2.0; preço-teto = 2/0.06 = 33.3; preço 20 => margem positiva
+    # dividendo médio 2.0; preço-teto = 2/0.06 = 33.3; preço 20 => margem positiva.
+    # >= 3 anos pagos (BAZIN_MIN_PAID_YEARS).
+    a = Asset(ticker="TEST3", asset_class="STOCK", sector="Energia", price=20.0,
+              fundamentals=Fundamentals(pvp=1.0, pl=8.0, dividend_yield=0.10),
+              dividends_by_year={"2022": 2.0, "2023": 2.0, "2024": 2.0})
+    ranking = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
+    bazin = next(m for m in ranking[0].metrics if m.key == "bazin_ceiling")
+    assert bazin.raw_value is not None and bazin.raw_value > 0
+
+
+def test_bazin_unavailable_without_min_paid_years():
+    # só 2 anos pagos => Bazin indisponível (não derivar de média curta/circular)
     a = Asset(ticker="TEST3", asset_class="STOCK", sector="Energia", price=20.0,
               fundamentals=Fundamentals(pvp=1.0, pl=8.0, dividend_yield=0.10),
               dividends_by_year={"2023": 2.0, "2024": 2.0})
     ranking = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
     bazin = next(m for m in ranking[0].metrics if m.key == "bazin_ceiling")
-    assert bazin.raw_value is not None and bazin.raw_value > 0
+    assert bazin.available is False and bazin.raw_value is None
+
+
+def test_bazin_mean_ignores_unpaid_years():
+    # 3 anos pagos de 2.0 e um ano "0" (pulo) não deve deflacionar a média.
+    paid_only = Asset(ticker="AAA3", asset_class="STOCK", price=20.0,
+                      fundamentals=Fundamentals(pvp=1.0, pl=8.0),
+                      dividends_by_year={"2022": 2.0, "2023": 2.0, "2024": 2.0})
+    with_zero = Asset(ticker="BBB3", asset_class="STOCK", price=20.0,
+                      fundamentals=Fundamentals(pvp=1.0, pl=8.0),
+                      dividends_by_year={"2021": 2.0, "2022": 0.0, "2023": 2.0, "2024": 2.0})
+    r = score_assets([paid_only, with_zero], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
+    m_a = next(m for m in next(x for x in r if x.ticker == "AAA3").metrics if m.key == "bazin_ceiling")
+    m_b = next(m for m in next(x for x in r if x.ticker == "BBB3").metrics if m.key == "bazin_ceiling")
+    # ambos têm média de proventos pagos = 2.0 => mesma margem (zero não conta)
+    assert abs((m_a.raw_value or 0) - (m_b.raw_value or 0)) < 1e-9
+
+
+def test_graham_anchor_zero_above_ceiling():
+    # P/L×P/VP muito acima de 22,5 => margem Graham zerada (Graham rejeita)
+    cheap = Asset(ticker="CHEAP3", asset_class="STOCK", price=10.0,
+                  fundamentals=Fundamentals(pvp=0.8, pl=5.0))   # produto 4.0
+    pricey = Asset(ticker="PRICEY3", asset_class="STOCK", price=10.0,
+                   fundamentals=Fundamentals(pvp=9.0, pl=30.0))  # produto 270
+    r = score_assets([cheap, pricey], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
+    g_cheap = next(m for m in next(x for x in r if x.ticker == "CHEAP3").metrics if m.key == "graham")
+    g_pricey = next(m for m in next(x for x in r if x.ticker == "PRICEY3").metrics if m.key == "graham")
+    assert g_pricey.normalized == 0.0  # acima do teto
+    assert (g_cheap.normalized or 0) > 0.8  # bem abaixo do teto
+
+
+def test_pl_negative_is_not_a_discount():
+    # P/L negativo (prejuízo) não pode virar "o mais barato" — fica indisponível
+    a = Asset(ticker="LOSS3", asset_class="STOCK", price=10.0,
+              fundamentals=Fundamentals(pvp=1.0, pl=-5.0))
+    ranking = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
+    pl = next(m for m in ranking[0].metrics if m.key == "pl")
+    assert pl.available is False and pl.raw_value is None
+
+
+def test_number_of_graham_uses_lpa_vpa():
+    # intrínseco = sqrt(22,5*2*10) = sqrt(450) ≈ 21,2; preço 10 => margem ~0,53
+    a = Asset(ticker="GR3", asset_class="STOCK", price=10.0,
+              fundamentals=Fundamentals(pvp=1.0, pl=8.0, lpa=2.0, vpa=10.0))
+    ranking = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
+    gi = next(m for m in ranking[0].metrics if m.key == "graham_intrinsic")
+    assert gi.available is True and (gi.raw_value or 0) > 0.4
+
+
+def test_percentile_excludes_self_so_worst_is_low():
+    # 3 ativos com P/VP distintos; o de maior P/VP (pior) deve ficar perto de 0, não 1/3
+    assets = [
+        Asset(ticker="A3", asset_class="STOCK", price=10.0, fundamentals=Fundamentals(pvp=0.5, pl=5.0)),
+        Asset(ticker="B3", asset_class="STOCK", price=10.0, fundamentals=Fundamentals(pvp=1.0, pl=5.0)),
+        Asset(ticker="C3", asset_class="STOCK", price=10.0, fundamentals=Fundamentals(pvp=3.0, pl=5.0)),
+    ]
+    r = score_assets(assets, _portfolio(), {"STOCK": 1.0}, WEIGHTS)
+    worst = next(m for m in next(x for x in r if x.ticker == "C3").metrics if m.key == "pvp")
+    assert worst.normalized == 0.0  # pior dos 3, excluindo a si mesmo

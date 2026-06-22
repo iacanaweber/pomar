@@ -42,6 +42,7 @@ async def build_assets(
         price = fund.get("price")
         sector = fund.get("sector")
         pvp, pl, dy = fund.get("pvp"), fund.get("pl"), fund.get("dy")
+        lpa, vpa = fund.get("lpa"), fund.get("vpa")  # base do Número de Graham (antes descartados)
 
         # fallback de cotação/setor via brapi (ETFs/BDRs que não estão no Fundamentus)
         if price is None and brapi is not None:
@@ -82,7 +83,7 @@ async def build_assets(
             asset_class=cls,
             sector=sector,
             price=price,
-            fundamentals=Fundamentals(pvp=pvp, pl=pl, dividend_yield=dy),
+            fundamentals=Fundamentals(pvp=pvp, pl=pl, dividend_yield=dy, lpa=lpa, vpa=vpa),
             dividends_by_year=divs,
             lot_size=1,
             missing=missing,

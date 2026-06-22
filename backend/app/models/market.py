@@ -14,6 +14,8 @@ class Fundamentals(BaseModel):
     dividend_yield: Optional[float] = Field(
         None, description="Dividend yield (0..1, ex: 0.092 = 9,2%)."
     )
+    lpa: Optional[float] = Field(None, description="Lucro por ação (base do Número de Graham).")
+    vpa: Optional[float] = Field(None, description="Valor patrimonial por ação (base do Número de Graham).")
     market_cap: Optional[float] = Field(None, description="Valor de mercado.")
 
 
