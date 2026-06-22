@@ -1,4 +1,5 @@
 import type {
+  AssetDetailResponse,
   AuthStatus,
   Glossary,
   HealthStatus,
@@ -10,7 +11,6 @@ import type {
   PreferencesBody,
   ProjectionRequest,
   ProjectionResponse,
-  ScoredAsset,
   StrategiesResponse,
   WatchlistItem,
 } from "../types";
@@ -83,7 +83,7 @@ export const api = {
 
   // carteira / mercado
   portfolio: () => request<Portfolio>("/api/portfolio"),
-  asset: (ticker: string) => request<ScoredAsset>(`/api/asset/${ticker}`),
+  asset: (ticker: string) => request<AssetDetailResponse>(`/api/asset/${ticker}`, {}, 30000),
 
   // preferências / watchlist
   preferences: () => request<Preferences>("/api/preferences"),

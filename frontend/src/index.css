@@ -202,6 +202,24 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .income-big { font-size: 26px; color: var(--green); }
 .snowball-svg { width: 100%; height: auto; margin: 8px 0; }
 
+/* Links de ativo + detalhe */
+.asset-link { color: var(--green); font-weight: 700; text-decoration: none; }
+.asset-link:hover { text-decoration: underline; }
+.card-detail-link { padding: 0 14px 12px; font-size: 12px; }
+.asset-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; margin-top: 8px; }
+.asset-head-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.asset-price { font-size: 20px; color: var(--green); }
+.fund-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+.fund-item { display: flex; flex-direction: column; gap: 2px; background: #fafdfa; border-radius: 8px; padding: 8px 10px; }
+.fund-item strong { font-size: 15px; }
+.prov-bars { display: flex; flex-direction: column; gap: 6px; }
+.prov-row { display: grid; grid-template-columns: 48px 1fr auto; align-items: center; gap: 8px; font-size: 13px; }
+.prov-year { color: var(--muted); }
+.prov-track { height: 14px; background: #eef2ee; border-radius: 999px; }
+.prov-fill { height: 100%; background: var(--leaf); border-radius: 999px; }
+.prov-val { white-space: nowrap; }
+
 @media (min-width: 640px) {
   .pf-chart { flex-direction: row; align-items: center; }
   .pie-svg { width: 280px; height: 280px; flex-shrink: 0; }

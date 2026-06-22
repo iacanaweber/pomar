@@ -1,6 +1,7 @@
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import { useAuthStatus, useLogout } from "./api/queries";
 import { GlossaryProvider } from "./app/GlossaryProvider";
+import { AssetPage } from "./pages/AssetPage";
 import { IncomePage } from "./pages/IncomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PlanPage } from "./pages/PlanPage";
@@ -39,6 +40,7 @@ function AppShell() {
         <Route path="/plano" element={<PlanPage />} />
         <Route path="/carteira" element={<PortfolioPage />} />
         <Route path="/renda" element={<IncomePage />} />
+        <Route path="/ativo/:ticker" element={<AssetPage />} />
         <Route path="*" element={<Navigate to="/plano" replace />} />
       </Routes>
 

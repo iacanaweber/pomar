@@ -53,6 +53,9 @@ export const usePlan = () => useMutation({ mutationFn: (req: PlanRequest) => api
 
 export const useIncome = () => useQuery({ queryKey: ["income"], queryFn: api.income });
 
+export const useAsset = (ticker: string) =>
+  useQuery({ queryKey: ["asset", ticker], queryFn: () => api.asset(ticker), enabled: !!ticker });
+
 /** Projeção bola de neve: query cacheada pelos parâmetros (recalcula ao mudar os inputs). */
 export const useProjection = (params: ProjectionRequest) =>
   useQuery({

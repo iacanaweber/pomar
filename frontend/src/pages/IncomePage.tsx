@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useIncome, useProjection } from "../api/queries";
 import type { ProjectionPoint } from "../types";
+import { AssetLink } from "../components/AssetLink";
 import { money, parseBRL, pct } from "../lib/format";
 
 /** Gráfico de área simples (SVG) do patrimônio projetado por ano. */
@@ -87,7 +88,7 @@ export function IncomePage() {
           <ul className="pf-drill-list">
             {(data.by_asset ?? []).slice(0, 8).map((a) => (
               <li key={a.ticker} className="pf-drill-item">
-                <span className="pf-drill-ticker">{a.ticker}</span>
+                <span className="pf-drill-ticker"><AssetLink ticker={a.ticker} /></span>
                 <span className="pf-drill-name">DY {pct(a.dividend_yield)}</span>
                 <span className="pf-drill-val">{money(a.annual_income, data.currency)}/ano</span>
               </li>
