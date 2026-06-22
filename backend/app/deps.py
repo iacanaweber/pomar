@@ -7,6 +7,12 @@ from app.cache.store import Cache
 from app.clients.brapi import BrapiClient
 from app.clients.ghostfolio import GhostfolioClient
 from app.config import get_settings
+from app.repositories.db import Database
+
+
+@lru_cache
+def get_db() -> Database:
+    return Database(get_settings().db_path)
 
 
 @lru_cache

@@ -3,6 +3,12 @@
 *.env
 !.env.example
 
+# Persistência local (SQLite)
+*.db
+*.db-wal
+*.db-shm
+backend/data/
+
 # Python
 __pycache__/
 *.py[cod]
