@@ -60,8 +60,8 @@ async def plan(req: PlanRequest) -> PlanResponse:
         extra = f" (e mais {len(no_data) - 8})" if len(no_data) > 8 else ""
         warnings.append(f"Sem cotação para: {', '.join(no_data[:8])}{extra}.")
 
-    # 3) score
-    ranking = score_assets(assets, portfolio, targets, weights)
+    # 3) score (a estratégia também aplica filtros de elegibilidade, não só pesos)
+    ranking = score_assets(assets, portfolio, targets, weights, strategy=req.strategy)
 
     # 4) alocação do aporte
     prices = {a.ticker: (a.price or 0.0) for a in assets}

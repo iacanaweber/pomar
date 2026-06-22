@@ -121,8 +121,20 @@ STRATEGY_PRESETS: dict = {
     },
     "graham": {
         "label": "Graham (valor)",
-        "description": "Margem de segurança no preço: P/VP e P/L baixos, P/L×P/VP ≤ 22,5.",
+        "description": "Margem de segurança no preço: P/VP e P/L baixos, P/L×P/VP ≤ 22,5, "
+        "lucro positivo. Exclui empresas fora desses critérios.",
         "weights": {"valuation": 0.55, "dividend": 0.20, "rebalance": 0.25, "sector": 0.00},
+    },
+    "dividend_growth": {
+        "label": "Dividend Growth",
+        "description": "Prioriza crescimento e consistência de proventos em pagadoras recorrentes.",
+        "weights": {"valuation": 0.15, "dividend": 0.45, "rebalance": 0.15, "sector": 0.25},
+    },
+    "valor_qualidade": {
+        "label": "Valor + Qualidade",
+        "description": "Desconto (valuation) com empresas de qualidade — o eixo de risco "
+        "penaliza dívida alta, payout insustentável e prejuízo.",
+        "weights": {"valuation": 0.45, "dividend": 0.20, "rebalance": 0.20, "sector": 0.15},
     },
 }
 

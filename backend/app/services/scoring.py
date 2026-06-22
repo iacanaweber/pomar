@@ -28,6 +28,7 @@ from app.models.common import Metric
 from app.models.market import Asset
 from app.models.portfolio import Portfolio
 from app.models.scoring import ScoredAsset
+from app.services.strategies import eligibility_reason
 
 BAZIN_TARGET_YIELD = 0.06  # DY-alvo de 6% do método Bazin
 GRAHAM_CEILING = 22.5  # teto clássico de P/L × P/VP
@@ -252,6 +253,7 @@ def score_assets(
     portfolio: Portfolio,
     targets: Dict[str, float],
     weights: Dict[str, float],
+    strategy: Optional[str] = None,
 ) -> List[ScoredAsset]:
     """Pontua e ordena os ativos candidatos. Não aloca dinheiro (isso é da allocation)."""
     current_by_class = portfolio.allocations.by_class
@@ -344,13 +346,19 @@ def score_assets(
         available_count = sum(1 for b in built if b["available"])
         metrics_by_key = {m.key: m for m in metrics}
         q, risk_level, red_flags = _quality_assessment(a, metrics_by_key)
+        final_score = round(composite * q, 4)
+        elig = eligibility_reason(strategy, a, metrics_by_key)
+        if elig:
+            # fora dos critérios da estratégia escolhida: não é comprável (score 0), com motivo
+            final_score = 0.0
+            red_flags = [f"Não elegível ({strategy}): {elig}", *red_flags]
         results.append(
             ScoredAsset(
                 ticker=a.ticker,
                 name=a.name,
                 asset_class=cls,
                 sector=a.sector,
-                composite_score=round(composite * q, 4),
+                composite_score=final_score,
                 composite_base=round(composite, 4),
                 quality_factor=round(q, 4),
                 risk_level=risk_level,

@@ -182,3 +182,27 @@ def test_value_trap_sinks_below_healthy():
                  dividends_by_year={"2022": 1.6, "2023": 1.7, "2024": 1.8})
     r = score_assets([trap, good], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
     assert r[0].ticker == "SOLID3"  # saudável vence a armadilha de valor
+
+
+# --- Estratégias v2: filtros de elegibilidade ---
+
+def test_graham_strategy_excludes_ineligible():
+    loss = Asset(ticker="L3", asset_class="STOCK", price=10.0,
+                 fundamentals=Fundamentals(pvp=1.0, pl=-2.0))
+    pricey = Asset(ticker="P3", asset_class="STOCK", price=10.0,
+                   fundamentals=Fundamentals(pvp=5.0, pl=30.0))  # 150 > 22,5
+    cheap = Asset(ticker="C3", asset_class="STOCK", price=10.0,
+                  fundamentals=Fundamentals(pvp=0.8, pl=5.0, current_ratio=2.0))  # 4,0
+    r = score_assets([loss, pricey, cheap], _portfolio(), {"STOCK": 1.0}, WEIGHTS, strategy="graham")
+    by = {x.ticker: x for x in r}
+    assert by["L3"].composite_score == 0.0
+    assert by["P3"].composite_score == 0.0
+    assert by["C3"].composite_score > 0.0
+    assert any("Graham" in f for f in by["L3"].red_flags)
+
+
+def test_equilibrado_does_not_filter():
+    pricey = Asset(ticker="P3", asset_class="STOCK", price=10.0,
+                   fundamentals=Fundamentals(pvp=5.0, pl=30.0))
+    r = score_assets([pricey], _portfolio(), {"STOCK": 1.0}, WEIGHTS, strategy="equilibrado")[0]
+    assert not any("elegível" in f.lower() for f in r.red_flags)
