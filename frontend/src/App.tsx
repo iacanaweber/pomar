@@ -1,6 +1,7 @@
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import { useAuthStatus, useLogout } from "./api/queries";
 import { GlossaryProvider } from "./app/GlossaryProvider";
+import { IncomePage } from "./pages/IncomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PlanPage } from "./pages/PlanPage";
 import { PortfolioPage } from "./pages/PortfolioPage";
@@ -29,11 +30,15 @@ function AppShell() {
         <NavLink to="/carteira" className={({ isActive }) => `tab ${isActive ? "tab-on" : ""}`}>
           Minha carteira
         </NavLink>
+        <NavLink to="/renda" className={({ isActive }) => `tab ${isActive ? "tab-on" : ""}`}>
+          Renda passiva
+        </NavLink>
       </nav>
 
       <Routes>
         <Route path="/plano" element={<PlanPage />} />
         <Route path="/carteira" element={<PortfolioPage />} />
+        <Route path="/renda" element={<IncomePage />} />
         <Route path="*" element={<Navigate to="/plano" replace />} />
       </Routes>
 

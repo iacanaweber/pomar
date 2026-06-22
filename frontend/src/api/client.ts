@@ -2,11 +2,14 @@ import type {
   AuthStatus,
   Glossary,
   HealthStatus,
+  IncomeResponse,
   PlanRequest,
   PlanResponse,
   Portfolio,
   Preferences,
   PreferencesBody,
+  ProjectionRequest,
+  ProjectionResponse,
   ScoredAsset,
   StrategiesResponse,
   WatchlistItem,
@@ -91,6 +94,11 @@ export const api = {
     request<{ ticker: string; asset_class: string }>("/api/watchlist", json({ ticker, note })),
   removeWatchlist: (ticker: string) =>
     request<{ ok: boolean }>(`/api/watchlist/${ticker}`, { method: "DELETE" }),
+
+  // renda passiva
+  income: () => request<IncomeResponse>("/api/income", {}, 60000),
+  projection: (body: ProjectionRequest) =>
+    request<ProjectionResponse>("/api/income/projection", json(body)),
 
   // plano (mais lento -> timeout maior)
   plan: (req: PlanRequest) => request<PlanResponse>("/api/plan", json(req), 60000),

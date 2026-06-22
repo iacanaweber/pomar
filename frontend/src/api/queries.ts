@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
-import type { PlanRequest, PreferencesBody } from "../types";
+import type { PlanRequest, PreferencesBody, ProjectionRequest } from "../types";
 
 export const keys = {
   health: ["health"] as const,
@@ -50,3 +50,13 @@ export function useSavePreferences() {
 
 /** Gerar plano é uma ação (POST com efeito), por isso é uma mutation, não query. */
 export const usePlan = () => useMutation({ mutationFn: (req: PlanRequest) => api.plan(req) });
+
+export const useIncome = () => useQuery({ queryKey: ["income"], queryFn: api.income });
+
+/** Projeção bola de neve: query cacheada pelos parâmetros (recalcula ao mudar os inputs). */
+export const useProjection = (params: ProjectionRequest) =>
+  useQuery({
+    queryKey: ["projection", params],
+    queryFn: () => api.projection(params),
+    staleTime: Infinity,
+  });
