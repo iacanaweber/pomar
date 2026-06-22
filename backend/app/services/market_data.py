@@ -17,7 +17,7 @@ from app.cache.store import Cache
 from app.clients.brapi import BrapiClient
 from app.models.market import Asset, Fundamentals
 from app.providers import fundamentus, statusinvest
-from app.services.classify import classify_ticker
+from app.services.classify import classify_ticker, resolve_sector
 from app.util import normalize_ticker
 
 _sem = asyncio.Semaphore(6)  # educado com os sites (não martelar)
@@ -33,7 +33,8 @@ async def build_assets(
     hints = class_hints or {}
 
     async def one(t: str) -> Asset:
-        cls = hints.get(t) or await classify_ticker(t, cache)
+        # mesma cascata da carteira: StatusInvest -> watchlist -> dica GF (filtrada) -> heurística
+        cls = await classify_ticker(t, cache, hints.get(t))
         async with _sem:
             fund = await fundamentus.fetch(t, cache)
             divs = await statusinvest.fetch(t, cache, cls)
@@ -60,6 +61,9 @@ async def build_assets(
             last_val = divs[last_year]
             if last_val > 0:
                 dy = round(last_val / price, 4)
+
+        # setor canônico (curado -> provedor -> default por classe); nunca None
+        sector = resolve_sector(t, cls, sector)
 
         missing = []
         if pvp is None:
