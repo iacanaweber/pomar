@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { Portfolio, Position } from "../types";
 import { PieChart, type Slice } from "../components/PieChart";
+import { AssetLink } from "../components/AssetLink";
 import { money, pct } from "../lib/format";
 
 type GroupBy = "asset" | "class" | "sector" | "tag";
@@ -166,7 +167,7 @@ export function PortfolioPage() {
           <ul className="pf-drill-list">
             {selected.members.map((m) => (
               <li key={m.ticker} className="pf-drill-item">
-                <span className="pf-drill-ticker">{m.ticker}</span>
+                <span className="pf-drill-ticker"><AssetLink ticker={m.ticker} /></span>
                 {m.name && <span className="pf-drill-name">{m.name}</span>}
                 <span className="pf-drill-val">
                   {money(m.value)} <span className="muted">· {pct(m.value / pf.total_value)}</span>

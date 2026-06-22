@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from app.models.common import Metric
+from app.models.market import Asset
 
 
 class SuggestedBuy(BaseModel):
@@ -62,6 +63,13 @@ class PlanResponse(BaseModel):
         "Conteúdo educativo. Não é recomendação de investimento. "
         "Os dados podem estar defasados; confira antes de operar.",
     )
+
+
+class AssetDetailResponse(BaseModel):
+    """Detalhe de um ativo: dados crus (fundamentos, proventos) + a pontuação explicada."""
+
+    asset: Asset
+    scored: ScoredAsset
 
 
 class PlanRequest(BaseModel):

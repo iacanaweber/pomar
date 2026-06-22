@@ -170,7 +170,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Asset */
+        /**
+         * Asset
+         * @description Detalhe completo do ativo: classe+setor canônicos, fundamentos (incl. LPA/VPA),
+         *     histórico de proventos e a pontuação explicada (métricas, reasons, red flags, selo de risco).
+         */
         get: operations["asset_api_asset__ticker__get"];
         put?: never;
         post?: never;
@@ -327,6 +331,131 @@ export interface components {
             by_sector?: {
                 [key: string]: number;
             };
+        };
+        /** Asset */
+        Asset: {
+            /** Ticker */
+            ticker: string;
+            /** Name */
+            name?: string | null;
+            /**
+             * Asset Class
+             * @description STOCK | FII | ETF | BDR.
+             * @default UNKNOWN
+             */
+            asset_class: string;
+            /** Sector */
+            sector?: string | null;
+            /**
+             * Price
+             * @description Cotação mais recente (BRL).
+             */
+            price?: number | null;
+            fundamentals?: components["schemas"]["Fundamentals"];
+            /**
+             * Dividends By Year
+             * @description Soma de dividendos por ano (ex: {'2023': 1.2, '2024': 1.4}). Base para preço-teto de Bazin e consistência.
+             */
+            dividends_by_year?: {
+                [key: string]: number;
+            };
+            /**
+             * Lot Size
+             * @description Tamanho do lote padrão (FII/ETF normalmente 1).
+             * @default 1
+             */
+            lot_size: number;
+            /**
+             * Missing
+             * @description Quais dados faltaram nesta consulta.
+             */
+            missing?: string[];
+            /**
+             * Stale
+             * @description True se veio de cache defasado.
+             * @default false
+             */
+            stale: boolean;
+            /**
+             * As Of
+             * @description Carimbo ISO da cotação/fundamentos.
+             */
+            as_of?: string | null;
+            /**
+             * Source
+             * @description Origem dos dados.
+             * @default brapi
+             */
+            source: string;
+        };
+        /**
+         * AssetDetailResponse
+         * @description Detalhe de um ativo: dados crus (fundamentos, proventos) + a pontuação explicada.
+         */
+        AssetDetailResponse: {
+            asset: components["schemas"]["Asset"];
+            scored: components["schemas"]["ScoredAsset"];
+        };
+        /**
+         * Fundamentals
+         * @description Fundamentos de um ativo. Campos podem ser None quando a brapi não fornece.
+         */
+        Fundamentals: {
+            /**
+             * Pvp
+             * @description Preço / Valor Patrimonial (priceToBook).
+             */
+            pvp?: number | null;
+            /**
+             * Pl
+             * @description Preço / Lucro (priceEarnings).
+             */
+            pl?: number | null;
+            /**
+             * Dividend Yield
+             * @description Dividend yield (0..1, ex: 0.092 = 9,2%).
+             */
+            dividend_yield?: number | null;
+            /**
+             * Lpa
+             * @description Lucro por ação (base do Número de Graham).
+             */
+            lpa?: number | null;
+            /**
+             * Vpa
+             * @description Valor patrimonial por ação (base do Número de Graham).
+             */
+            vpa?: number | null;
+            /**
+             * Market Cap
+             * @description Valor de mercado.
+             */
+            market_cap?: number | null;
+            /**
+             * Roe
+             * @description Return on equity (0..1).
+             */
+            roe?: number | null;
+            /**
+             * Net Margin
+             * @description Margem líquida (0..1).
+             */
+            net_margin?: number | null;
+            /**
+             * Net Debt To Ebitda
+             * @description Dívida líquida / EBITDA.
+             */
+            net_debt_to_ebitda?: number | null;
+            /**
+             * Current Ratio
+             * @description Liquidez corrente (ativo circ./passivo circ.).
+             */
+            current_ratio?: number | null;
+            /**
+             * Avg Daily Liquidity
+             * @description Volume financeiro médio diário (R$).
+             */
+            avg_daily_liquidity?: number | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -1092,9 +1221,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["AssetDetailResponse"];
                 };
             };
             /** @description Validation Error */

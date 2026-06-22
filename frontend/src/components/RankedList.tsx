@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { PlanResponse, ScoredAsset } from "../types";
 import { money } from "../lib/format";
+import { AssetLink } from "./AssetLink";
 import { ScoreBreakdown } from "./ScoreBreakdown";
 import { Tooltip } from "./Tooltip";
 
@@ -57,6 +58,10 @@ function AssetCard({ asset }: { asset: ScoredAsset }) {
           ))}
         </ul>
       )}
+
+      <div className="card-detail-link">
+        <AssetLink ticker={asset.ticker}>ver detalhes de {asset.ticker} →</AssetLink>
+      </div>
 
       {open && <ScoreBreakdown asset={asset} />}
     </li>
