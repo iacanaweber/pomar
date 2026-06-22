@@ -249,10 +249,10 @@ class BrapiClient:
 
 
 def _infer_class(node: dict, ticker: str) -> str:
-    t = node.get("type") or ""
-    if t == "fund" or ticker.endswith("11"):
-        # 11 pode ser FII, ETF ou Unit; heurística simples
-        return "FII"
-    if ticker.endswith(("34", "35", "32", "33")):
+    # Dica grosseira apenas. A classe canônica vem de classify_ticker (StatusInvest/watchlist).
+    # NÃO usar 'termina em 11 -> FII': AUVP11/BOVA11 são ETF, TAEE11 é ação, KNCR11 é FII.
+    if ticker.endswith(("34", "35", "32", "33", "39")):
         return "BDR"
+    if (node.get("type") or "") == "fund":
+        return "UNKNOWN"  # fundo (FII ou ETF) — indecidível aqui
     return "STOCK"

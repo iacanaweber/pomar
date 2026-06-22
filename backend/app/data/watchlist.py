@@ -43,3 +43,31 @@ CLASS_BY_TICKER: dict[str, str] = {
     **{t: "BDR" for t in BDRS},
 }
 
+# Setor canônico por ticker (determinístico, imune à grafia do provedor). Os rótulos dos
+# setores BESST casam com BESST_KEYWORDS (Bancos/Energia/Saneamento/Seguros/Telecom), então
+# a afinidade de setor perene fica estável. ETFs/BDRs (que o Fundamentus não cobre) recebem
+# um rótulo de carteira útil: amplos -> "Diversificado", índice estrangeiro -> "Exterior".
+SECTOR_BY_TICKER: dict[str, str] = {
+    # Bancos
+    "BBAS3": "Bancos", "ITUB4": "Bancos", "BBDC4": "Bancos", "SANB11": "Bancos", "ITSA4": "Bancos",
+    # Energia
+    "TAEE11": "Energia Elétrica", "ISAE4": "Energia Elétrica", "EGIE3": "Energia Elétrica",
+    "CMIG4": "Energia Elétrica", "CPLE6": "Energia Elétrica", "AXIA3": "Energia Elétrica",
+    # Saneamento
+    "SBSP3": "Saneamento", "SAPR11": "Saneamento", "CSMG3": "Saneamento",
+    # Seguros
+    "BBSE3": "Seguros", "PSSA3": "Seguros", "CXSE3": "Seguros",
+    # Telecom
+    "VIVT3": "Telecom", "TIMS3": "Telecom",
+    # Outros líquidos (não-BESST)
+    "VALE3": "Mineração", "PETR4": "Petróleo e Gás", "KLBN11": "Papel e Celulose",
+    "FESA4": "Siderurgia e Metalurgia", "WEGE3": "Bens Industriais",
+    # ETFs (curados; amplos = Diversificado, índice estrangeiro = Exterior)
+    "BOVA11": "Diversificado", "AUVP11": "Diversificado", "WRLD11": "Diversificado",
+    "IVVB11": "Exterior", "NASD11": "Exterior", "HASH11": "Cripto",
+    "SMAL11": "Small Caps", "DIVO11": "Dividendos", "FIND11": "Financeiro",
+    # BDRs (exposição internacional)
+    "AAPL34": "Exterior", "MSFT34": "Exterior", "GOGL34": "Exterior",
+    "AMZO34": "Exterior", "ROXO34": "Exterior",
+}
+

@@ -9,9 +9,33 @@ from __future__ import annotations
 from typing import Optional
 
 from app.cache.store import Cache
-from app.data.watchlist import CLASS_BY_TICKER
+from app.data.watchlist import CLASS_BY_TICKER, SECTOR_BY_TICKER
 from app.providers import statusinvest
 from app.util import normalize_ticker
+
+# Setor default por classe quando não há mapa curado nem setor do provedor — garante que
+# todo ativo tenha um setor não-nulo (a visão "por setor" fecha 100%, sem "Sem setor" espúrio).
+_DEFAULT_SECTOR_BY_CLASS = {
+    "ETF": "Diversificado",
+    "BDR": "Exterior",
+    "FII": "Imobiliário",
+    "STOCK": "Outros",
+    "UNKNOWN": "Outros",
+}
+
+
+def resolve_sector(ticker: str, asset_class: str, provider_sector: Optional[str]) -> str:
+    """Resolve o setor: mapa curado (por ticker) -> setor do provedor -> default por classe.
+
+    O mapa curado vem primeiro de propósito: torna a afinidade BESST determinística e imune
+    à grafia do Fundamentus/Ghostfolio. Nunca retorna None.
+    """
+    curated = SECTOR_BY_TICKER.get(normalize_ticker(ticker))
+    if curated:
+        return curated
+    if provider_sector and provider_sector.strip():
+        return provider_sector.strip()
+    return _DEFAULT_SECTOR_BY_CLASS.get(asset_class, "Outros")
 
 
 async def classify_ticker(ticker: str, cache: Cache, gf_hint: Optional[str] = None) -> str:
