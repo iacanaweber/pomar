@@ -15,7 +15,7 @@ def authed_client(monkeypatch, tmp_path):
     monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
     get_settings.cache_clear()
     get_db.cache_clear()
-    client = TestClient(create_app(), base_url="https://testserver")
+    client = TestClient(create_app(), base_url="http://testserver")
     client.post("/api/login", json={"password": "pw"})
     yield client
     get_settings.cache_clear()

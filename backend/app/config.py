@@ -53,6 +53,9 @@ class Settings(BaseSettings):
     debug: bool = Field(False, alias="DEBUG")  # expõe /docs e /api/debug/* só quando True
     cors_origins: str = Field("", alias="CORS_ORIGINS")  # vazio => apenas mesma origem
     session_ttl_hours: int = Field(720, alias="SESSION_TTL_HOURS")  # 30 dias
+    # Cookie de sessão Secure (só trafega em HTTPS). Padrão False para funcionar em HTTP/LAN;
+    # ATIVE (true) ao servir por HTTPS (ex.: atrás do Caddy/TLS). Em HTTP, true quebra o login.
+    cookie_secure: bool = Field(False, alias="COOKIE_SECURE")
 
     # Persistência (SQLite, single-user)
     db_path: str = Field("data/pomar.db", alias="DB_PATH")
