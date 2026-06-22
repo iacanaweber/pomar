@@ -2,19 +2,26 @@
 
 Quatro famílias de métricas, cada uma com peso configurável (presets de estratégia):
 
-- valuation  -> desconto / Graham      : P/VP, P/L, P/L×P/VP (≤ 22,5)
+- valuation  -> desconto / Graham      : P/VP, P/L, Margem Graham (vs teto 22,5), Nº de Graham
 - dividend   -> renda recorrente        : dividend yield, margem Bazin (preço-teto 6%), consistência
 - rebalance  -> meta de carteira        : gap entre peso-alvo e peso-atual da classe
 - sector     -> setores perenes (Barsi) : afinidade com BESST (bancos, energia, saneamento, seguros, telecom)
 
+Normalização HÍBRIDA (v2):
+- "anchor": métricas com "preço justo" conhecido (Graham vs 22,5; Nº de Graham) são pontuadas pela
+  DISTÂNCIA ao justo — o teto deixa de ser decorativo e passa a valer no score.
+- "pct": percentil DENTRO da classe, agora SEM auto-inclusão e com mid-rank em empates (escala [0,1]).
+- "raw": valor já em 0..1 (consistência, rebalance, setor).
+
 Regras de ouro:
-- Normalização por percentil DENTRO da classe (robusta a outliers, explicável).
-- Dado faltante nunca é inventado: a métrica vira `available=False` e seu peso é
-  redistribuído entre as métricas disponíveis do ativo.
+- Dado faltante nunca é inventado: a métrica vira `available=False` e seu peso é redistribuído.
+- P/L<=0 (prejuízo) não é "desconto": vira indisponível, coerente com o Número de Graham.
+- Média de Bazin só sobre anos efetivamente pagos (não deflaciona por anos sem pagamento).
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from math import sqrt
+from typing import Callable, Dict, List, Optional
 
 from app.config import BESST_KEYWORDS
 from app.models.common import Metric
@@ -24,37 +31,60 @@ from app.models.scoring import ScoredAsset
 
 BAZIN_TARGET_YIELD = 0.06  # DY-alvo de 6% do método Bazin
 GRAHAM_CEILING = 22.5  # teto clássico de P/L × P/VP
+BAZIN_MIN_PAID_YEARS = 3  # nº mínimo de anos pagos para calcular o preço-teto de Bazin
+CONSISTENCY_MIN_YEARS = 3  # histórico mínimo para medir consistência (evita 100% trivial)
 
-# Especificação das métricas: família, classes aplicáveis e se "maior é melhor".
-# `pct=True` => normaliza por percentil entre pares; senão usa o valor cru (já em 0..1).
-_METRIC_SPECS = [
+
+def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
+    return max(lo, min(hi, x))
+
+
+def _graham_anchor(raw: float) -> float:
+    """Margem de Graham por DISTÂNCIA ao teto: (22,5 − P/L×P/VP) / 22,5, em [0,1].
+
+    Zera acima do teto (sem margem de segurança) — fiel ao critério absoluto de Graham,
+    ao contrário de um percentil que premiaria a "menos cara" de um grupo todo caro.
+    """
+    return _clamp((GRAHAM_CEILING - raw) / GRAHAM_CEILING)
+
+
+# Especificação das métricas. `norm`: "anchor" (distância ao justo) | "pct" (percentil intra-classe)
+# | "raw" (valor já em 0..1). `anchor` é a função aplicada quando norm == "anchor".
+_METRIC_SPECS: List[dict] = [
     {"key": "pvp", "label": "P/VP", "family": "valuation", "classes": {"STOCK", "FII"},
-     "higher_better": False, "pct": True},
+     "higher_better": False, "norm": "pct"},
     {"key": "pl", "label": "P/L", "family": "valuation", "classes": {"STOCK"},
-     "higher_better": False, "pct": True},
+     "higher_better": False, "norm": "pct"},
     {"key": "graham", "label": "Margem Graham", "family": "valuation", "classes": {"STOCK"},
-     "higher_better": False, "pct": True},
+     "higher_better": True, "norm": "anchor", "anchor": _graham_anchor},
+    {"key": "graham_intrinsic", "label": "Margem (Nº de Graham)", "family": "valuation",
+     "classes": {"STOCK"}, "higher_better": True, "norm": "raw"},
     {"key": "div_yield", "label": "Dividend Yield", "family": "dividend",
-     "classes": {"STOCK", "FII", "ETF", "BDR"}, "higher_better": True, "pct": True},
+     "classes": {"STOCK", "FII", "ETF", "BDR"}, "higher_better": True, "norm": "pct"},
     {"key": "bazin_ceiling", "label": "Margem Bazin", "family": "dividend",
-     "classes": {"STOCK", "FII"}, "higher_better": True, "pct": True},
+     "classes": {"STOCK", "FII"}, "higher_better": True, "norm": "pct"},
     {"key": "dividend_consistency", "label": "Consistência de dividendos", "family": "dividend",
-     "classes": {"STOCK", "FII"}, "higher_better": True, "pct": False},
+     "classes": {"STOCK", "FII"}, "higher_better": True, "norm": "raw"},
     {"key": "rebalance_gap", "label": "Rebalanceamento", "family": "rebalance",
-     "classes": {"STOCK", "FII", "ETF", "BDR"}, "higher_better": True, "pct": False},
+     "classes": {"STOCK", "FII", "ETF", "BDR"}, "higher_better": True, "norm": "raw"},
     {"key": "sector_besst", "label": "Setor perene (BESST)", "family": "sector",
-     "classes": {"STOCK"}, "higher_better": True, "pct": False},
+     "classes": {"STOCK"}, "higher_better": True, "norm": "raw"},
 ]
 
 _FAMILIES = ["valuation", "dividend", "rebalance", "sector"]
+
+_PERCENT_KEYS = {
+    "div_yield", "bazin_ceiling", "rebalance_gap", "dividend_consistency",
+    "sector_besst", "graham_intrinsic",
+}
 
 
 def _fmt(key: str, raw: Optional[float]) -> Optional[str]:
     if raw is None:
         return None
-    if key in ("div_yield",):
+    if key == "div_yield":
         return f"{raw * 100:.1f}%"
-    if key in ("bazin_ceiling", "rebalance_gap", "dividend_consistency", "sector_besst"):
+    if key in _PERCENT_KEYS:
         return f"{raw * 100:.0f}%"
     return f"{raw:.2f}"
 
@@ -66,38 +96,46 @@ def _besst_affinity(sector: Optional[str]) -> Optional[float]:
     return 1.0 if any(kw in s for kw in BESST_KEYWORDS) else 0.0
 
 
-def _bazin_margin(asset: Asset) -> tuple[Optional[float], Optional[str]]:
-    """Margem sobre o preço-teto de Bazin. Retorna (margem, fallback_used).
+def _bazin_margin(asset: Asset) -> Optional[float]:
+    """Margem sobre o preço-teto de Bazin, em [-1, 1] (positivo = comprando abaixo do teto).
 
-    Preço-teto = dividendo médio anual ÷ 6%. Margem = (teto − preço) ÷ teto, ou seja
-    o quanto o preço está abaixo do teto (positivo = comprando barato).
+    Preço-teto = dividendo médio anual ÷ 6%, usando APENAS anos com pagamento > 0 (não
+    deflaciona a média por anos sem pagamento). Exige um histórico mínimo de anos pagos —
+    sem isso, a métrica fica indisponível (em vez de derivar circularmente do yield).
     """
     price = asset.price
     if not price:
-        return None, None
-    avg_div: Optional[float] = None
-    fallback: Optional[str] = None
-    if asset.dividends_by_year:
-        vals = [v for v in asset.dividends_by_year.values() if v is not None]
-        if vals:
-            avg_div = sum(vals) / len(vals)
-    if avg_div is None and asset.fundamentals.dividend_yield:
-        # Sem histórico: aproxima pelo provento implícito no yield dos últimos 12m.
-        avg_div = asset.fundamentals.dividend_yield * price
-        fallback = "yield_12m (sem histórico anual)"
-    if not avg_div:
-        return None, None
+        return None
+    paid = [v for v in asset.dividends_by_year.values() if v and v > 0]
+    if len(paid) < BAZIN_MIN_PAID_YEARS:
+        return None
+    avg_div = sum(paid) / len(paid)
     ceiling = avg_div / BAZIN_TARGET_YIELD
     if ceiling <= 0:
-        return None, fallback
+        return None
     margin = (ceiling - price) / ceiling
-    return max(-1.0, min(1.0, margin)), fallback
+    return max(-1.0, min(1.0, margin))
+
+
+def _graham_intrinsic_margin(asset: Asset) -> Optional[float]:
+    """Margem de segurança pelo Número de Graham: (√(22,5·LPA·VPA) − preço) ÷ valor intrínseco.
+
+    Em [0,1]. Indisponível sem LPA/VPA positivos (prejuízo/patrimônio negativo não tem
+    valor intrínseco de Graham).
+    """
+    f = asset.fundamentals
+    if not asset.price or f.lpa is None or f.vpa is None or f.lpa <= 0 or f.vpa <= 0:
+        return None
+    intrinsic = sqrt(GRAHAM_CEILING * f.lpa * f.vpa)
+    if intrinsic <= 0:
+        return None
+    return _clamp((intrinsic - asset.price) / intrinsic)
 
 
 def _dividend_consistency(asset: Asset) -> Optional[float]:
     years = asset.dividends_by_year
-    if not years:
-        return None
+    if not years or len(years) < CONSISTENCY_MIN_YEARS:
+        return None  # histórico curto não vira "100% consistente" trivial
     paid = sum(1 for v in years.values() if v and v > 0)
     return paid / len(years)
 
@@ -107,17 +145,23 @@ def _graham_value(asset: Asset) -> Optional[float]:
     pl = asset.fundamentals.pl
     if pvp is None or pl is None or pl <= 0 or pvp <= 0:
         return None
-    return pl * pvp  # menor é melhor; comparado ao teto 22,5
+    return pl * pvp  # menor é melhor; convertido em margem pela âncora ao teto 22,5
+
+
+def _pl_value(asset: Asset) -> Optional[float]:
+    """P/L só como sinal de desconto quando positivo. P/L<=0 (prejuízo) não é 'barato'."""
+    pl = asset.fundamentals.pl
+    return pl if (pl is not None and pl > 0) else None
 
 
 def _raw_values(asset: Asset, class_gap: float) -> Dict[str, Optional[float]]:
-    bazin, _ = _bazin_margin(asset)
     return {
-        "pvp": asset.fundamentals.pvp,
-        "pl": asset.fundamentals.pl,
+        "pvp": asset.fundamentals.pvp if (asset.fundamentals.pvp or 0) > 0 else None,
+        "pl": _pl_value(asset),
         "graham": _graham_value(asset),
+        "graham_intrinsic": _graham_intrinsic_margin(asset),
         "div_yield": asset.fundamentals.dividend_yield,
-        "bazin_ceiling": bazin,
+        "bazin_ceiling": _bazin_margin(asset),
         "dividend_consistency": _dividend_consistency(asset),
         "rebalance_gap": class_gap,
         "sector_besst": _besst_affinity(asset.sector),
@@ -125,14 +169,28 @@ def _raw_values(asset: Asset, class_gap: float) -> Dict[str, Optional[float]]:
 
 
 def _percentile(value: float, peers: List[float], higher_better: bool) -> float:
+    """Percentil de rank em [0,1], EXCLUINDO o próprio ativo e com mid-rank em empates.
+
+    Corrige o viés de auto-inclusão (o pior ativo recebia 1/N em vez de ~0) e a compressão
+    da escala. `peers` inclui o próprio valor; removemos uma ocorrência antes de comparar.
+    """
     valid = [p for p in peers if p is not None]
     if len(valid) <= 1:
         return 0.5  # sem pares suficientes: neutro
+    others = list(valid)
+    try:
+        others.remove(value)  # exclui uma ocorrência do próprio ativo
+    except ValueError:
+        pass
+    n = len(others)
+    if n == 0:
+        return 0.5
     if higher_better:
-        cnt = sum(1 for p in valid if value >= p)
+        better = sum(1 for o in others if value > o)
     else:
-        cnt = sum(1 for p in valid if value <= p)
-    return cnt / len(valid)
+        better = sum(1 for o in others if value < o)
+    ties = sum(1 for o in others if o == value)
+    return (better + 0.5 * ties) / n
 
 
 def score_assets(
@@ -157,13 +215,12 @@ def score_assets(
         cls = a.asset_class
         gap = raw_gaps.get(cls, 0.0)
         gap_norm = (gap / max_gap) if max_gap > 0 else 0.0
-        raw = _raw_values(a, gap_norm)
-        per_asset_raw[a.ticker] = raw
+        per_asset_raw[a.ticker] = _raw_values(a, gap_norm)
 
     # 2) arrays de pares por classe para métricas de percentil
     peers: Dict[tuple, List[float]] = {}
     for spec in _METRIC_SPECS:
-        if not spec["pct"]:
+        if spec["norm"] != "pct":
             continue
         for a in assets:
             v = per_asset_raw[a.ticker][spec["key"]]
@@ -176,7 +233,6 @@ def score_assets(
         cls = a.asset_class
         raw = per_asset_raw[a.ticker]
 
-        # 2a) monta métricas disponíveis e aplicáveis
         applicable = [s for s in _METRIC_SPECS if cls in s["classes"]]
         built: List[dict] = []
         for spec in applicable:
@@ -184,14 +240,17 @@ def score_assets(
             available = v is not None
             normalized: Optional[float] = None
             if available:
-                if spec["pct"]:
+                norm = spec["norm"]
+                if norm == "pct":
                     normalized = _percentile(v, peers.get((spec["key"], cls), []), spec["higher_better"])
-                else:
-                    # valor cru já em 0..1 (consistência, setor, rebalance)
-                    normalized = max(0.0, min(1.0, v if spec["higher_better"] else 1 - v))
+                elif norm == "anchor":
+                    anchor: Callable[[float], float] = spec["anchor"]
+                    normalized = anchor(v)
+                else:  # "raw" — valor já em 0..1
+                    normalized = _clamp(v if spec["higher_better"] else 1 - v)
             built.append({"spec": spec, "raw": v, "available": available, "normalized": normalized})
 
-        # 2b) redistribui pesos: família sem métrica disponível cede peso às demais
+        # redistribui pesos: família sem métrica disponível cede peso às demais
         avail_by_family: Dict[str, int] = {f: 0 for f in _FAMILIES}
         for b in built:
             if b["available"]:
@@ -202,7 +261,6 @@ def score_assets(
 
         metrics: List[Metric] = []
         composite = 0.0
-        bazin_fallback = _bazin_margin(a)[1]
         for b in built:
             spec = b["spec"]
             fam = spec["family"]
@@ -224,8 +282,7 @@ def score_assets(
                     contribution=round(contribution, 4) if contribution is not None else None,
                     source=_source_for(spec["key"]),
                     available=b["available"],
-                    fallback_used=bazin_fallback if spec["key"] == "bazin_ceiling" else None,
-                    peer_group=cls if spec["pct"] else None,
+                    peer_group=cls if spec["norm"] == "pct" else None,
                 )
             )
 
@@ -253,10 +310,11 @@ def score_assets(
 def _source_for(key: str) -> str:
     return {
         "pvp": "Fundamentus (P/VP)",
-        "pl": "Fundamentus (P/L)",
-        "graham": "calculado: P/L × P/VP vs 22,5 (Graham)",
-        "div_yield": "calculado: últ. ano de proventos (StatusInvest) ÷ preço",
-        "bazin_ceiling": "calculado: preço-teto = média de proventos ÷ 6% (Bazin/StatusInvest)",
+        "pl": "Fundamentus (P/L, >0)",
+        "graham": "calculado: distância de P/L×P/VP ao teto 22,5 (Graham)",
+        "graham_intrinsic": "calculado: √(22,5×LPA×VPA) vs preço (Número de Graham, Fundamentus)",
+        "div_yield": "calculado: proventos recentes (StatusInvest) ÷ preço",
+        "bazin_ceiling": "calculado: preço-teto = média de proventos pagos ÷ 6% (Bazin/StatusInvest)",
         "dividend_consistency": "calculado: anos pagos ÷ anos analisados (StatusInvest)",
         "rebalance_gap": "calculado: alvo − atual (Ghostfolio)",
         "sector_besst": "calculado: setor (Fundamentus) ∈ BESST (Barsi)",
@@ -273,11 +331,12 @@ def _reasons(metrics: List[Metric], asset: Asset) -> List[str]:
         out.append("Negociando abaixo do preço-teto de Bazin")
     if "graham" in by_key and (by_key["graham"].raw_value or 99) <= GRAHAM_CEILING:
         out.append(f"P/L × P/VP = {by_key['graham'].raw_value:.1f} (≤ 22,5 de Graham)")
+    if "graham_intrinsic" in by_key and (by_key["graham_intrinsic"].raw_value or 0) > 0:
+        out.append("Preço abaixo do valor intrínseco (Número de Graham)")
     if "dividend_consistency" in by_key and (by_key["dividend_consistency"].raw_value or 0) >= 0.8:
         out.append("Histórico consistente de dividendos")
     if "rebalance_gap" in by_key and (by_key["rebalance_gap"].normalized or 0) >= 0.6:
         out.append(f"Classe {asset.asset_class} está sub-alocada vs sua meta")
-    # ordena pela contribuição para mostrar primeiro o que mais pesou
     ranked = sorted(
         [m for m in metrics if m.contribution], key=lambda m: m.contribution, reverse=True
     )
