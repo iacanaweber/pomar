@@ -184,6 +184,29 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .disclaimer { font-size: 11px; color: var(--muted); margin-top: 18px; text-align: center; }
 .footer { text-align: center; font-size: 11px; color: var(--muted); padding: 24px 16px; }
 
+/* v2 — login, ação do header e painel de ajustes avançados */
+.login-page { max-width: 420px; margin-top: 8vh; }
+.login-card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 24px; }
+.login-card .brand { margin-bottom: 18px; }
+.login-card h1 { color: var(--green); margin: 0; }
+.login-card form { display: flex; flex-direction: column; gap: 12px; }
+.login-card input { padding: 12px; border: 2px solid var(--line); border-radius: 10px; font-size: 16px; }
+.header-action { margin-left: auto; background: rgba(255, 255, 255, 0.18); color: #fff; border: 0;
+  border-radius: 8px; padding: 8px 14px; font-weight: 600; cursor: pointer; }
+.link-button { background: none; border: 0; color: var(--green); font-weight: 600; cursor: pointer;
+  padding: 4px 0; text-align: left; font-size: 13px; }
+.advanced { display: flex; flex-direction: column; gap: 12px; padding: 12px; background: #fafdfa;
+  border: 1px solid var(--line); border-radius: 10px; }
+.adv-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.adv-row .field { flex: 1; min-width: 110px; }
+.advanced input { padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; font-size: 14px; }
+.targets-editor { display: flex; flex-direction: column; gap: 6px; }
+.targets-title { font-weight: 600; font-size: 13px; }
+.targets-sum { font-size: 12px; color: var(--muted); }
+.targets-sum.warn { color: var(--amber); font-weight: 600; }
+.money.money-invalid { border-color: #f5c6cb; }
+.field-error { color: #8a1c1c; font-size: 12px; font-weight: 500; }
+
 /* Desktop */
 @media (min-width: 640px) {
   .breakdown-grid { grid-template-columns: 1fr 1fr; }

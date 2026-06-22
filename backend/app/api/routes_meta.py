@@ -1,7 +1,7 @@
 """Rotas de saúde, glossário e estratégias."""
 from __future__ import annotations
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 
 from app.config import STRATEGY_PRESETS, get_settings
 from app.data.glossary import get_glossary
@@ -26,8 +26,11 @@ async def glossary() -> dict:
 async def debug_brapi(ticker: str = "BBAS3") -> dict:
     """Diagnóstico da conexão com a brapi (status HTTP, token presente, resposta crua).
 
-    NÃO expõe o token — só o tamanho. Útil para descobrir por que um ticker falha.
+    NÃO expõe o token — só o tamanho. Disponível apenas com DEBUG=true (404 caso contrário),
+    para não vazar configuração em produção.
     """
+    if not get_settings().debug:
+        raise HTTPException(status_code=404, detail="Not found")
     return await get_brapi().diagnose(ticker)
 
 

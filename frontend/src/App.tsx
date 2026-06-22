@@ -1,22 +1,14 @@
-import { useEffect, useState } from "react";
-import { api } from "./api/client";
-import type { Glossary } from "./types";
-import { GlossaryContext } from "./hooks/useGlossary";
+import { Navigate, NavLink, Route, Routes } from "react-router-dom";
+import { useAuthStatus, useLogout } from "./api/queries";
+import { GlossaryProvider } from "./app/GlossaryProvider";
+import { LoginPage } from "./pages/LoginPage";
 import { PlanPage } from "./pages/PlanPage";
 import { PortfolioPage } from "./pages/PortfolioPage";
 
-type Tab = "plan" | "portfolio";
-
-export default function App() {
-  const [glossary, setGlossary] = useState<Glossary>({});
-  const [tab, setTab] = useState<Tab>("plan");
-
-  useEffect(() => {
-    api.glossary().then(setGlossary).catch(() => {});
-  }, []);
-
+function AppShell() {
+  const logout = useLogout();
   return (
-    <GlossaryContext.Provider value={glossary}>
+    <>
       <header className="header">
         <div className="brand">
           <span className="logo">🌳</span>
@@ -24,26 +16,50 @@ export default function App() {
             <h1>Pomar</h1>
             <p>Plante seus aportes, colha dividendos.</p>
           </div>
+          <button className="header-action" onClick={() => logout.mutate()}>
+            Sair
+          </button>
         </div>
       </header>
 
       <nav className="tabs">
-        <button className={`tab ${tab === "plan" ? "tab-on" : ""}`} onClick={() => setTab("plan")}>
+        <NavLink to="/plano" className={({ isActive }) => `tab ${isActive ? "tab-on" : ""}`}>
           Recomendações
-        </button>
-        <button
-          className={`tab ${tab === "portfolio" ? "tab-on" : ""}`}
-          onClick={() => setTab("portfolio")}
-        >
+        </NavLink>
+        <NavLink to="/carteira" className={({ isActive }) => `tab ${isActive ? "tab-on" : ""}`}>
           Minha carteira
-        </button>
+        </NavLink>
       </nav>
 
-      {tab === "plan" ? <PlanPage /> : <PortfolioPage />}
+      <Routes>
+        <Route path="/plano" element={<PlanPage />} />
+        <Route path="/carteira" element={<PortfolioPage />} />
+        <Route path="*" element={<Navigate to="/plano" replace />} />
+      </Routes>
 
       <footer className="footer">
-        Pomar · dados de mercado por brapi.dev · carteira via Ghostfolio · conteúdo educativo
+        Pomar · dados por Fundamentus, StatusInvest e brapi · carteira via Ghostfolio · conteúdo
+        educativo
       </footer>
-    </GlossaryContext.Provider>
+    </>
+  );
+}
+
+export default function App() {
+  const auth = useAuthStatus();
+  if (auth.isLoading) {
+    return (
+      <main className="page">
+        <p className="muted">Carregando…</p>
+      </main>
+    );
+  }
+  if (auth.data?.auth_required && !auth.data.authenticated) {
+    return <LoginPage />;
+  }
+  return (
+    <GlossaryProvider>
+      <AppShell />
+    </GlossaryProvider>
   );
 }

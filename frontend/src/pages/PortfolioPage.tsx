@@ -34,8 +34,9 @@ function aggregate(positions: Position[], by: GroupBy): { label: string; value: 
     else if (by === "sector") add(p.sector || "Sem setor", p.value);
     else {
       // por tag: divide o valor igualmente entre as tags da posição
-      if (p.tags.length === 0) add("Sem tag", p.value);
-      else p.tags.forEach((t) => add(t, p.value / p.tags.length));
+      const tags = p.tags ?? [];
+      if (tags.length === 0) add("Sem tag", p.value);
+      else tags.forEach((t) => add(t, p.value / tags.length));
     }
   }
 
@@ -65,7 +66,7 @@ export function PortfolioPage() {
 
   const slices: Slice[] = useMemo(() => {
     if (!pf) return [];
-    return aggregate(pf.positions, by).map((d, i) => ({
+    return aggregate(pf.positions ?? [], by).map((d, i) => ({
       ...d,
       color: PALETTE[i % PALETTE.length],
     }));
@@ -82,7 +83,7 @@ export function PortfolioPage() {
 
   if (!pf) return <main className="page"><p className="muted">Carregando carteira…</p></main>;
 
-  if (pf.positions.length === 0)
+  if ((pf.positions ?? []).length === 0)
     return (
       <main className="page">
         <div className="banner banner-warn">
@@ -96,7 +97,7 @@ export function PortfolioPage() {
       <div className="pf-summary">
         <span className="muted">Patrimônio total</span>
         <strong className="pf-total">{brl(pf.total_value)}</strong>
-        <span className="muted">{pf.positions.length} posições</span>
+        <span className="muted">{(pf.positions ?? []).length} posições</span>
       </div>
 
       <div className="seg">
