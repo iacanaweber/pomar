@@ -250,6 +250,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/income": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Income
+         * @description Renda passiva atual estimada da carteira (Σ valor × DY), com decomposição por ativo.
+         */
+        get: operations["income_api_income_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/income/projection": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Projection
+         * @description Projeção bola de neve (e, opcionalmente, o aporte necessário para uma renda-alvo).
+         */
+        post: operations["projection_api_income_projection_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api": {
         parameters: {
             query?: never;
@@ -292,6 +332,51 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /** IncomeAsset */
+        IncomeAsset: {
+            /** Ticker */
+            ticker: string;
+            /** Name */
+            name?: string | null;
+            /** Value */
+            value: number;
+            /** Dividend Yield */
+            dividend_yield: number;
+            /** Annual Income */
+            annual_income: number;
+        };
+        /** IncomeResponse */
+        IncomeResponse: {
+            /**
+             * Annual Income
+             * @default 0
+             */
+            annual_income: number;
+            /**
+             * Monthly Income
+             * @default 0
+             */
+            monthly_income: number;
+            /**
+             * Portfolio Yield
+             * @default 0
+             */
+            portfolio_yield: number;
+            /**
+             * Total Value
+             * @default 0
+             */
+            total_value: number;
+            /** By Asset */
+            by_asset?: components["schemas"]["IncomeAsset"][];
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+            /** Warnings */
+            warnings?: string[];
         };
         /** LoginBody */
         LoginBody: {
@@ -561,6 +646,85 @@ export interface components {
             reserve_target?: number | null;
             /** Bazin Target Mode */
             bazin_target_mode?: string | null;
+        };
+        /** ProjectionPoint */
+        ProjectionPoint: {
+            /** Year */
+            year: number;
+            /** Value */
+            value: number;
+            /** Invested */
+            invested: number;
+            /** Annual Income */
+            annual_income: number;
+            /** Monthly Income */
+            monthly_income: number;
+        };
+        /** ProjectionRequest */
+        ProjectionRequest: {
+            /**
+             * Current Value
+             * @default 0
+             */
+            current_value: number;
+            /**
+             * Monthly Contribution
+             * @default 0
+             */
+            monthly_contribution: number;
+            /**
+             * Annual Yield
+             * @description DY anual em fração (0..1).
+             */
+            annual_yield: number;
+            /**
+             * Annual Growth
+             * @description Crescimento anual dos proventos (0..1).
+             * @default 0
+             */
+            annual_growth: number;
+            /**
+             * Years
+             * @default 20
+             */
+            years: number;
+            /**
+             * Reinvest
+             * @default true
+             */
+            reinvest: boolean;
+            /**
+             * Target Monthly Income
+             * @description Se informado, calcula o aporte mensal necessário para essa renda.
+             */
+            target_monthly_income?: number | null;
+        };
+        /** ProjectionResponse */
+        ProjectionResponse: {
+            /** Series */
+            series?: components["schemas"]["ProjectionPoint"][];
+            /**
+             * Final Value
+             * @default 0
+             */
+            final_value: number;
+            /**
+             * Final Monthly Income
+             * @default 0
+             */
+            final_monthly_income: number;
+            /**
+             * Total Invested
+             * @default 0
+             */
+            total_invested: number;
+            /**
+             * Total Dividends
+             * @default 0
+             */
+            total_dividends: number;
+            /** Required Monthly Contribution */
+            required_monthly_contribution?: number | null;
         };
         /** ScoredAsset */
         ScoredAsset: {
@@ -1111,6 +1275,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    income_api_income_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeResponse"];
+                };
+            };
+        };
+    };
+    projection_api_income_projection_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProjectionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProjectionResponse"];
                 };
             };
             /** @description Validation Error */

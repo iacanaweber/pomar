@@ -194,6 +194,14 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .pf-drill-name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pf-drill-val { white-space: nowrap; }
 
+/* Renda passiva */
+.income-now { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0; }
+.income-stat { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 140px; }
+.income-stat strong { font-size: 18px; }
+.income-big { font-size: 26px; color: var(--green); }
+.snowball-svg { width: 100%; height: auto; margin: 8px 0; }
+
 @media (min-width: 640px) {
   .pf-chart { flex-direction: row; align-items: center; }
   .pie-svg { width: 280px; height: 280px; flex-shrink: 0; }

@@ -16,6 +16,11 @@ export type Position = Schemas["Position"];
 export type Allocations = Schemas["Allocations"];
 export type PreferencesBody = Schemas["PreferencesBody"];
 export type WatchlistAdd = Schemas["WatchlistAdd"];
+export type IncomeResponse = Schemas["IncomeResponse"];
+export type IncomeAsset = Schemas["IncomeAsset"];
+export type ProjectionRequest = Schemas["ProjectionRequest"];
+export type ProjectionResponse = Schemas["ProjectionResponse"];
+export type ProjectionPoint = Schemas["ProjectionPoint"];
 
 // --- Tipos de respostas que o FastAPI devolve como dict livre (sem response_model),
 //     portanto não vêm tipados no OpenAPI; declarados aqui manualmente. ---
