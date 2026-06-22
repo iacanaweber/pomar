@@ -97,7 +97,9 @@ async def login(body: LoginBody, response: Response) -> dict:
         max_age=ttl,
         httponly=True,
         samesite="strict",
-        secure=not settings.debug,  # em dev (DEBUG, http) o cookie precisa funcionar sem TLS
+        # Secure só quando configurado (HTTPS). Em HTTP, um cookie Secure não é armazenado
+        # pelo navegador e o login "não avança" silenciosamente.
+        secure=settings.cookie_secure,
         path="/",
     )
     return {"ok": True}

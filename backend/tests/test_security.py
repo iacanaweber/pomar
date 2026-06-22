@@ -14,9 +14,10 @@ def client_with_password(monkeypatch):
     monkeypatch.setenv("DEBUG", "false")
     get_settings.cache_clear()
     app = create_app()
-    # base_url https: o cookie de sessão é Secure (produção via TLS); sobre http o jar
-    # do TestClient não o reenviaria. Sem `with` => não dispara o warmup (rede) do lifespan.
-    yield TestClient(app, base_url="https://testserver")
+    # base_url HTTP: cobre o cenário real de deploy LAN (sem TLS). Como COOKIE_SECURE é
+    # False por padrão, o cookie de sessão é armazenado e reenviado sobre HTTP — se fosse
+    # Secure, o login "não avançaria" (bug corrigido). Sem `with` => não dispara o warmup.
+    yield TestClient(app, base_url="http://testserver")
     get_settings.cache_clear()
 
 
