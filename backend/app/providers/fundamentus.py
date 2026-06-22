@@ -41,10 +41,18 @@ def _grab(html: str, label: str) -> Optional[str]:
     return m.group(1) if m else None
 
 
+def _pct(label_value: Optional[str]) -> Optional[float]:
+    """Indicador em % do Fundamentus (ex.: ROE '12,3%') -> fração 0,123."""
+    n = _num(label_value)
+    return (n / 100) if n is not None else None
+
+
 def _parse(html: str) -> dict:
     setor = _grab(html, "Setor")
     setor = re.sub(r"<[^>]+>", "", setor).strip() if setor else None
     dy = _grab(html, "Div. Yield")
+    # Indicadores de risco/qualidade. Os rótulos seguem o HTML do Fundamentus; se algum
+    # mudar, o campo simplesmente vira None (neutro no score) — verificar ao vivo.
     return {
         "pl": _num(_grab(html, "P/L")),
         "pvp": _num(_grab(html, "P/VP")),
@@ -52,6 +60,11 @@ def _parse(html: str) -> dict:
         "price": _num(_grab(html, "Cotação")),
         "lpa": _num(_grab(html, "LPA")),
         "vpa": _num(_grab(html, "VPA")),
+        "roe": _pct(_grab(html, "ROE")),
+        "net_margin": _pct(_grab(html, "Marg. Líquida")),
+        "net_debt_to_ebitda": _num(_grab(html, "Dív Líq/EBIT")),
+        "current_ratio": _num(_grab(html, "Liquidez Corr")),
+        "avg_daily_liquidity": _num(_grab(html, "Vol $ méd (2m)")),
         "sector": setor,
     }
 

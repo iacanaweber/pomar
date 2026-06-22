@@ -34,6 +34,16 @@ class ScoredAsset(BaseModel):
     reasons: List[str] = Field(
         default_factory=list, description="Frases curtas explicando por que o ativo subiu no ranking."
     )
+    composite_base: float = Field(
+        0.0, description="Score antes do fator de qualidade/risco (auditoria)."
+    )
+    quality_factor: float = Field(
+        1.0, description="Fator de qualidade/risco em [0,1] que multiplica o score (1 = sem penalidade)."
+    )
+    risk_level: str = Field("verde", description="Selo de risco: verde | amarelo | vermelho.")
+    red_flags: List[str] = Field(
+        default_factory=list, description="Pontos de atenção (por que NÃO comprar)."
+    )
 
 
 class PlanResponse(BaseModel):

@@ -127,3 +127,58 @@ def test_percentile_excludes_self_so_worst_is_low():
     r = score_assets(assets, _portfolio(), {"STOCK": 1.0}, WEIGHTS)
     worst = next(m for m in next(x for x in r if x.ticker == "C3").metrics if m.key == "pvp")
     assert worst.normalized == 0.0  # pior dos 3, excluindo a si mesmo
+
+
+# --- Eixo de risco / qualidade (anti value-trap) ---
+
+def test_loss_making_gets_red_flag_and_penalty():
+    a = Asset(ticker="LOSS3", asset_class="STOCK", price=10.0,
+              fundamentals=Fundamentals(pvp=0.5, pl=-5.0, dividend_yield=0.15))
+    r = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS)[0]
+    assert r.quality_factor <= 0.5
+    assert any("prejuízo" in f.lower() for f in r.red_flags)
+    assert r.risk_level == "vermelho"
+
+
+def test_high_debt_penalizes_quality():
+    healthy = Asset(ticker="OK3", asset_class="STOCK", price=10.0,
+                    fundamentals=Fundamentals(pvp=1.0, pl=8.0, dividend_yield=0.08, net_debt_to_ebitda=1.0))
+    levered = Asset(ticker="DEBT3", asset_class="STOCK", price=10.0,
+                    fundamentals=Fundamentals(pvp=1.0, pl=8.0, dividend_yield=0.08, net_debt_to_ebitda=6.0))
+    r = score_assets([healthy, levered], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
+    ok = next(x for x in r if x.ticker == "OK3")
+    debt = next(x for x in r if x.ticker == "DEBT3")
+    assert debt.quality_factor < ok.quality_factor
+    assert any("ndividamento" in f for f in debt.red_flags)
+
+
+def test_payout_over_100_flags():
+    a = Asset(ticker="PAY3", asset_class="STOCK", price=10.0,
+              fundamentals=Fundamentals(pvp=1.0, pl=8.0, lpa=1.0),
+              dividends_by_year={"2022": 1.5, "2023": 1.5, "2024": 1.5})
+    r = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS)[0]
+    assert any("ayout" in f for f in r.red_flags)
+    assert r.quality_factor <= 0.6
+
+
+def test_healthy_asset_is_green_no_flags():
+    a = Asset(ticker="GOOD3", asset_class="STOCK", sector="Bancos", price=20.0,
+              fundamentals=Fundamentals(pvp=0.8, pl=6.0, dividend_yield=0.09, lpa=3.0, vpa=25.0,
+                                        net_debt_to_ebitda=1.0),
+              dividends_by_year={"2022": 2.0, "2023": 2.1, "2024": 2.2})
+    r = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS)[0]
+    assert r.quality_factor == 1.0
+    assert r.risk_level == "verde"
+    assert r.red_flags == []
+
+
+def test_value_trap_sinks_below_healthy():
+    # "barato + paga muito" mas endividado e com prejuízo deve cair abaixo de um saudável
+    trap = Asset(ticker="TRAP3", asset_class="STOCK", sector="Bancos", price=10.0,
+                 fundamentals=Fundamentals(pvp=0.4, pl=-3.0, dividend_yield=0.18, net_debt_to_ebitda=7.0))
+    good = Asset(ticker="SOLID3", asset_class="STOCK", sector="Bancos", price=20.0,
+                 fundamentals=Fundamentals(pvp=0.9, pl=7.0, dividend_yield=0.08, lpa=3.0, vpa=22.0,
+                                           net_debt_to_ebitda=1.0),
+                 dividends_by_year={"2022": 1.6, "2023": 1.7, "2024": 1.8})
+    r = score_assets([trap, good], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
+    assert r[0].ticker == "SOLID3"  # saudável vence a armadilha de valor
