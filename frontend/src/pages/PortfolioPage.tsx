@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { api } from "../api/client";
 import type { Portfolio, Position } from "../types";
 import { PieChart, type Slice } from "../components/PieChart";
+import { money, pct } from "../lib/format";
 
 type GroupBy = "asset" | "class" | "sector" | "tag";
 
@@ -19,38 +20,57 @@ const PALETTE = [
   "#00897b", "#c0ca33", "#6d4c41", "#42a5f5",
 ];
 
-const brl = (v: number) =>
-  v.toLocaleString("pt-br", { style: "currency", currency: "BRL" });
+interface Member {
+  ticker: string;
+  name: string | null;
+  value: number; // contribuição da posição para este grupo (no caso de tag, valor rateado)
+}
+interface Group {
+  label: string;
+  value: number;
+  members: Member[];
+}
 
-/** Agrega as posições conforme a visão escolhida. Posições com várias tags/sem
- *  valor são tratadas para o total da pizza bater com o total da carteira. */
-function aggregate(positions: Position[], by: GroupBy): { label: string; value: number }[] {
-  const map = new Map<string, number>();
-  const add = (k: string, v: number) => map.set(k, (map.get(k) ?? 0) + v);
+/** Agrega as posições conforme a visão escolhida, guardando os ATIVOS de cada grupo
+ *  (para o detalhamento ao clicar numa fatia). */
+function aggregate(positions: Position[], by: GroupBy): Group[] {
+  const map = new Map<string, Group>();
+  const add = (key: string, m: Member) => {
+    let g = map.get(key);
+    if (!g) {
+      g = { label: key, value: 0, members: [] };
+      map.set(key, g);
+    }
+    g.value += m.value;
+    g.members.push(m);
+  };
 
   for (const p of positions) {
-    if (by === "asset") add(p.ticker, p.value);
-    else if (by === "class") add(p.asset_class || "OUTROS", p.value);
-    else if (by === "sector") add(p.sector || "Sem setor", p.value);
+    const base = { ticker: p.ticker, name: p.name ?? null };
+    if (by === "asset") add(p.ticker, { ...base, value: p.value });
+    else if (by === "class") add(p.asset_class || "OUTROS", { ...base, value: p.value });
+    else if (by === "sector") add(p.sector || "Sem setor", { ...base, value: p.value });
     else {
-      // por tag: divide o valor igualmente entre as tags da posição
       const tags = p.tags ?? [];
-      if (tags.length === 0) add("Sem tag", p.value);
-      else tags.forEach((t) => add(t, p.value / tags.length));
+      if (tags.length === 0) add("Sem tag", { ...base, value: p.value });
+      else tags.forEach((t) => add(t, { ...base, value: p.value / tags.length }));
     }
   }
 
-  let items = Array.from(map, ([label, value]) => ({ label, value })).sort(
-    (a, b) => b.value - a.value,
-  );
-
-  // muitos itens: agrupa os menores em "Outros" para legibilidade
+  let items = Array.from(map.values()).sort((a, b) => b.value - a.value);
+  // muitos itens: agrupa os menores em "Outros" (mantendo seus ativos no detalhamento)
   if (items.length > 12) {
     const head = items.slice(0, 11);
     const tail = items.slice(11);
-    head.push({ label: `Outros (${tail.length})`, value: tail.reduce((s, x) => s + x.value, 0) });
+    head.push({
+      label: `Outros (${tail.length})`,
+      value: tail.reduce((s, x) => s + x.value, 0),
+      members: tail.flatMap((g) => g.members),
+    });
     items = head;
   }
+  // ativos de cada grupo ordenados por valor
+  items.forEach((g) => g.members.sort((a, b) => b.value - a.value));
   return items;
 }
 
@@ -64,13 +84,11 @@ export function PortfolioPage() {
     api.portfolio().then(setPf).catch((e) => setError(e.message));
   }, []);
 
-  const slices: Slice[] = useMemo(() => {
-    if (!pf) return [];
-    return aggregate(pf.positions ?? [], by).map((d, i) => ({
-      ...d,
-      color: PALETTE[i % PALETTE.length],
-    }));
-  }, [pf, by]);
+  const groups = useMemo(() => (pf ? aggregate(pf.positions ?? [], by) : []), [pf, by]);
+  const slices: Slice[] = useMemo(
+    () => groups.map((g, i) => ({ label: g.label, value: g.value, color: PALETTE[i % PALETTE.length] })),
+    [groups],
+  );
 
   if (error)
     return (
@@ -92,11 +110,13 @@ export function PortfolioPage() {
       </main>
     );
 
+  const selected = active != null ? groups[active] : null;
+
   return (
     <main className="page">
       <div className="pf-summary">
         <span className="muted">Patrimônio total</span>
-        <strong className="pf-total">{brl(pf.total_value)}</strong>
+        <strong className="pf-total">{money(pf.total_value)}</strong>
         <span className="muted">{(pf.positions ?? []).length} posições</span>
       </div>
 
@@ -118,26 +138,47 @@ export function PortfolioPage() {
       <div className="pf-chart">
         <PieChart slices={slices} active={active} onActive={setActive} />
         <ul className="legend">
-          {slices.map((s, i) => {
-            const pct = (s.value / pf.total_value) * 100;
-            return (
-              <li
-                key={s.label}
-                className={`legend-item ${active != null && active !== i ? "dim" : ""}`}
-                onMouseEnter={() => setActive(i)}
-                onMouseLeave={() => setActive(null)}
-                onClick={() => setActive(active === i ? null : i)}
-              >
-                <span className="legend-dot" style={{ background: s.color }} />
-                <span className="legend-label">{s.label}</span>
-                <span className="legend-val">
-                  {brl(s.value)} <span className="muted">· {pct.toFixed(1)}%</span>
-                </span>
-              </li>
-            );
-          })}
+          {slices.map((s, i) => (
+            <li
+              key={s.label}
+              className={`legend-item ${active != null && active !== i ? "dim" : ""} ${active === i ? "legend-on" : ""}`}
+              onClick={() => setActive(active === i ? null : i)}
+            >
+              <span className="legend-dot" style={{ background: s.color }} />
+              <span className="legend-label">{s.label}</span>
+              <span className="legend-val">
+                {money(s.value)} <span className="muted">· {pct(s.value / pf.total_value)}</span>
+              </span>
+            </li>
+          ))}
         </ul>
       </div>
+
+      {selected && by !== "asset" && (
+        <div className="pf-drill">
+          <h3>
+            Ativos em <span className="pf-drill-group">{selected.label}</span>{" "}
+            <span className="muted">
+              · {selected.members.length}{" "}
+              {selected.members.length === 1 ? "ativo" : "ativos"} · {money(selected.value)}
+            </span>
+          </h3>
+          <ul className="pf-drill-list">
+            {selected.members.map((m) => (
+              <li key={m.ticker} className="pf-drill-item">
+                <span className="pf-drill-ticker">{m.ticker}</span>
+                {m.name && <span className="pf-drill-name">{m.name}</span>}
+                <span className="pf-drill-val">
+                  {money(m.value)} <span className="muted">· {pct(m.value / pf.total_value)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+          <button className="link-button" onClick={() => setActive(null)}>
+            Fechar detalhamento
+          </button>
+        </div>
+      )}
     </main>
   );
 }
