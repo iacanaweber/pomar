@@ -599,6 +599,29 @@ export interface components {
              * @description Frases curtas explicando por que o ativo subiu no ranking.
              */
             reasons?: string[];
+            /**
+             * Composite Base
+             * @description Score antes do fator de qualidade/risco (auditoria).
+             * @default 0
+             */
+            composite_base: number;
+            /**
+             * Quality Factor
+             * @description Fator de qualidade/risco em [0,1] que multiplica o score (1 = sem penalidade).
+             * @default 1
+             */
+            quality_factor: number;
+            /**
+             * Risk Level
+             * @description Selo de risco: verde | amarelo | vermelho.
+             * @default verde
+             */
+            risk_level: string;
+            /**
+             * Red Flags
+             * @description Pontos de atenção (por que NÃO comprar).
+             */
+            red_flags?: string[];
         };
         /**
          * SuggestedBuy
