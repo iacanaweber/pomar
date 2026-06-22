@@ -34,6 +34,11 @@ GRAHAM_CEILING = 22.5  # teto clássico de P/L × P/VP
 BAZIN_MIN_PAID_YEARS = 3  # nº mínimo de anos pagos para calcular o preço-teto de Bazin
 CONSISTENCY_MIN_YEARS = 3  # histórico mínimo para medir consistência (evita 100% trivial)
 
+# Piso de liquidez média diária (R$) por classe — abaixo disso, penaliza o score.
+LIQUIDITY_MIN: Dict[str, float] = {
+    "STOCK": 1_000_000.0, "FII": 200_000.0, "BDR": 500_000.0, "ETF": 200_000.0,
+}
+
 
 def _clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
@@ -193,6 +198,55 @@ def _percentile(value: float, peers: List[float], higher_better: bool) -> float:
     return (better + 0.5 * ties) / n
 
 
+def _payout_ratio(asset: Asset) -> Optional[float]:
+    """Payout aproximado = dividendo do último ano ÷ LPA (usa dados já coletados)."""
+    f = asset.fundamentals
+    if f.lpa is None or f.lpa <= 0 or not asset.dividends_by_year:
+        return None
+    last_div = asset.dividends_by_year[max(asset.dividends_by_year)]
+    return (last_div / f.lpa) if last_div and last_div > 0 else None
+
+
+def _quality_assessment(asset: Asset, metrics_by_key: Dict[str, Metric]) -> tuple[float, str, List[str]]:
+    """Eixo de QUALIDADE/RISCO — separado das 4 famílias (não dilui o score; multiplica-o).
+
+    Retorna (Q em [0,1], selo verde|amarelo|vermelho, red_flags). Dado ausente é NEUTRO
+    (não penaliza) — distingue 'fonte ausente' de 'motivo ruim'. Afunda value traps
+    (barato + paga muito, mas endividado / payout insustentável / prejuízo / ilíquido).
+    """
+    f = asset.fundamentals
+    q = 1.0
+    flags: List[str] = []
+    if f.pl is not None and f.pl <= 0:
+        q *= 0.5
+        flags.append("Empresa com prejuízo (P/L ≤ 0)")
+    if f.net_debt_to_ebitda is not None and f.net_debt_to_ebitda > 3:
+        q *= max(0.3, 1 - 0.15 * (f.net_debt_to_ebitda - 3))
+        if f.net_debt_to_ebitda > 4:
+            flags.append("Endividamento elevado (dív. líq./EBITDA)")
+    payout = _payout_ratio(asset)
+    if payout is not None and payout > 1.0:
+        q *= 0.6
+        flags.append("Payout acima de 100% (dividendo pode não se sustentar)")
+    if f.avg_daily_liquidity is not None and f.avg_daily_liquidity < LIQUIDITY_MIN.get(asset.asset_class, 0.0):
+        q *= 0.7
+        flags.append("Liquidez diária baixa")
+    bz = metrics_by_key.get("bazin_ceiling")
+    if bz is not None and bz.available and (bz.raw_value or 0) < 0:
+        flags.append("Negociando acima do preço-teto de Bazin")
+    cons = metrics_by_key.get("dividend_consistency")
+    if cons is not None and cons.available and (cons.raw_value or 1) < 0.5:
+        flags.append("Histórico de dividendos irregular")
+    q = _clamp(q)
+    if q >= 0.85 and not flags:
+        level = "verde"
+    elif q < 0.6 or len(flags) >= 2:
+        level = "vermelho"
+    else:
+        level = "amarelo"
+    return q, level, flags
+
+
 def score_assets(
     assets: List[Asset],
     portfolio: Portfolio,
@@ -288,13 +342,19 @@ def score_assets(
 
         applicable_count = len(applicable)
         available_count = sum(1 for b in built if b["available"])
+        metrics_by_key = {m.key: m for m in metrics}
+        q, risk_level, red_flags = _quality_assessment(a, metrics_by_key)
         results.append(
             ScoredAsset(
                 ticker=a.ticker,
                 name=a.name,
                 asset_class=cls,
                 sector=a.sector,
-                composite_score=round(composite, 4),
+                composite_score=round(composite * q, 4),
+                composite_base=round(composite, 4),
+                quality_factor=round(q, 4),
+                risk_level=risk_level,
+                red_flags=red_flags,
                 metrics=metrics,
                 data_completeness=f"{available_count}/{applicable_count}",
                 reasons=_reasons(metrics, a),

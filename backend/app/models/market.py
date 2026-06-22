@@ -17,6 +17,12 @@ class Fundamentals(BaseModel):
     lpa: Optional[float] = Field(None, description="Lucro por ação (base do Número de Graham).")
     vpa: Optional[float] = Field(None, description="Valor patrimonial por ação (base do Número de Graham).")
     market_cap: Optional[float] = Field(None, description="Valor de mercado.")
+    # Eixo de risco/qualidade (anti value-trap). None = sem dado (tratado como neutro).
+    roe: Optional[float] = Field(None, description="Return on equity (0..1).")
+    net_margin: Optional[float] = Field(None, description="Margem líquida (0..1).")
+    net_debt_to_ebitda: Optional[float] = Field(None, description="Dívida líquida / EBITDA.")
+    current_ratio: Optional[float] = Field(None, description="Liquidez corrente (ativo circ./passivo circ.).")
+    avg_daily_liquidity: Optional[float] = Field(None, description="Volume financeiro médio diário (R$).")
 
 
 class Asset(BaseModel):
