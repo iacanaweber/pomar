@@ -3,8 +3,10 @@ import { Tooltip } from "./Tooltip";
 
 /** Mostra alocação atual vs alvo por classe — base do rebalanceamento. */
 export function AllocationSummary({ plan }: { plan: PlanResponse }) {
+  const targetsByClass = plan.targets_by_class ?? {};
+  const currentByClass = plan.current_by_class ?? {};
   const classes = Array.from(
-    new Set([...Object.keys(plan.targets_by_class), ...Object.keys(plan.current_by_class)]),
+    new Set([...Object.keys(targetsByClass), ...Object.keys(currentByClass)]),
   );
   return (
     <div className="alloc">
@@ -15,8 +17,8 @@ export function AllocationSummary({ plan }: { plan: PlanResponse }) {
       </h3>
       <div className="alloc-rows">
         {classes.map((c) => {
-          const cur = (plan.current_by_class[c] ?? 0) * 100;
-          const tgt = (plan.targets_by_class[c] ?? 0) * 100;
+          const cur = (currentByClass[c] ?? 0) * 100;
+          const tgt = (targetsByClass[c] ?? 0) * 100;
           return (
             <div className="alloc-row" key={c}>
               <span className="alloc-class">{c}</span>

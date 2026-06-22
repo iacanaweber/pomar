@@ -6,7 +6,7 @@ export function ScoreBreakdown({ asset }: { asset: ScoredAsset }) {
   return (
     <div className="breakdown">
       <div className="breakdown-grid">
-        {asset.metrics.map((m) => (
+        {(asset.metrics ?? []).map((m) => (
           <MetricValue key={m.key} metric={m} />
         ))}
       </div>

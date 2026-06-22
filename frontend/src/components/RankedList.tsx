@@ -35,9 +35,9 @@ function AssetCard({ asset }: { asset: ScoredAsset }) {
         <span className="card-toggle">{open ? "▲" : "▼"}</span>
       </button>
 
-      {asset.reasons.length > 0 && (
+      {(asset.reasons ?? []).length > 0 && (
         <ul className="card-reasons">
-          {asset.reasons.map((r, i) => (
+          {(asset.reasons ?? []).map((r, i) => (
             <li key={i}>🌱 {r}</li>
           ))}
         </ul>
@@ -49,8 +49,9 @@ function AssetCard({ asset }: { asset: ScoredAsset }) {
 }
 
 export function RankedList({ plan }: { plan: PlanResponse }) {
-  const buys = plan.ranking.filter((a) => a.suggested);
-  const rest = plan.ranking.filter((a) => !a.suggested);
+  const ranking = plan.ranking ?? [];
+  const buys = ranking.filter((a) => a.suggested);
+  const rest = ranking.filter((a) => !a.suggested);
   return (
     <div className="ranked">
       {buys.length > 0 && (
