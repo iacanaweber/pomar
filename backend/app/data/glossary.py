@@ -27,11 +27,20 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     },
     "div_yield": {
         "label": "Dividend Yield",
-        "definition": "Quanto o ativo pagou em dividendos no último ano de proventos disponível, "
-        "dividido pelo preço atual. É a 'renda' que o ativo gera por reais investidos.",
-        "source": "calculado: último ano de proventos (StatusInvest) ÷ preço",
+        "definition": "Soma dos proventos pagos nos últimos 365 dias (por data de pagamento) "
+        "dividido pelo preço atual. É a 'renda' BRUTA que o ativo gera por reais investidos.",
+        "source": "calculado: proventos dos últimos 365 dias (StatusInvest) ÷ preço",
         "interpretation": "Maior é melhor para renda, mas yields muito altos podem ser "
         "pontuais (não se repetem) — por isso penalizamos os que parecem não recorrentes.",
+    },
+    "net_yield": {
+        "label": "Dividend Yield líquido",
+        "definition": "Como o Dividend Yield, mas após o imposto: JCP sofre 15% de IR na fonte "
+        "(×0,85); dividendos de ações e rendimentos de FII são isentos para pessoa física. "
+        "Mostra a renda que efetivamente cai na sua conta.",
+        "source": "calculado: (dividendos + 0,85×JCP) dos últimos 365 dias ÷ preço",
+        "interpretation": "Para bancos que pagam muito via JCP (ITUB4, BBAS4), o líquido fica "
+        "abaixo do bruto. Use o líquido para planejar quanto vai realmente receber.",
     },
     "graham": {
         "label": "Margem Graham",
@@ -56,9 +65,27 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "definition": "Método de Décio Bazin: o 'preço-teto' justo é o dividendo médio anual "
         "dividido por 6% (DY-alvo). Comprar abaixo desse teto garante um yield mínimo de 6%. "
         "A margem mostra o quanto o preço atual está abaixo (positivo) ou acima do teto.",
-        "source": "calculado: preço-teto = dividendo médio ÷ 0,06; margem = (teto − preço) ÷ teto",
+        "source": "calculado: preço-teto = dividendo médio (5 anos) ÷ DY-alvo; margem = (teto − preço) ÷ teto",
         "interpretation": "Margem positiva = comprando abaixo do teto (bom). Negativa = caro "
-        "frente ao histórico de proventos.",
+        "frente ao histórico de proventos. O DY-alvo é 6% por padrão, configurável (ou atrelado à Selic).",
+    },
+    "bazin_ceiling_price": {
+        "label": "Preço-teto (Bazin)",
+        "definition": "O preço máximo a pagar pela ação, em reais, para garantir o DY-alvo "
+        "(6% por padrão), usando a média dos proventos pagos dos últimos 5 anos. Comprar abaixo "
+        "dele dá margem de segurança de renda.",
+        "source": "calculado: média de proventos (5 anos) ÷ DY-alvo",
+        "interpretation": "Se o preço atual está ABAIXO do teto, é zona de compra pelo método "
+        "Bazin. Acima do teto, o yield esperado fica abaixo da sua meta.",
+    },
+    "yield_on_cost": {
+        "label": "Yield on Cost (YoC)",
+        "definition": "Quanto a posição rende em proventos sobre o PREÇO QUE VOCÊ PAGOU (preço "
+        "médio), não sobre o preço de mercado atual. Para quem acumula por décadas, o YoC tende "
+        "a crescer e mostra o 'rendimento do que você plantou'.",
+        "source": "calculado: provento anual por cota ÷ preço médio de compra (Ghostfolio)",
+        "interpretation": "YoC acima do yield de mercado significa que o preço subiu desde a sua "
+        "compra — sua renda sobre o custo é maior que a de quem compra hoje.",
     },
     "dividend_consistency": {
         "label": "Consistência de dividendos",

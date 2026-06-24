@@ -1,6 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
-import type { PlanRequest, PreferencesBody, ProjectionRequest } from "../types";
+import type {
+  AccountIn,
+  EntryIn,
+  OrderIn,
+  PlanRequest,
+  PreferencesBody,
+  ProjectionRequest,
+} from "../types";
 
 export const keys = {
   health: ["health"] as const,
@@ -10,6 +17,11 @@ export const keys = {
   portfolio: ["portfolio"] as const,
   preferences: ["preferences"] as const,
   watchlist: ["watchlist"] as const,
+  income: ["income"] as const,
+  incomeGoal: ["income-goal"] as const,
+  incomeCalendar: ["income-calendar"] as const,
+  fixedIncome: ["fixed-income"] as const,
+  orders: ["orders"] as const,
 };
 
 export const useHealth = () => useQuery({ queryKey: keys.health, queryFn: api.health });
@@ -48,10 +60,80 @@ export function useSavePreferences() {
   });
 }
 
+export function useAddWatchlist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ticker, note }: { ticker: string; note?: string }) =>
+      api.addWatchlist(ticker, note),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.watchlist }),
+  });
+}
+
+export function useRemoveWatchlist() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (ticker: string) => api.removeWatchlist(ticker),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.watchlist }),
+  });
+}
+
 /** Gerar plano é uma ação (POST com efeito), por isso é uma mutation, não query. */
 export const usePlan = () => useMutation({ mutationFn: (req: PlanRequest) => api.plan(req) });
 
-export const useIncome = () => useQuery({ queryKey: ["income"], queryFn: api.income });
+export const useIncome = () => useQuery({ queryKey: keys.income, queryFn: api.income });
+
+export const useIncomeGoal = () =>
+  useQuery({ queryKey: keys.incomeGoal, queryFn: api.incomeGoal });
+
+export const useIncomeCalendar = () =>
+  useQuery({ queryKey: keys.incomeCalendar, queryFn: api.incomeCalendar });
+
+// --- Renda fixa (rastreador / reserva) ---
+export const useFixedIncome = () =>
+  useQuery({ queryKey: keys.fixedIncome, queryFn: api.fixedIncome });
+
+export function useCreateAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AccountIn) => api.createAccount(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.fixedIncome }),
+  });
+}
+
+export function useAddEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: EntryIn }) => api.addEntry(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.fixedIncome }),
+  });
+}
+
+export function useArchiveAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.archiveAccount(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.fixedIncome }),
+  });
+}
+
+// --- Ordens ("já comprei") ---
+export const useOrders = () => useQuery({ queryKey: keys.orders, queryFn: api.orders });
+
+export function useCreateOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: OrderIn) => api.createOrder(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.orders }),
+  });
+}
+
+export function useDeleteOrder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => api.deleteOrder(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.orders }),
+  });
+}
 
 export const useAsset = (ticker: string) =>
   useQuery({ queryKey: ["asset", ticker], queryFn: () => api.asset(ticker), enabled: !!ticker });

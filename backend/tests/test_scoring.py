@@ -206,3 +206,81 @@ def test_equilibrado_does_not_filter():
                    fundamentals=Fundamentals(pvp=5.0, pl=30.0))
     r = score_assets([pricey], _portfolio(), {"STOCK": 1.0}, WEIGHTS, strategy="equilibrado")[0]
     assert not any("elegível" in f.lower() for f in r.red_flags)
+
+
+# --- Fase 2: calibrações do método ---
+
+def test_besst_affinity_is_graded():
+    from app.services.scoring import _besst_affinity
+    assert _besst_affinity("Bancos") == 1.0
+    assert _besst_affinity("Energia Elétrica") == 1.0
+    assert _besst_affinity("Serviços Financeiros") == 0.3  # corretora/fintech não é "banco" de Barsi
+    assert _besst_affinity("Mineração") == 0.0             # setor presente, sem afinidade
+    assert _besst_affinity(None) is None                    # setor ausente
+
+
+def test_bazin_ceiling_price_exposed_and_below_flag():
+    a = Asset(ticker="C3", asset_class="STOCK", sector="Energia", price=20.0,
+              fundamentals=Fundamentals(pvp=1.0, pl=8.0),
+              dividends_by_year={"2022": 2.0, "2023": 2.0, "2024": 2.0})
+    s = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS)[0]
+    assert s.bazin_ceiling_price is not None and abs(s.bazin_ceiling_price - 33.33) < 0.1
+    assert s.bazin_below_ceiling is True  # preço 20 < teto 33,3
+
+
+def test_bazin_target_yield_configurable():
+    a = Asset(ticker="C3", asset_class="STOCK", sector="Energia", price=20.0,
+              fundamentals=Fundamentals(pvp=1.0, pl=8.0),
+              dividends_by_year={"2022": 2.0, "2023": 2.0, "2024": 2.0})
+    s = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS, bazin_target_yield=0.08)[0]
+    assert abs(s.bazin_ceiling_price - 25.0) < 0.1  # 2,0 / 0,08 = 25
+
+
+def test_resolve_bazin_target_yield():
+    from app.services.scoring import resolve_bazin_target_yield
+    assert resolve_bazin_target_yield("fixed_6", 0.06, None) == 0.06
+    assert resolve_bazin_target_yield("fixed_6", 0.08, 0.14) == 0.08          # manual ignora CDI
+    assert resolve_bazin_target_yield("dynamic_selic", 0.06, 0.14) == 0.07    # max(0,06; 0,5×0,14)
+    assert resolve_bazin_target_yield("dynamic_selic", 0.06, None) == 0.06    # sem CDI → manual
+
+
+def test_sector_normalization_groups_by_sector_with_fallback():
+    banks = [
+        Asset(ticker=f"BANK{i}", asset_class="STOCK", sector="Bancos", price=10.0,
+              fundamentals=Fundamentals(pvp=pvp, pl=6.0))
+        for i, pvp in enumerate([0.6, 0.8, 1.0, 1.2])  # 4 bancos => normaliza por setor
+    ]
+    miner = Asset(ticker="MINE3", asset_class="STOCK", sector="Mineração", price=10.0,
+                  fundamentals=Fundamentals(pvp=0.5, pl=6.0))
+    r = score_assets(banks + [miner], _portfolio(), {"STOCK": 1.0}, WEIGHTS)
+    bank0 = next(x for x in r if x.ticker == "BANK0")
+    assert next(m for m in bank0.metrics if m.key == "pvp").peer_group == "Bancos"
+    mine = next(x for x in r if x.ticker == "MINE3")
+    assert next(m for m in mine.metrics if m.key == "pvp").peer_group == "STOCK"  # setor raro → classe
+
+
+def test_fii_payout_not_penalized():
+    fii = Asset(ticker="XPLG11", asset_class="FII", sector="Imobiliário", price=100.0,
+                fundamentals=Fundamentals(pvp=1.0, lpa=8.0),
+                dividends_by_year={"2022": 9.0, "2023": 9.0, "2024": 9.0})  # payout >100%
+    r = score_assets([fii], _portfolio(), {"FII": 1.0}, WEIGHTS)[0]
+    assert not any("ayout" in f for f in r.red_flags)  # FII distribui ~100% por lei: isento
+
+
+def test_consistency_weighted_at_least_as_much_as_yield():
+    a = Asset(ticker="D3", asset_class="STOCK", sector="Bancos", price=20.0,
+              fundamentals=Fundamentals(pvp=0.9, pl=7.0, dividend_yield=0.08),
+              dividends_by_year={"2021": 2.0, "2022": 2.0, "2023": 2.0, "2024": 2.0})
+    by = {m.key: m for m in score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS)[0].metrics}
+    assert by["dividend_consistency"].weight >= by["div_yield"].weight
+    assert by["dividend_consistency"].weight >= by["bazin_ceiling"].weight
+
+
+def test_barsi_filter_excludes_low_liquidity():
+    a = Asset(ticker="ILLIQ3", asset_class="STOCK", sector="Bancos", price=20.0,
+              fundamentals=Fundamentals(pvp=0.8, pl=6.0, dividend_yield=0.08,
+                                        avg_daily_liquidity=2_000_000.0),  # < R$ 5 mi
+              dividends_by_year={"2022": 1.6, "2023": 1.7, "2024": 1.8})
+    r = score_assets([a], _portfolio(), {"STOCK": 1.0}, WEIGHTS, strategy="barsi")[0]
+    assert r.composite_score == 0.0
+    assert any("Liquidez" in f for f in r.red_flags)

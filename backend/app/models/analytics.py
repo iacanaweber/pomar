@@ -12,15 +12,47 @@ class IncomeAsset(BaseModel):
     value: float
     dividend_yield: float
     annual_income: float
+    cost_basis: Optional[float] = None
+    yield_on_cost: Optional[float] = Field(None, description="Renda anual ÷ preço médio pago.")
 
 
 class IncomeResponse(BaseModel):
     annual_income: float = 0.0
     monthly_income: float = 0.0
     portfolio_yield: float = 0.0
+    yield_on_cost: Optional[float] = Field(None, description="YoC agregado (renda ÷ custo total).")
     total_value: float = 0.0
     by_asset: List[IncomeAsset] = Field(default_factory=list)
     currency: str = "BRL"
+    warnings: List[str] = Field(default_factory=list)
+
+
+class IncomeGoalResponse(BaseModel):
+    """Objetivo de renda: quanto falta e quanto aportar para viver de dividendos."""
+
+    target_monthly_income: float = 0.0
+    current_monthly_income: float = 0.0
+    gap_monthly: float = 0.0
+    pct_achieved: float = 0.0
+    horizon_years: int = 20
+    portfolio_yield: float = 0.0
+    required_monthly_contribution: Optional[float] = None
+    estimated_years_to_goal: Optional[int] = None
+    currency: str = "BRL"
+    warnings: List[str] = Field(default_factory=list)
+
+
+class CalendarMonth(BaseModel):
+    month: int  # 1..12
+    income: float = 0.0
+    by_asset: List[dict] = Field(default_factory=list)
+
+
+class CalendarResponse(BaseModel):
+    months: List[CalendarMonth] = Field(default_factory=list)
+    annual_total: float = 0.0
+    currency: str = "BRL"
+    basis: str = "média sazonal dos últimos anos (estimativa)"
     warnings: List[str] = Field(default_factory=list)
 
 

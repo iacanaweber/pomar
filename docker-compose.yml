@@ -9,6 +9,10 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    # Persiste o SQLite (preferências, watchlist, renda fixa, histórico) fora da camada
+    # efêmera do container — sem isto, `docker compose up --build` apagaria tudo.
+    volumes:
+      - pomar-data:/app/data
     depends_on:
       - redis
     restart: unless-stopped
@@ -29,3 +33,4 @@ services:
 
 volumes:
   redis-data:
+  pomar-data:   # banco SQLite do Pomar (DB_PATH=data/pomar.db -> /app/data dentro do container)

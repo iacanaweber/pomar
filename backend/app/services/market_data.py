@@ -37,9 +37,13 @@ async def build_assets(
         cls = await classify_ticker(t, cache, hints.get(t))
         async with _sem:
             fund = await fundamentus.fetch(t, cache)
-            divs = await statusinvest.fetch(t, cache, cls)
+            si = await statusinvest.fetch(t, cache, cls)
 
         fund = fund or {}
+        si = si if isinstance(si, dict) else {}
+        by_year = si.get("by_year", {})
+        trailing_gross = si.get("trailing_365_gross")
+        trailing_net = si.get("trailing_365_net")
         price = fund.get("price")
         sector = fund.get("sector")
         pvp, pl, dy = fund.get("pvp"), fund.get("pl"), fund.get("dy")
@@ -55,12 +59,13 @@ async def build_assets(
             except Exception:
                 pass
 
-        # dividend yield do histórico real: último ano completo ÷ preço
-        if divs and price:
-            last_year = max(divs)
-            last_val = divs[last_year]
-            if last_val > 0:
-                dy = round(last_val / price, 4)
+        # DY trailing-365d real (proventos por data, StatusInvest) — bruto e líquido (JCP×0,85);
+        # cai para o DY do Fundamentus quando não há histórico recente (sem sobrescrever cegamente).
+        dy_net = None
+        if price and trailing_gross and trailing_gross > 0:
+            dy = round(trailing_gross / price, 4)
+            if trailing_net is not None:
+                dy_net = round(trailing_net / price, 4)
 
         # setor canônico (curado -> provedor -> default por classe); nunca None
         sector = resolve_sector(t, cls, sector)
@@ -72,7 +77,7 @@ async def build_assets(
             missing.append("pl")
         if dy is None:
             missing.append("dividend_yield")
-        if not divs:
+        if not by_year:
             missing.append("dividends_history")
         if price is None:
             missing.append("all")
@@ -80,7 +85,7 @@ async def build_assets(
         src = []
         if fund:
             src.append("fundamentus")
-        if divs:
+        if si:
             src.append("statusinvest")
         return Asset(
             ticker=t,
@@ -88,13 +93,13 @@ async def build_assets(
             sector=sector,
             price=price,
             fundamentals=Fundamentals(
-                pvp=pvp, pl=pl, dividend_yield=dy, lpa=lpa, vpa=vpa,
+                pvp=pvp, pl=pl, dividend_yield=dy, dividend_yield_net=dy_net, lpa=lpa, vpa=vpa,
                 roe=fund.get("roe"), net_margin=fund.get("net_margin"),
                 net_debt_to_ebitda=fund.get("net_debt_to_ebitda"),
                 current_ratio=fund.get("current_ratio"),
                 avg_daily_liquidity=fund.get("avg_daily_liquidity"),
             ),
-            dividends_by_year=divs,
+            dividends_by_year=by_year,
             lot_size=1,
             missing=missing,
             as_of=datetime.now(timezone.utc).isoformat(),

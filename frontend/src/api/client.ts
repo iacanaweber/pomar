@@ -1,9 +1,18 @@
 import type {
+  AccountIn,
+  AccountSummary,
   AssetDetailResponse,
   AuthStatus,
+  CalendarResponse,
+  EntryIn,
+  FixedIncomeSummary,
   Glossary,
   HealthStatus,
+  IncomeGoalResponse,
   IncomeResponse,
+  OrderIn,
+  OrderOut,
+  OrdersListResponse,
   PlanRequest,
   PlanResponse,
   Portfolio,
@@ -99,6 +108,25 @@ export const api = {
   income: () => request<IncomeResponse>("/api/income", {}, 60000),
   projection: (body: ProjectionRequest) =>
     request<ProjectionResponse>("/api/income/projection", json(body)),
+  incomeGoal: () => request<IncomeGoalResponse>("/api/income/goal", {}, 60000),
+  incomeCalendar: () => request<CalendarResponse>("/api/income/calendar", {}, 60000),
+
+  // renda fixa (rastreador / reserva)
+  fixedIncome: () => request<FixedIncomeSummary>("/api/fixed-income/summary"),
+  createAccount: (body: AccountIn) =>
+    request<AccountSummary>("/api/fixed-income/accounts", json(body)),
+  updateAccount: (id: number, body: Partial<AccountIn> & { archived?: boolean }) =>
+    request<AccountSummary>(`/api/fixed-income/accounts/${id}`, { ...json(body), method: "PATCH" }),
+  archiveAccount: (id: number) =>
+    request<{ ok: boolean }>(`/api/fixed-income/accounts/${id}`, { method: "DELETE" }),
+  addEntry: (id: number, body: EntryIn) =>
+    request<AccountSummary>(`/api/fixed-income/accounts/${id}/entries`, json(body)),
+
+  // ordens ("já comprei")
+  orders: () => request<OrdersListResponse>("/api/orders"),
+  createOrder: (body: OrderIn) => request<OrderOut>("/api/orders", json(body)),
+  deleteOrder: (id: number) =>
+    request<{ ok: boolean }>(`/api/orders/${id}`, { method: "DELETE" }),
 
   // plano (mais lento -> timeout maior)
   plan: (req: PlanRequest) => request<PlanResponse>("/api/plan", json(req), 60000),

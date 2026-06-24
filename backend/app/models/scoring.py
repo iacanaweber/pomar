@@ -45,6 +45,28 @@ class ScoredAsset(BaseModel):
     red_flags: List[str] = Field(
         default_factory=list, description="Pontos de atenção (por que NÃO comprar)."
     )
+    # Preço-teto de Bazin (valor absoluto), para a UI mostrar "abaixo/acima do teto".
+    bazin_ceiling_price: Optional[float] = Field(
+        None, description="Preço-teto de Bazin em BRL (dividendo médio ÷ DY-alvo). None se indisponível."
+    )
+    bazin_below_ceiling: Optional[bool] = Field(
+        None, description="True se o preço atual está abaixo do teto (zona de compra)."
+    )
+    bazin_margin: Optional[float] = Field(
+        None, description="Margem sobre o teto em [-1,1] (positivo = comprando com desconto)."
+    )
+
+
+class ReserveSuggestion(BaseModel):
+    """Quanto do aporte direcionar à reserva/renda fixa antes da renda variável (Barsi/Bazin)."""
+
+    target_amount: float = Field(..., description="Alvo de reserva em BRL (reserve_target × patrimônio).")
+    current_amount: float = Field(..., description="Reserva atual (BRL) — do rastreador de renda fixa.")
+    gap: float = Field(..., description="Quanto falta para a reserva-alvo (BRL).")
+    pct_filled: float = Field(..., description="Fração da reserva-alvo já preenchida (0..1).")
+    directed_now: float = Field(..., description="Quanto deste aporte vai para a reserva (BRL).")
+    benchmark_cdi_annual: Optional[float] = Field(None, description="CDI anualizado (fração), referência.")
+    note: str = Field("Complete a reserva/CDI antes da renda variável.")
 
 
 class PlanResponse(BaseModel):
@@ -58,6 +80,9 @@ class PlanResponse(BaseModel):
     current_by_class: Dict[str, float] = Field(default_factory=dict)
     ranking: List[ScoredAsset] = Field(default_factory=list)
     unallocated: float = Field(0.0, description="Sobra do aporte não alocada (BRL).")
+    reserve: Optional[ReserveSuggestion] = Field(
+        None, description="Sugestão de reserva/renda fixa (quando há reserve_target)."
+    )
     warnings: List[str] = Field(default_factory=list)
     disclaimer: str = Field(
         "Conteúdo educativo. Não é recomendação de investimento. "
@@ -92,4 +117,13 @@ class PlanRequest(BaseModel):
     )
     min_ticket: float = Field(
         100.0, ge=0, description="Valor mínimo para alocar em um único ativo (BRL)."
+    )
+    max_weight_per_class: Optional[float] = Field(
+        None, gt=0, le=1, description="Teto de peso por classe na carteira resultante."
+    )
+    reserve_target: Optional[float] = Field(
+        None, ge=0, le=1, description="Fração-alvo em reserva/renda fixa. Se omitido, usa as preferências."
+    )
+    reserve_current: Optional[float] = Field(
+        None, ge=0, description="Reserva já existente (BRL). Se omitido, usa o total do rastreador de RF."
     )

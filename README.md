@@ -96,6 +96,10 @@ docker compose up -d --build
 
 Acesse em **`http://<ip-do-servidor>:3334`** e entre com a sua `APP_PASSWORD`.
 
+> 💾 **Persistência.** O banco (preferências, watchlist, renda fixa, histórico) fica no volume
+> Docker `pomar-data` (montado em `/app/data`), então sobrevive a `up --build`. **Backup atômico:**
+> `docker compose exec backend sqlite3 /app/data/pomar.db ".backup '/app/data/backup.db'"`.
+
 ### Acesso pelo celular (LAN)
 O celular na **mesma rede** abre o mesmo endereço. A interface é responsiva (mobile-first) e os
 tooltips funcionam por toque. Em HTTP, mantenha `COOKIE_SECURE=false`.

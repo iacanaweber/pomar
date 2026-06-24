@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { PlanResponse, ScoredAsset } from "../types";
 import { money } from "../lib/format";
 import { AssetLink } from "./AssetLink";
+import { CeilingBadge } from "./CeilingBadge";
 import { ScoreBreakdown } from "./ScoreBreakdown";
 import { Tooltip } from "./Tooltip";
 
@@ -42,6 +43,18 @@ function AssetCard({ asset }: { asset: ScoredAsset }) {
         )}
         <span className="card-toggle">{open ? "▲" : "▼"}</span>
       </button>
+
+      {asset.bazin_ceiling_price != null && (
+        <div className="card-ceiling">
+          <CeilingBadge
+            ceiling={asset.bazin_ceiling_price}
+            price={asset.suggested?.price ?? null}
+            margin={asset.bazin_margin}
+            belowCeiling={asset.bazin_below_ceiling}
+            variant="chip"
+          />
+        </div>
+      )}
 
       {reasons.length > 0 && (
         <ul className="card-reasons">

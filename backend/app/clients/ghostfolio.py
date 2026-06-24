@@ -68,6 +68,11 @@ class GhostfolioClient:
             cls = _CLASS_MAP.get(raw_type, "STOCK")
             sector = _first_sector(h)
             weight = value / total if total else 0.0
+            cost = _cost_basis(h)
+            qty = h.get("quantity")
+            avg = _num(h.get("averagePrice"))
+            if avg is None and cost is not None and qty:
+                avg = round(cost / float(qty), 4) if float(qty) else None
             positions.append(
                 Position(
                     ticker=normalize_ticker(h.get("symbol", "?")),
@@ -76,7 +81,10 @@ class GhostfolioClient:
                     sector=sector,
                     value=value,
                     weight=weight,
-                    quantity=h.get("quantity"),
+                    quantity=qty,
+                    cost_basis=cost,
+                    average_price=avg,
+                    net_performance_pct=_net_perf(h),
                     tags=_tags(h),
                 )
             )
@@ -99,6 +107,32 @@ class GhostfolioClient:
                 return resp.status_code == 200
         except Exception:
             return False
+
+
+def _num(v) -> Optional[float]:
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _cost_basis(holding: dict) -> Optional[float]:
+    """Custo total da posição. Os nomes variam por versão do Ghostfolio — tenta os comuns."""
+    for k in ("investment", "investmentInBaseCurrency", "grossInvestment", "totalInvestment"):
+        v = _num(holding.get(k))
+        if v is not None:
+            return round(v, 2)
+    return None
+
+
+def _net_perf(holding: dict) -> Optional[float]:
+    """Rentabilidade líquida (fração). Normaliza % -> fração quando o valor vem como 12.5."""
+    for k in ("netPerformancePercentWithCurrencyEffect", "netPerformancePercent",
+              "grossPerformancePercent"):
+        v = _num(holding.get(k))
+        if v is not None:
+            return round(v / 100.0, 6) if abs(v) > 1.5 else round(v, 6)
+    return None
 
 
 def _first_sector(holding: dict) -> Optional[str]:

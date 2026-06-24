@@ -24,9 +24,12 @@ def settings():
 async def test_migrations_create_tables(db):
     rows = await db.fetchall("SELECT name FROM sqlite_master WHERE type='table'")
     names = {r["name"] for r in rows}
-    assert {"preferences", "watchlist", "scenarios", "plan_history", "executed_orders", "alerts"} <= names
+    assert {
+        "preferences", "watchlist", "scenarios", "plan_history", "executed_orders", "alerts",
+        "fixed_income_accounts", "fixed_income_entries",
+    } <= names
     ver = await db.fetchone("SELECT MAX(version) AS v FROM schema_migrations")
-    assert ver["v"] == 1
+    assert ver["v"] == 3
 
 
 async def test_preferences_defaults_when_empty(db, settings):
@@ -51,6 +54,22 @@ async def test_watchlist_seed_is_idempotent(db):
     first = await watchlist_repo.seed_if_empty(db)
     assert first > 0
     assert await watchlist_repo.seed_if_empty(db) == 0
+
+
+async def test_db_survives_reopen(tmp_path, settings):
+    """Prova que a persistência depende só do arquivo (logo, do volume Docker): gravar,
+    fechar a conexão e reabrir OUTRA instância no mesmo path preserva os dados."""
+    path = str(tmp_path / "persist.db")
+    first = Database(path)
+    await first.ensure_ready()
+    await preferences_repo.put(first, {"max_assets": 9}, settings)
+    await first.close()
+
+    second = Database(path)
+    await second.ensure_ready()
+    p = await preferences_repo.get(second, settings)
+    assert p["max_assets"] == 9
+    await second.close()
 
 
 async def test_watchlist_crud(db):

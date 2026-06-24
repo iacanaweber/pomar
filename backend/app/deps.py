@@ -6,6 +6,7 @@ from functools import lru_cache
 from app.cache.store import Cache
 from app.clients.brapi import BrapiClient
 from app.clients.ghostfolio import GhostfolioClient
+from app.clients.sgs_bcb import SgsClient
 from app.config import get_settings
 from app.repositories.db import Database
 
@@ -30,3 +31,8 @@ def get_ghostfolio() -> GhostfolioClient:
 def get_brapi() -> BrapiClient:
     s = get_settings()
     return BrapiClient(s.brapi_base_url, s.brapi_token, get_cache(), batch_size=s.brapi_batch)
+
+
+@lru_cache
+def get_sgs() -> SgsClient:
+    return SgsClient(get_cache())

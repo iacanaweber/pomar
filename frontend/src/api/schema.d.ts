@@ -263,7 +263,7 @@ export interface paths {
         };
         /**
          * Income
-         * @description Renda passiva atual estimada da carteira (Σ valor × DY), com decomposição por ativo.
+         * @description Renda passiva atual estimada da carteira (Σ valor × DY) + Yield on Cost por ativo.
          */
         get: operations["income_api_income_get"];
         put?: never;
@@ -294,6 +294,152 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/income/goal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Income Goal
+         * @description Objetivo de renda: combina a renda ATUAL real, a meta persistida e o aporte para dizer
+         *     o gap, o % atingido, quanto aportar/mês e em quantos anos você chega lá (Aportador).
+         */
+        get: operations["income_goal_api_income_goal_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/income/calendar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Income Calendar
+         * @description Mapa de proventos mês a mês da carteira atual (estimativa sazonal dos últimos anos).
+         */
+        get: operations["income_calendar_api_income_calendar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fixed-income/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fixed Income Summary */
+        get: operations["fixed_income_summary_api_fixed_income_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fixed-income/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create Account */
+        post: operations["create_account_api_fixed_income_accounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/fixed-income/accounts/{account_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Archive Account */
+        delete: operations["archive_account_api_fixed_income_accounts__account_id__delete"];
+        options?: never;
+        head?: never;
+        /** Update Account */
+        patch: operations["update_account_api_fixed_income_accounts__account_id__patch"];
+        trace?: never;
+    };
+    "/api/fixed-income/accounts/{account_id}/entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Entries */
+        get: operations["list_entries_api_fixed_income_accounts__account_id__entries_get"];
+        put?: never;
+        /** Add Entry */
+        post: operations["add_entry_api_fixed_income_accounts__account_id__entries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Orders */
+        get: operations["list_orders_api_orders_get"];
+        put?: never;
+        /** Create Order */
+        post: operations["create_order_api_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{order_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Order */
+        delete: operations["delete_order_api_orders__order_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api": {
         parameters: {
             query?: never;
@@ -315,6 +461,70 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AccountIn */
+        AccountIn: {
+            /**
+             * Name
+             * @description Ex.: 'CDB Banco X', 'Tesouro Selic 2029', 'Conta'.
+             */
+            name: string;
+            /** Institution */
+            institution?: string | null;
+            /**
+             * Kind
+             * @description 'cdb'|'tesouro'|'poupanca'|'conta'|'outro'.
+             */
+            kind?: string | null;
+            /**
+             * Benchmark
+             * @description 'cdi'|'selic'|'prefixado'|'ipca' (informativo).
+             */
+            benchmark?: string | null;
+        };
+        /** AccountSummary */
+        AccountSummary: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Institution */
+            institution?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Benchmark */
+            benchmark?: string | null;
+            /**
+             * Archived
+             * @default false
+             */
+            archived: boolean;
+            /**
+             * Current Balance
+             * @default 0
+             */
+            current_balance: number;
+            /**
+             * Last Yield Annual
+             * @description Rendimento anualizado (fração).
+             */
+            last_yield_annual?: number | null;
+            /**
+             * Last Yield Gain
+             * @description Ganho do período (BRL).
+             */
+            last_yield_gain?: number | null;
+            /** Last Yield From */
+            last_yield_from?: string | null;
+            /** Last Yield To */
+            last_yield_to?: string | null;
+            /** Last Yield Business Days */
+            last_yield_business_days?: number | null;
+            /**
+             * Pct Of Cdi
+             * @description Rendimento como fração do CDI (1.0 = 100%).
+             */
+            pct_of_cdi?: number | null;
+        };
         /** Allocations */
         Allocations: {
             /**
@@ -396,6 +606,83 @@ export interface components {
             asset: components["schemas"]["Asset"];
             scored: components["schemas"]["ScoredAsset"];
         };
+        /** CalendarMonth */
+        CalendarMonth: {
+            /** Month */
+            month: number;
+            /**
+             * Income
+             * @default 0
+             */
+            income: number;
+            /** By Asset */
+            by_asset?: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** CalendarResponse */
+        CalendarResponse: {
+            /** Months */
+            months?: components["schemas"]["CalendarMonth"][];
+            /**
+             * Annual Total
+             * @default 0
+             */
+            annual_total: number;
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+            /**
+             * Basis
+             * @default média sazonal dos últimos anos (estimativa)
+             */
+            basis: string;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /** EntryIn */
+        EntryIn: {
+            /**
+             * Kind
+             * @description balance = atualização de saldo; deposit = aporte; withdrawal = resgate.
+             * @enum {string}
+             */
+            kind: "balance" | "deposit" | "withdrawal";
+            /**
+             * Amount
+             * @description Saldo observado (balance) ou valor (deposit/withdrawal).
+             */
+            amount: number;
+            /**
+             * Entry Date
+             * @description Data ISO yyyy-mm-dd (padrão: hoje).
+             */
+            entry_date?: string | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** FixedIncomeSummary */
+        FixedIncomeSummary: {
+            /** Accounts */
+            accounts?: components["schemas"]["AccountSummary"][];
+            /**
+             * Total Balance
+             * @default 0
+             */
+            total_balance: number;
+            /**
+             * Cdi Annual
+             * @description CDI anualizado (fração), benchmark.
+             */
+            cdi_annual?: number | null;
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+        };
         /**
          * Fundamentals
          * @description Fundamentos de um ativo. Campos podem ser None quando a brapi não fornece.
@@ -413,9 +700,14 @@ export interface components {
             pl?: number | null;
             /**
              * Dividend Yield
-             * @description Dividend yield (0..1, ex: 0.092 = 9,2%).
+             * @description Dividend yield BRUTO trailing-365d (0..1, ex: 0.092 = 9,2%).
              */
             dividend_yield?: number | null;
+            /**
+             * Dividend Yield Net
+             * @description Dividend yield LÍQUIDO (JCP×0,85; dividendo/FII isentos), trailing-365d.
+             */
+            dividend_yield_net?: number | null;
             /**
              * Lpa
              * @description Lucro por ação (base do Número de Graham).
@@ -474,6 +766,60 @@ export interface components {
             dividend_yield: number;
             /** Annual Income */
             annual_income: number;
+            /** Cost Basis */
+            cost_basis?: number | null;
+            /**
+             * Yield On Cost
+             * @description Renda anual ÷ preço médio pago.
+             */
+            yield_on_cost?: number | null;
+        };
+        /**
+         * IncomeGoalResponse
+         * @description Objetivo de renda: quanto falta e quanto aportar para viver de dividendos.
+         */
+        IncomeGoalResponse: {
+            /**
+             * Target Monthly Income
+             * @default 0
+             */
+            target_monthly_income: number;
+            /**
+             * Current Monthly Income
+             * @default 0
+             */
+            current_monthly_income: number;
+            /**
+             * Gap Monthly
+             * @default 0
+             */
+            gap_monthly: number;
+            /**
+             * Pct Achieved
+             * @default 0
+             */
+            pct_achieved: number;
+            /**
+             * Horizon Years
+             * @default 20
+             */
+            horizon_years: number;
+            /**
+             * Portfolio Yield
+             * @default 0
+             */
+            portfolio_yield: number;
+            /** Required Monthly Contribution */
+            required_monthly_contribution?: number | null;
+            /** Estimated Years To Goal */
+            estimated_years_to_goal?: number | null;
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+            /** Warnings */
+            warnings?: string[];
         };
         /** IncomeResponse */
         IncomeResponse: {
@@ -492,6 +838,11 @@ export interface components {
              * @default 0
              */
             portfolio_yield: number;
+            /**
+             * Yield On Cost
+             * @description YoC agregado (renda ÷ custo total).
+             */
+            yield_on_cost?: number | null;
             /**
              * Total Value
              * @default 0
@@ -578,6 +929,77 @@ export interface components {
              */
             peer_group?: string | null;
         };
+        /** OrderIn */
+        OrderIn: {
+            /** Ticker */
+            ticker: string;
+            /** Asset Class */
+            asset_class?: string | null;
+            /**
+             * Shares
+             * @description Quantidade de cotas/ações compradas.
+             */
+            shares: number;
+            /**
+             * Price
+             * @description Preço pago por cota (BRL).
+             */
+            price: number;
+            /**
+             * Fees
+             * @description Custos/corretagem (BRL).
+             * @default 0
+             */
+            fees: number;
+            /**
+             * Executed At
+             * @description Data ISO (padrão: agora).
+             */
+            executed_at?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Plan Id */
+            plan_id?: number | null;
+        };
+        /** OrderOut */
+        OrderOut: {
+            /** Id */
+            id: number;
+            /** Ticker */
+            ticker: string;
+            /** Asset Class */
+            asset_class?: string | null;
+            /** Shares */
+            shares: number;
+            /** Price */
+            price: number;
+            /**
+             * Fees
+             * @default 0
+             */
+            fees: number;
+            /** Executed At */
+            executed_at?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Plan Id */
+            plan_id?: number | null;
+        };
+        /** OrdersListResponse */
+        OrdersListResponse: {
+            /** Items */
+            items?: components["schemas"]["OrderOut"][];
+            /**
+             * Total Invested
+             * @default 0
+             */
+            total_invested: number;
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+        };
         /** PlanRequest */
         PlanRequest: {
             /**
@@ -623,6 +1045,21 @@ export interface components {
              * @default 100
              */
             min_ticket: number;
+            /**
+             * Max Weight Per Class
+             * @description Teto de peso por classe na carteira resultante.
+             */
+            max_weight_per_class?: number | null;
+            /**
+             * Reserve Target
+             * @description Fração-alvo em reserva/renda fixa. Se omitido, usa as preferências.
+             */
+            reserve_target?: number | null;
+            /**
+             * Reserve Current
+             * @description Reserva já existente (BRL). Se omitido, usa o total do rastreador de RF.
+             */
+            reserve_current?: number | null;
         };
         /** PlanResponse */
         PlanResponse: {
@@ -658,6 +1095,8 @@ export interface components {
              * @default 0
              */
             unallocated: number;
+            /** @description Sugestão de reserva/renda fixa (quando há reserve_target). */
+            reserve?: components["schemas"]["ReserveSuggestion"] | null;
             /** Warnings */
             warnings?: string[];
             /**
@@ -735,6 +1174,21 @@ export interface components {
              */
             quantity?: number | null;
             /**
+             * Cost Basis
+             * @description Custo total da posição (BRL), se conhecido.
+             */
+            cost_basis?: number | null;
+            /**
+             * Average Price
+             * @description Preço médio de compra (BRL).
+             */
+            average_price?: number | null;
+            /**
+             * Net Performance Pct
+             * @description Rentabilidade líquida da posição (fração) — do Ghostfolio, se disponível.
+             */
+            net_performance_pct?: number | null;
+            /**
              * Tags
              * @description Tags do Ghostfolio nesta posição.
              */
@@ -775,6 +1229,14 @@ export interface components {
             reserve_target?: number | null;
             /** Bazin Target Mode */
             bazin_target_mode?: string | null;
+            /** Bazin Target Yield */
+            bazin_target_yield?: number | null;
+            /** Target Monthly Income */
+            target_monthly_income?: number | null;
+            /** Target Horizon Years */
+            target_horizon_years?: number | null;
+            /** Annual Growth */
+            annual_growth?: number | null;
         };
         /** ProjectionPoint */
         ProjectionPoint: {
@@ -855,6 +1317,47 @@ export interface components {
             /** Required Monthly Contribution */
             required_monthly_contribution?: number | null;
         };
+        /**
+         * ReserveSuggestion
+         * @description Quanto do aporte direcionar à reserva/renda fixa antes da renda variável (Barsi/Bazin).
+         */
+        ReserveSuggestion: {
+            /**
+             * Target Amount
+             * @description Alvo de reserva em BRL (reserve_target × patrimônio).
+             */
+            target_amount: number;
+            /**
+             * Current Amount
+             * @description Reserva atual (BRL) — do rastreador de renda fixa.
+             */
+            current_amount: number;
+            /**
+             * Gap
+             * @description Quanto falta para a reserva-alvo (BRL).
+             */
+            gap: number;
+            /**
+             * Pct Filled
+             * @description Fração da reserva-alvo já preenchida (0..1).
+             */
+            pct_filled: number;
+            /**
+             * Directed Now
+             * @description Quanto deste aporte vai para a reserva (BRL).
+             */
+            directed_now: number;
+            /**
+             * Benchmark Cdi Annual
+             * @description CDI anualizado (fração), referência.
+             */
+            benchmark_cdi_annual?: number | null;
+            /**
+             * Note
+             * @default Complete a reserva/CDI antes da renda variável.
+             */
+            note: string;
+        };
         /** ScoredAsset */
         ScoredAsset: {
             /** Ticker */
@@ -915,6 +1418,21 @@ export interface components {
              * @description Pontos de atenção (por que NÃO comprar).
              */
             red_flags?: string[];
+            /**
+             * Bazin Ceiling Price
+             * @description Preço-teto de Bazin em BRL (dividendo médio ÷ DY-alvo). None se indisponível.
+             */
+            bazin_ceiling_price?: number | null;
+            /**
+             * Bazin Below Ceiling
+             * @description True se o preço atual está abaixo do teto (zona de compra).
+             */
+            bazin_below_ceiling?: boolean | null;
+            /**
+             * Bazin Margin
+             * @description Margem sobre o teto em [-1,1] (positivo = comprando com desconto).
+             */
+            bazin_margin?: number | null;
         };
         /**
          * SuggestedBuy
@@ -1455,6 +1973,333 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProjectionResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    income_goal_api_income_goal_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IncomeGoalResponse"];
+                };
+            };
+        };
+    };
+    income_calendar_api_income_calendar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarResponse"];
+                };
+            };
+        };
+    };
+    fixed_income_summary_api_fixed_income_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FixedIncomeSummary"];
+                };
+            };
+        };
+    };
+    create_account_api_fixed_income_accounts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_account_api_fixed_income_accounts__account_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_account_api_fixed_income_accounts__account_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_entries_api_fixed_income_accounts__account_id__entries_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_entry_api_fixed_income_accounts__account_id__entries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_orders_api_orders_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrdersListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_order_api_orders_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_order_api_orders__order_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

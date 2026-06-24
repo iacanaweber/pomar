@@ -5,6 +5,7 @@ LPA e VPA. HTML em latin-1. Resultado cacheado por 24h.
 """
 from __future__ import annotations
 
+import logging
 import re
 from typing import Optional
 
@@ -12,6 +13,7 @@ import httpx
 
 from app.cache.store import Cache
 
+log = logging.getLogger("pomar.fundamentus")
 _TTL = 86400  # 24h
 _UA = {
     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
@@ -51,8 +53,11 @@ def _parse(html: str) -> dict:
     setor = _grab(html, "Setor")
     setor = re.sub(r"<[^>]+>", "", setor).strip() if setor else None
     dy = _grab(html, "Div. Yield")
-    # Indicadores de risco/qualidade. Os rótulos seguem o HTML do Fundamentus; se algum
-    # mudar, o campo simplesmente vira None (neutro no score) — verificar ao vivo.
+    # Dív.Líq/EBITDA não existe pronto no Fundamentus; aproximamos por Dív.Líquida ÷ EBIT
+    # (EBIT < EBITDA ⇒ razão um pouco mais conservadora). Ambos são valores absolutos na página.
+    div_liq = _num(_grab(html, "Dív. Líquida"))
+    ebit = _num(_grab(html, "EBIT"))
+    net_debt_to_ebit = (div_liq / ebit) if (div_liq is not None and ebit and ebit > 0) else None
     return {
         "pl": _num(_grab(html, "P/L")),
         "pvp": _num(_grab(html, "P/VP")),
@@ -62,7 +67,7 @@ def _parse(html: str) -> dict:
         "vpa": _num(_grab(html, "VPA")),
         "roe": _pct(_grab(html, "ROE")),
         "net_margin": _pct(_grab(html, "Marg. Líquida")),
-        "net_debt_to_ebitda": _num(_grab(html, "Dív Líq/EBIT")),
+        "net_debt_to_ebitda": net_debt_to_ebit,  # proxy: Dív.Líquida ÷ EBIT
         "current_ratio": _num(_grab(html, "Liquidez Corr")),
         "avg_daily_liquidity": _num(_grab(html, "Vol $ méd (2m)")),
         "sector": setor,
@@ -86,4 +91,10 @@ async def fetch(ticker: str, cache: Cache) -> Optional[dict]:
     if any(data.get(k) is not None for k in ("price", "pl", "pvp", "dy")):
         cache.set(key, data, _TTL)
         return data
+    # HTTP ok mas nada parseado: provável mudança de markup — falha ALTO, não silenciosa.
+    if resp.status_code == 200 and len(resp.content) > 1000:
+        log.warning(
+            "fundamentus parser_suspect: %s respondeu 200 mas nenhum campo-chave foi extraído "
+            "(markup pode ter mudado).", ticker
+        )
     return None

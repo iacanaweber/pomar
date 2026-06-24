@@ -89,6 +89,43 @@ _MIGRATIONS: list[tuple[int, str]] = [
         );
         """,
     ),
+    (
+        2,
+        # Rastreador manual de renda fixa: contas + lançamentos (saldo/aporte/resgate).
+        # O rendimento é derivado das atualizações de saldo (ver services/fixed_income.py).
+        """
+        CREATE TABLE IF NOT EXISTS fixed_income_accounts (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            name        TEXT NOT NULL,
+            institution TEXT,
+            kind        TEXT,                       -- 'cdb'|'tesouro'|'poupanca'|'conta'|'outro'
+            benchmark   TEXT,                       -- 'cdi'|'selic'|'prefixado'|'ipca' (informativo)
+            created_at  TEXT,
+            archived    INTEGER NOT NULL DEFAULT 0
+        );
+
+        CREATE TABLE IF NOT EXISTS fixed_income_entries (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            account_id  INTEGER NOT NULL REFERENCES fixed_income_accounts(id) ON DELETE CASCADE,
+            kind        TEXT NOT NULL,              -- 'balance' | 'deposit' | 'withdrawal'
+            amount      REAL NOT NULL,              -- saldo observado (balance) OU valor (deposit/withdrawal)
+            entry_date  TEXT NOT NULL,              -- ISO yyyy-mm-dd
+            note        TEXT,
+            created_at  TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_fie_account ON fixed_income_entries(account_id, entry_date);
+        """,
+    ),
+    (
+        3,
+        # Parametrização do preço-teto de Bazin + meta de renda (Aportador / objetivo).
+        """
+        ALTER TABLE preferences ADD COLUMN bazin_target_yield    REAL    NOT NULL DEFAULT 0.06;
+        ALTER TABLE preferences ADD COLUMN target_monthly_income REAL    NOT NULL DEFAULT 0.0;
+        ALTER TABLE preferences ADD COLUMN target_horizon_years  INTEGER NOT NULL DEFAULT 20;
+        ALTER TABLE preferences ADD COLUMN annual_growth         REAL    NOT NULL DEFAULT 0.0;
+        """,
+    ),
 ]
 
 
@@ -154,6 +191,18 @@ class Database:
         assert self._conn is not None
         self._conn.execute(sql, params)
         self._conn.commit()
+
+    async def insert(self, sql: str, params: Iterable[Any] = ()) -> int:
+        """Executa um INSERT e retorna o id gerado (lastrowid), serializado pelo lock."""
+        await self.ensure_ready()
+        async with self._lock:
+            return await asyncio.to_thread(self._insert_commit, sql, tuple(params))
+
+    def _insert_commit(self, sql: str, params: tuple) -> int:
+        assert self._conn is not None
+        cur = self._conn.execute(sql, params)
+        self._conn.commit()
+        return int(cur.lastrowid or 0)
 
     async def fetchone(self, sql: str, params: Iterable[Any] = ()) -> Optional[dict]:
         await self.ensure_ready()

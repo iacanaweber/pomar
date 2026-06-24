@@ -4,6 +4,7 @@ import { PlanControls } from "../components/PlanControls";
 import { RankedList } from "../components/RankedList";
 import { AllocationSummary } from "../components/AllocationSummary";
 import { HealthBanner } from "../components/HealthBanner";
+import { ReserveSummaryCard } from "../components/ReserveSummaryCard";
 
 export function PlanPage() {
   const strategies = useStrategies();
@@ -36,6 +37,9 @@ export function PlanPage() {
                 <div key={i}>• {w}</div>
               ))}
             </div>
+          )}
+          {result.reserve && (
+            <ReserveSummaryCard reserve={result.reserve} currency={result.currency} />
           )}
           <AllocationSummary plan={result} />
           <RankedList plan={result} />

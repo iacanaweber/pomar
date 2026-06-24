@@ -28,10 +28,12 @@ export function PieChart({
   slices,
   active,
   onActive,
+  ariaLabel,
 }: {
   slices: Slice[];
   active: number | null;
   onActive: (i: number | null) => void;
+  ariaLabel?: string;
 }) {
   const [hover, setHover] = useState<number | null>(null);
   const sel = active ?? hover;
@@ -48,7 +50,12 @@ export function PieChart({
   let angle = 0;
   return (
     <div className="pie">
-      <svg viewBox={`0 0 ${size} ${size}`} className="pie-svg" role="img">
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        className="pie-svg"
+        role="img"
+        aria-label={ariaLabel ?? "Distribuição da carteira"}
+      >
         {single ? (
           <circle
             cx={cx}
