@@ -1,7 +1,9 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { useAsset } from "../api/queries";
+import { CeilingBadge } from "../components/CeilingBadge";
 import { ScoreBreakdown } from "../components/ScoreBreakdown";
+import { Tooltip } from "../components/Tooltip";
 import type { Fundamentals } from "../types";
 import { money, pct } from "../lib/format";
 
@@ -73,6 +75,14 @@ export function AssetPage() {
 
       {asset.stale && <div className="banner banner-warn">⏳ Dados de cache (possivelmente defasados).</div>}
 
+      <CeilingBadge
+        ceiling={scored.bazin_ceiling_price}
+        price={asset.price}
+        margin={scored.bazin_margin}
+        belowCeiling={scored.bazin_below_ceiling}
+        variant="block"
+      />
+
       {(scored.reasons ?? []).length > 0 && (
         <ul className="card-reasons">
           {(scored.reasons ?? []).map((r, i) => (
@@ -93,7 +103,21 @@ export function AssetPage() {
         <div className="fund-grid">
           <Fund label="P/L" value={f.pl != null ? f.pl.toFixed(2) : null} />
           <Fund label="P/VP" value={f.pvp != null ? f.pvp.toFixed(2) : null} />
-          <Fund label="Dividend Yield" value={f.dividend_yield != null ? pct(f.dividend_yield) : null} />
+          {f.dividend_yield != null && (
+            <div className="fund-item">
+              <Tooltip metricKey="net_yield">
+                <span className="muted">Dividend Yield</span>
+              </Tooltip>
+              <strong>
+                {pct(f.dividend_yield)} <span className="muted" style={{ fontWeight: 400 }}>bruto</span>
+              </strong>
+              {f.dividend_yield_net != null && (
+                <span className="muted" style={{ fontSize: 12 }}>
+                  {pct(f.dividend_yield_net)} líquido
+                </span>
+              )}
+            </div>
+          )}
           <Fund label="LPA" value={f.lpa != null ? f.lpa.toFixed(2) : null} />
           <Fund label="VPA" value={f.vpa != null ? f.vpa.toFixed(2) : null} />
           <Fund label="ROE" value={f.roe != null ? pct(f.roe) : null} />

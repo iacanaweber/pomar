@@ -17,9 +17,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import (
+    routes_fixed_income,
     routes_income,
     routes_market,
     routes_meta,
+    routes_orders,
     routes_plan,
     routes_portfolio,
     routes_preferences,
@@ -90,6 +92,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_preferences.router, prefix="/api", tags=["preferences"])
     app.include_router(routes_watchlist.router, prefix="/api", tags=["watchlist"])
     app.include_router(routes_income.router, prefix="/api", tags=["income"])
+    app.include_router(routes_fixed_income.router, prefix="/api", tags=["fixed-income"])
+    app.include_router(routes_orders.router, prefix="/api", tags=["orders"])
 
     @app.get("/api")
     async def root() -> dict:

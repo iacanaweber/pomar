@@ -6,12 +6,13 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException
 
 from app.config import get_settings
-from app.deps import get_brapi, get_cache, get_ghostfolio
+from app.deps import get_brapi, get_cache, get_db, get_ghostfolio, get_sgs
 from app.models.portfolio import Allocations, Portfolio
 from app.models.scoring import AssetDetailResponse
+from app.repositories import preferences_repo
 from app.services import market_data
 from app.services.portfolio_service import get_enriched_portfolio
-from app.services.scoring import score_assets
+from app.services.scoring import resolve_bazin_target_yield, score_assets
 from app.services.universe import build_universe
 
 router = APIRouter()
@@ -41,5 +42,17 @@ async def asset(ticker: str) -> AssetDetailResponse:
     empty = Portfolio(
         total_value=0.0, as_of=datetime.now(timezone.utc).isoformat(), allocations=Allocations()
     )
-    scored = score_assets([a], empty, settings.default_targets, settings.default_weights)[0]
+    prefs = await preferences_repo.get(get_db(), settings)
+    cdi = None
+    if (prefs.get("bazin_target_mode") or "fixed_6") == "dynamic_selic":
+        try:
+            cdi = await get_sgs().cdi_annual()
+        except Exception:  # noqa: BLE001
+            cdi = None
+    bazin_yield = resolve_bazin_target_yield(
+        prefs.get("bazin_target_mode"), float(prefs.get("bazin_target_yield") or 0.06), cdi
+    )
+    scored = score_assets(
+        [a], empty, settings.default_targets, settings.default_weights, bazin_target_yield=bazin_yield
+    )[0]
     return AssetDetailResponse(asset=a, scored=scored)

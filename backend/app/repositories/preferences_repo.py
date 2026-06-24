@@ -22,9 +22,13 @@ def _defaults(settings: Settings) -> Dict[str, Any]:
         "max_assets": 5,
         "max_weight_per_asset": 0.20,
         "min_ticket": 100.0,
-        "lot_mode": "integral",
+        "lot_mode": "fracionario",
         "reserve_target": 0.0,
         "bazin_target_mode": "fixed_6",
+        "bazin_target_yield": 0.06,
+        "target_monthly_income": 0.0,
+        "target_horizon_years": 20,
+        "annual_growth": 0.0,
     }
 
 
@@ -42,6 +46,10 @@ def _row_to_prefs(row: Dict[str, Any], settings: Settings) -> Dict[str, Any]:
             "lot_mode": row["lot_mode"],
             "reserve_target": row["reserve_target"],
             "bazin_target_mode": row["bazin_target_mode"],
+            "bazin_target_yield": row["bazin_target_yield"],
+            "target_monthly_income": row["target_monthly_income"],
+            "target_horizon_years": row["target_horizon_years"],
+            "annual_growth": row["annual_growth"],
         }
     )
     return base
@@ -58,8 +66,9 @@ async def put(db: Database, prefs: Dict[str, Any], settings: Settings) -> Dict[s
         """
         INSERT INTO preferences
             (id, strategy, aporte_default, targets_json, weights_json, max_assets,
-             max_weight_per_asset, min_ticket, lot_mode, reserve_target, bazin_target_mode, updated_at)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             max_weight_per_asset, min_ticket, lot_mode, reserve_target, bazin_target_mode,
+             bazin_target_yield, target_monthly_income, target_horizon_years, annual_growth, updated_at)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             strategy=excluded.strategy,
             aporte_default=excluded.aporte_default,
@@ -71,6 +80,10 @@ async def put(db: Database, prefs: Dict[str, Any], settings: Settings) -> Dict[s
             lot_mode=excluded.lot_mode,
             reserve_target=excluded.reserve_target,
             bazin_target_mode=excluded.bazin_target_mode,
+            bazin_target_yield=excluded.bazin_target_yield,
+            target_monthly_income=excluded.target_monthly_income,
+            target_horizon_years=excluded.target_horizon_years,
+            annual_growth=excluded.annual_growth,
             updated_at=excluded.updated_at
         """,
         (
@@ -84,6 +97,10 @@ async def put(db: Database, prefs: Dict[str, Any], settings: Settings) -> Dict[s
             merged["lot_mode"],
             merged["reserve_target"],
             merged["bazin_target_mode"],
+            merged["bazin_target_yield"],
+            merged["target_monthly_income"],
+            merged["target_horizon_years"],
+            merged["annual_growth"],
             datetime.now(timezone.utc).isoformat(),
         ),
     )

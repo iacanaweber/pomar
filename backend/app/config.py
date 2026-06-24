@@ -151,3 +151,27 @@ BESST_KEYWORDS: tuple = (
     "seguro", "insurance",  # Seguros
     "telecom",  # Telecomunicações
 )
+
+# Afinidade GRADUADA com os setores perenes de Barsi (BESST), em [0,1]. Substitui o flag
+# binário por substring: bancos/energia/saneamento/seguros/telecom = 1.0; "serviços
+# financeiros"/corretora/fintech = 0.3 (Barsi reserva o 1.0 a BANCOS, não a qualquer
+# financeira). O matching é por substring (case-insensitive) e retorna a MAIOR afinidade
+# casada. Setor presente mas sem casar => 0.0; setor ausente => indisponível.
+SECTOR_AFFINITY_MAP: dict = {
+    # Bancos
+    "banco": 1.0, "bank": 1.0,
+    # Energia
+    "energia elétrica": 1.0, "energia eletrica": 1.0, "energia": 1.0,
+    "energy": 1.0, "electric": 1.0, "utilities": 1.0,
+    "utilidade pública": 0.8, "utilidade publica": 0.8,
+    # Saneamento
+    "saneament": 1.0, "água": 1.0, "agua": 1.0, "water": 1.0,
+    # Seguros / previdência
+    "seguro": 1.0, "seguros": 1.0, "insurance": 1.0,
+    "previdência": 0.8, "previdencia": 0.8,
+    # Telecom
+    "telecom": 1.0, "telecomunicaç": 1.0,
+    # Financeiro amplo (NÃO é banco): corretora/fintech/serviços financeiros
+    "serviços financeiros": 0.3, "servicos financeiros": 0.3, "financ": 0.3,
+    "corretora": 0.3, "fintech": 0.3,
+}

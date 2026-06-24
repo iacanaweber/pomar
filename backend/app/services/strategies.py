@@ -23,6 +23,10 @@ def _avail(mbk: Dict[str, Metric], key: str) -> Optional[Metric]:
     return m if (m is not None and m.available) else None
 
 
+# Liquidez média diária mínima que Barsi exige para montar posição relevante por décadas.
+BARSI_MIN_LIQUIDITY = 5_000_000.0
+
+
 def _barsi(asset: Asset, mbk: Dict[str, Metric]) -> Optional[str]:
     besst = _avail(mbk, "sector_besst")
     if besst is None or (besst.raw_value or 0) < 1:
@@ -30,6 +34,9 @@ def _barsi(asset: Asset, mbk: Dict[str, Metric]) -> Optional[str]:
     cons = _avail(mbk, "dividend_consistency")
     if cons is None or (cons.raw_value or 0) < 0.8:
         return "Consistência de dividendos insuficiente para Barsi"
+    liq = asset.fundamentals.avg_daily_liquidity
+    if liq is not None and liq < BARSI_MIN_LIQUIDITY:
+        return "Liquidez diária abaixo do mínimo de Barsi (R$ 5 mi/dia)"
     return None
 
 

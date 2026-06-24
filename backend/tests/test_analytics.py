@@ -49,3 +49,34 @@ def test_required_contribution_zero_when_already_there():
     # carteira que já gera a renda-alvo sem aportes
     contrib = analytics.required_monthly_contribution(100.0, 1_000_000.0, 0.08, 0.0, years=10)
     assert contrib == 0.0
+
+
+# --- Fase 3: Yield on Cost e anos até a meta ---
+
+def test_portfolio_income_yield_on_cost():
+    from app.models.portfolio import Position
+
+    positions = [Position(ticker="BBAS3", asset_class="STOCK", value=10_000.0, weight=1.0,
+                          cost_basis=8_000.0)]
+    out = analytics.portfolio_income(positions, {"BBAS3": 0.10})
+    a = out["by_asset"][0]
+    assert a["annual_income"] == 1000.0
+    assert a["yield_on_cost"] == 0.125    # 1000 / 8000
+    assert out["yield_on_cost"] == 0.125  # agregado
+
+
+def test_yield_on_cost_none_without_cost():
+    from app.models.portfolio import Position
+
+    out = analytics.portfolio_income(
+        [Position(ticker="X3", asset_class="STOCK", value=1000.0, weight=1.0)], {"X3": 0.08}
+    )
+    assert out["by_asset"][0]["yield_on_cost"] is None
+    assert out["yield_on_cost"] is None
+
+
+def test_estimated_years_to_goal_monotonic():
+    y_small = analytics.estimated_years_to_goal(5000.0, 0.0, 1000.0, 0.08)
+    y_big = analytics.estimated_years_to_goal(5000.0, 0.0, 3000.0, 0.08)
+    assert y_small is not None and y_big is not None
+    assert y_big <= y_small  # aporte maior chega antes

@@ -24,6 +24,29 @@ export type ProjectionPoint = Schemas["ProjectionPoint"];
 export type AssetDetailResponse = Schemas["AssetDetailResponse"];
 export type Asset = Schemas["Asset"];
 export type Fundamentals = Schemas["Fundamentals"];
+export type ReserveSuggestion = Schemas["ReserveSuggestion"];
+
+// --- Objetivo de renda + calendário ---
+export type IncomeGoalResponse = Schemas["IncomeGoalResponse"];
+export type CalendarResponse = Schemas["CalendarResponse"];
+export type CalendarMonth = Schemas["CalendarMonth"];
+
+// --- Renda fixa (rastreador) ---
+export type FixedIncomeSummary = Schemas["FixedIncomeSummary"];
+export type AccountSummary = Schemas["AccountSummary"];
+export type AccountIn = Schemas["AccountIn"];
+export type EntryIn = Schemas["EntryIn"];
+
+// --- Ordens ("já comprei") ---
+export type OrderIn = Schemas["OrderIn"];
+export type OrderOut = Schemas["OrderOut"];
+export type OrdersListResponse = Schemas["OrdersListResponse"];
+
+/** Item de proventos por ativo dentro de um mês do calendário (dict livre no backend). */
+export interface CalendarByAsset {
+  ticker: string;
+  income: number;
+}
 
 // --- Tipos de respostas que o FastAPI devolve como dict livre (sem response_model),
 //     portanto não vêm tipados no OpenAPI; declarados aqui manualmente. ---
@@ -56,6 +79,10 @@ export interface Preferences {
   lot_mode: string;
   reserve_target: number;
   bazin_target_mode: string;
+  bazin_target_yield?: number | null;
+  target_monthly_income?: number | null;
+  target_horizon_years?: number | null;
+  annual_growth?: number | null;
 }
 
 export interface WatchlistItem {

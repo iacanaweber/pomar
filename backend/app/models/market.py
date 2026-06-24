@@ -12,7 +12,10 @@ class Fundamentals(BaseModel):
     pvp: Optional[float] = Field(None, description="Preço / Valor Patrimonial (priceToBook).")
     pl: Optional[float] = Field(None, description="Preço / Lucro (priceEarnings).")
     dividend_yield: Optional[float] = Field(
-        None, description="Dividend yield (0..1, ex: 0.092 = 9,2%)."
+        None, description="Dividend yield BRUTO trailing-365d (0..1, ex: 0.092 = 9,2%)."
+    )
+    dividend_yield_net: Optional[float] = Field(
+        None, description="Dividend yield LÍQUIDO (JCP×0,85; dividendo/FII isentos), trailing-365d."
     )
     lpa: Optional[float] = Field(None, description="Lucro por ação (base do Número de Graham).")
     vpa: Optional[float] = Field(None, description="Valor patrimonial por ação (base do Número de Graham).")

@@ -26,6 +26,10 @@ class PreferencesBody(BaseModel):
     lot_mode: Optional[str] = None
     reserve_target: Optional[float] = None
     bazin_target_mode: Optional[str] = None
+    bazin_target_yield: Optional[float] = None
+    target_monthly_income: Optional[float] = None
+    target_horizon_years: Optional[int] = None
+    annual_growth: Optional[float] = None
 
 
 @router.get("/preferences")

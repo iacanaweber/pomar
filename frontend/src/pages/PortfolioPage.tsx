@@ -1,24 +1,22 @@
-import { useEffect, useMemo, useState } from "react";
-import { api } from "../api/client";
-import type { Portfolio, Position } from "../types";
+import { useMemo, useState } from "react";
+import { ApiError } from "../api/client";
+import { useIncome, usePortfolio } from "../api/queries";
+import type { Position } from "../types";
 import { PieChart, type Slice } from "../components/PieChart";
 import { AssetLink } from "../components/AssetLink";
+import { Tooltip } from "../components/Tooltip";
+import { YocCell } from "../components/YocCell";
 import { money, pct } from "../lib/format";
+import { BESST_COLORS, BESST_DEFENSIVE, PALETTE, besstCategory } from "../lib/palette";
 
-type GroupBy = "asset" | "class" | "sector" | "tag";
+type GroupBy = "asset" | "class" | "sector" | "tag" | "besst";
 
 const GROUPS: { key: GroupBy; label: string }[] = [
   { key: "asset", label: "Por ativo" },
   { key: "class", label: "Por classe" },
   { key: "sector", label: "Por setor" },
   { key: "tag", label: "Por tag" },
-];
-
-// Paleta com tons de verde/terra + acentos, suficiente para muitas fatias.
-const PALETTE = [
-  "#2e7d32", "#66bb6a", "#f9a825", "#1b5e20", "#9ccc65", "#ef6c00",
-  "#26a69a", "#8d6e63", "#5c6bc0", "#ec407a", "#789262", "#ffb300",
-  "#00897b", "#c0ca33", "#6d4c41", "#42a5f5",
+  { key: "besst", label: "BESST" },
 ];
 
 interface Member {
@@ -51,6 +49,7 @@ function aggregate(positions: Position[], by: GroupBy): Group[] {
     if (by === "asset") add(p.ticker, { ...base, value: p.value });
     else if (by === "class") add(p.asset_class || "OUTROS", { ...base, value: p.value });
     else if (by === "sector") add(p.sector || "Sem setor", { ...base, value: p.value });
+    else if (by === "besst") add(besstCategory(p.sector), { ...base, value: p.value });
     else {
       const tags = p.tags ?? [];
       if (tags.length === 0) add("Sem tag", { ...base, value: p.value });
@@ -76,33 +75,58 @@ function aggregate(positions: Position[], by: GroupBy): Group[] {
 }
 
 export function PortfolioPage() {
-  const [pf, setPf] = useState<Portfolio | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const { data: pf, isLoading, error } = usePortfolio();
+  const income = useIncome();
   const [by, setBy] = useState<GroupBy>("class");
   const [active, setActive] = useState<number | null>(null);
 
-  useEffect(() => {
-    api.portfolio().then(setPf).catch((e) => setError(e.message));
-  }, []);
+  // DY/YoC por ticker, a partir da renda passiva (única fonte com DY de mercado por ativo).
+  const yieldByTicker = useMemo(() => {
+    const m = new Map<string, { dy?: number | null; yoc?: number | null }>();
+    for (const a of income.data?.by_asset ?? []) {
+      m.set(a.ticker, { dy: a.dividend_yield, yoc: a.yield_on_cost });
+    }
+    return m;
+  }, [income.data]);
 
-  const groups = useMemo(() => (pf ? aggregate(pf.positions ?? [], by) : []), [pf, by]);
+  const positions = pf?.positions ?? [];
+  const groups = useMemo(() => aggregate(positions, by), [positions, by]);
+
   const slices: Slice[] = useMemo(
-    () => groups.map((g, i) => ({ label: g.label, value: g.value, color: PALETTE[i % PALETTE.length] })),
-    [groups],
+    () =>
+      groups.map((g, i) => ({
+        label: g.label,
+        value: g.value,
+        color: by === "besst" ? BESST_COLORS[besstCategory(g.label)] : PALETTE[i % PALETTE.length],
+      })),
+    [groups, by],
   );
+
+  // % defensivo (BESST): soma das categorias essenciais ÷ total.
+  const defensivePct = useMemo(() => {
+    if (by !== "besst") return null;
+    const total = groups.reduce((s, g) => s + g.value, 0) || 1;
+    const def = groups
+      .filter((g) => (BESST_DEFENSIVE as string[]).includes(g.label))
+      .reduce((s, g) => s + g.value, 0);
+    return def / total;
+  }, [groups, by]);
+
+  if (isLoading) return <main className="page"><p className="muted">Carregando carteira…</p></main>;
 
   if (error)
     return (
       <main className="page">
         <div className="banner banner-error">
-          ⚠️ Não consegui ler sua carteira no Ghostfolio: {error}
+          ⚠️ Não consegui ler sua carteira no Ghostfolio:{" "}
+          {error instanceof ApiError ? error.userMessage : "erro desconhecido"}
         </div>
       </main>
     );
 
   if (!pf) return <main className="page"><p className="muted">Carregando carteira…</p></main>;
 
-  if ((pf.positions ?? []).length === 0)
+  if (positions.length === 0)
     return (
       <main className="page">
         <div className="banner banner-warn">
@@ -112,19 +136,41 @@ export function PortfolioPage() {
     );
 
   const selected = active != null ? groups[active] : null;
+  const portfolioYoc = income.data?.yield_on_cost ?? null;
+  const portfolioDy = income.data?.portfolio_yield ?? null;
+
+  const ariaLabel = `Distribuição da carteira por ${
+    GROUPS.find((g) => g.key === by)?.label ?? by
+  }: ${slices.map((s) => `${s.label} ${pct(s.value / pf.total_value)}`).join(", ")}`;
 
   return (
     <main className="page">
       <div className="pf-summary">
         <span className="muted">Patrimônio total</span>
         <strong className="pf-total">{money(pf.total_value)}</strong>
-        <span className="muted">{(pf.positions ?? []).length} posições</span>
+        <span className="muted">{positions.length} posições</span>
+        {(portfolioDy != null || portfolioYoc != null) && (
+          <span className="pf-yields">
+            {portfolioYoc != null && (
+              <Tooltip metricKey="yield_on_cost">
+                <span>YoC carteira <strong>{pct(portfolioYoc)}</strong></span>
+              </Tooltip>
+            )}
+            {portfolioDy != null && (
+              <Tooltip metricKey="div_yield">
+                <span> · DY <strong>{pct(portfolioDy)}</strong></span>
+              </Tooltip>
+            )}
+          </span>
+        )}
       </div>
 
-      <div className="seg">
+      <div className="seg" role="tablist">
         {GROUPS.map((g) => (
           <button
             key={g.key}
+            role="tab"
+            aria-selected={by === g.key}
             className={`seg-btn ${by === g.key ? "seg-on" : ""}`}
             onClick={() => {
               setBy(g.key);
@@ -137,13 +183,29 @@ export function PortfolioPage() {
       </div>
 
       <div className="pf-chart">
-        <PieChart slices={slices} active={active} onActive={setActive} />
-        <ul className="legend">
+        <div className="pf-chart-pie">
+          <PieChart slices={slices} active={active} onActive={setActive} ariaLabel={ariaLabel} />
+          {by === "besst" && defensivePct != null && (
+            <p className="besst-center-note">
+              {pct(defensivePct, 0)} em setores perenes (defensivo)
+            </p>
+          )}
+        </div>
+        <ul className="legend" role="list">
           {slices.map((s, i) => (
             <li
               key={s.label}
+              role="listitem"
+              tabIndex={0}
+              aria-label={`${s.label}: ${money(s.value)}, ${pct(s.value / pf.total_value)}`}
               className={`legend-item ${active != null && active !== i ? "dim" : ""} ${active === i ? "legend-on" : ""}`}
               onClick={() => setActive(active === i ? null : i)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  setActive(active === i ? null : i);
+                }
+              }}
             >
               <span className="legend-dot" style={{ background: s.color }} />
               <span className="legend-label">{s.label}</span>
@@ -154,6 +216,28 @@ export function PortfolioPage() {
           ))}
         </ul>
       </div>
+
+      {by === "asset" && (
+        <div className="pf-drill">
+          <h3>Por ativo · DY e Yield on Cost</h3>
+          <ul className="pf-drill-list">
+            {[...positions]
+              .sort((a, b) => b.value - a.value)
+              .map((p) => {
+                const y = yieldByTicker.get(p.ticker);
+                return (
+                  <li key={p.ticker} className="pf-drill-item pf-asset-row">
+                    <span className="pf-drill-ticker"><AssetLink ticker={p.ticker} /></span>
+                    <span className="pf-asset-val">
+                      {money(p.value)} <span className="muted">· {pct(p.value / pf.total_value)}</span>
+                    </span>
+                    <YocCell dividendYield={y?.dy} yieldOnCost={y?.yoc} />
+                  </li>
+                );
+              })}
+          </ul>
+        </div>
+      )}
 
       {selected && by !== "asset" && (
         <div className="pf-drill">

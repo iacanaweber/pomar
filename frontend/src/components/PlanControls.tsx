@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import type { PlanRequest, Preferences, StrategiesResponse } from "../types";
 import { useSavePreferences } from "../api/queries";
 import { parseBRL } from "../lib/format";
+import { SavedToast } from "./SavedToast";
 import { Tooltip } from "./Tooltip";
 
 interface Props {
@@ -34,10 +35,12 @@ export function PlanControls({ strategies, preferences, loading, onSubmit }: Pro
   const [maxAssets, setMaxAssets] = useState(5);
   const [maxWeightPct, setMaxWeightPct] = useState(20);
   const [minTicket, setMinTicket] = useState("100");
+  const [reserveTargetPct, setReserveTargetPct] = useState(0);
   // Alvos por classe em % (0..100) para edição; convertidos para fração no submit.
   const [targetsPct, setTargetsPct] = useState<Record<string, number>>({});
 
   const savePrefs = useSavePreferences();
+  const [savedAt, setSavedAt] = useState<number | null>(null);
 
   // Sincroniza o formulário com as preferências salvas quando elas chegam (uma vez).
   useEffect(() => {
@@ -46,6 +49,7 @@ export function PlanControls({ strategies, preferences, loading, onSubmit }: Pro
     setMaxAssets(preferences.max_assets);
     setMaxWeightPct(Math.round(preferences.max_weight_per_asset * 100));
     setMinTicket(String(preferences.min_ticket));
+    setReserveTargetPct(Math.round((preferences.reserve_target ?? 0) * 100));
     setTargetsPct(
       Object.fromEntries(
         Object.entries(preferences.targets).map(([k, v]) => [k, Math.round(v * 100)]),
@@ -74,6 +78,7 @@ export function PlanControls({ strategies, preferences, loading, onSubmit }: Pro
       max_weight_per_asset: maxWeightPct / 100,
       min_ticket: parseBRL(minTicket) || 0,
       ...(targets ? { targets } : {}),
+      ...(reserveTargetPct > 0 ? { reserve_target: reserveTargetPct / 100 } : {}),
     };
   };
 
@@ -85,21 +90,26 @@ export function PlanControls({ strategies, preferences, loading, onSubmit }: Pro
   };
 
   const savePreferences = () => {
-    savePrefs.mutate({
-      strategy,
-      max_assets: maxAssets,
-      max_weight_per_asset: maxWeightPct / 100,
-      min_ticket: parseBRL(minTicket) || 0,
-      ...(Object.keys(targetsPct).length
-        ? { targets: Object.fromEntries(Object.entries(targetsPct).map(([k, v]) => [k, (v || 0) / 100])) }
-        : {}),
-    });
+    savePrefs.mutate(
+      {
+        strategy,
+        max_assets: maxAssets,
+        max_weight_per_asset: maxWeightPct / 100,
+        min_ticket: parseBRL(minTicket) || 0,
+        reserve_target: reserveTargetPct / 100,
+        ...(Object.keys(targetsPct).length
+          ? { targets: Object.fromEntries(Object.entries(targetsPct).map(([k, v]) => [k, (v || 0) / 100])) }
+          : {}),
+      },
+      { onSuccess: () => setSavedAt(Date.now()) },
+    );
   };
 
   const valueInvalid = touched && !(parseBRL(aporte) > 0);
 
   return (
     <form className="controls" onSubmit={submit}>
+      <SavedToast show={savedAt} />
       <label className="field">
         <span>Quanto você tem para investir hoje?</span>
         <div className={`money ${valueInvalid ? "money-invalid" : ""}`}>
@@ -182,6 +192,18 @@ export function PlanControls({ strategies, preferences, loading, onSubmit }: Pro
                 inputMode="decimal"
                 value={minTicket}
                 onChange={(e) => setMinTicket(e.target.value)}
+              />
+            </label>
+            <label className="field">
+              <Tooltip metricKey="reserve_target">
+                <span>Reserva-alvo (%)</span>
+              </Tooltip>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={reserveTargetPct}
+                onChange={(e) => setReserveTargetPct(Number(e.target.value))}
               />
             </label>
           </div>
