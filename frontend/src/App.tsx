@@ -24,6 +24,7 @@ const ReservePage = lazy(() =>
 const TABS: { to: string; label: string }[] = [
   { to: "/plano", label: "Plantar" },
   { to: "/carteira", label: "Carteira" },
+  { to: "/reserva", label: "Reserva" },
   { to: "/renda", label: "Renda" },
   { to: "/watchlist", label: "Descobrir" },
   { to: "/calendario", label: "Calendário" },
