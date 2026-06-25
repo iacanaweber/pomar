@@ -87,23 +87,47 @@ def current_balance(entries: List[Dict]) -> float:
 
 
 def last_yield(entries: List[Dict], holidays: frozenset[date] = B3_HOLIDAYS) -> Optional[Dict]:
-    """Rendimento da ÚLTIMA atualização de saldo vs a atualização de saldo anterior.
+    """Rendimento da ÚLTIMA atualização de saldo vs o ponto de partida anterior.
 
-    principal_before = saldo anterior + (aportes − resgates) em (D1, D2].
-    Retorna o dict de `annualized_return` enriquecido com as datas, ou None se há < 2 saldos.
+    O ponto de partida é, em ordem de preferência:
+    1. o SALDO anterior (+ aportes − resgates no período) — mais preciso; ou
+    2. quando não há saldo anterior, os APORTES (líq. de resgates) até a data do saldo, com a
+       data do primeiro aporte como início — exato p/ "1 aporte + 1 saldo"; conservador p/ vários.
+
+    Retorna o dict de `annualized_return` com as datas, ou None se não há base/dias úteis.
     """
     ev = _sorted(entries)
     balances = [e for e in ev if e["kind"] == "balance"]
-    if len(balances) < 2:
+    if not balances:
         return None
-    prev, last = balances[-2], balances[-1]
-    d1, d2 = parse_date(prev["entry_date"]), parse_date(last["entry_date"])
-    principal = float(prev["amount"])
-    for e in ev:
-        if e["kind"] in ("deposit", "withdrawal"):
-            d = parse_date(e["entry_date"])
-            if d1 < d <= d2:
-                principal += float(e["amount"]) if e["kind"] == "deposit" else -float(e["amount"])
+    last = balances[-1]
+    d2 = parse_date(last["entry_date"])
+    if d2 is None:
+        return None
+
+    if len(balances) >= 2:
+        prev = balances[-2]
+        d1 = parse_date(prev["entry_date"])
+        if d1 is None:
+            return None
+        principal = float(prev["amount"])
+        for e in ev:
+            if e["kind"] in ("deposit", "withdrawal"):
+                d = parse_date(e["entry_date"])
+                if d is not None and d1 < d <= d2:
+                    principal += float(e["amount"]) if e["kind"] == "deposit" else -float(e["amount"])
+    else:
+        flows = []
+        for e in ev:
+            if e["kind"] in ("deposit", "withdrawal"):
+                d = parse_date(e["entry_date"])
+                if d is not None and d <= d2:
+                    flows.append((d, e["kind"], float(e["amount"])))
+        if not flows:
+            return None
+        principal = sum(a if k == "deposit" else -a for (_, k, a) in flows)
+        d1 = min(d for (d, _, _) in flows)
+
     bd = business_days_between(d1, d2, holidays)
     res = annualized_return(principal, float(last["amount"]), bd)
     if res is None:

@@ -108,6 +108,23 @@ export function useAddEntry() {
   });
 }
 
+export const useEntries = (id: number) =>
+  useQuery({
+    queryKey: [...keys.fixedIncome, "entries", id],
+    queryFn: () => api.listEntries(id),
+    enabled: id > 0,
+  });
+
+export function useDeleteEntry() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ accountId, entryId }: { accountId: number; entryId: number }) =>
+      api.deleteEntry(accountId, entryId),
+    // invalida tudo sob ["fixed-income"] (resumo + listas de lançamentos)
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.fixedIncome }),
+  });
+}
+
 export function useArchiveAccount() {
   const qc = useQueryClient();
   return useMutation({

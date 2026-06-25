@@ -73,6 +73,16 @@ async def list_entries(account_id: int) -> dict:
     return {"items": [EntryOut(**r).model_dump() for r in rows]}
 
 
+@router.delete("/fixed-income/accounts/{account_id}/entries/{entry_id}")
+async def delete_entry(account_id: int, entry_id: int) -> dict:
+    db = get_db()
+    entry = await repo.get_entry(db, entry_id)
+    if not entry or entry["account_id"] != account_id:
+        raise HTTPException(status_code=404, detail="Lançamento não encontrado.")
+    await repo.delete_entry(db, entry_id)
+    return {"ok": True}
+
+
 @router.post("/fixed-income/accounts/{account_id}/entries", response_model=AccountSummary)
 async def add_entry(account_id: int, body: EntryIn) -> AccountSummary:
     db = get_db()

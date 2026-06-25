@@ -76,6 +76,22 @@ def test_fixed_income_account_and_yield(authed_client, _stub_cdi):
     assert summary["cdi_annual"] == 0.1415
 
 
+def test_fixed_income_list_and_delete_entry(authed_client, _stub_cdi):
+    c = authed_client
+    aid = c.post("/api/fixed-income/accounts", json={"name": "Conta X"}).json()["id"]
+    c.post(f"/api/fixed-income/accounts/{aid}/entries",
+           json={"kind": "deposit", "amount": 10_000.0, "entry_date": "2026-06-01"})
+    c.post(f"/api/fixed-income/accounts/{aid}/entries",
+           json={"kind": "balance", "amount": 10_120.0, "entry_date": "2026-06-25"})
+    items = c.get(f"/api/fixed-income/accounts/{aid}/entries").json()["items"]
+    assert len(items) == 2
+    # remove o aporte (errado) e confirma que sumiu
+    eid = next(i["id"] for i in items if i["kind"] == "deposit")
+    assert c.delete(f"/api/fixed-income/accounts/{aid}/entries/{eid}").status_code == 200
+    left = c.get(f"/api/fixed-income/accounts/{aid}/entries").json()["items"]
+    assert len(left) == 1 and left[0]["kind"] == "balance"
+
+
 def test_plan_reserve_directs_aporte(authed_client, _stub_cdi, monkeypatch):
     """Com reserve_target, parte do aporte é direcionada à reserva (sem depender de rede)."""
     from app.models.portfolio import Allocations, Portfolio

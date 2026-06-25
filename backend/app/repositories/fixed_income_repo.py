@@ -63,9 +63,17 @@ async def add_entry(
 
 async def list_entries(db: Database, account_id: int) -> List[Dict[str, Any]]:
     return await db.fetchall(
-        "SELECT * FROM fixed_income_entries WHERE account_id = ? ORDER BY entry_date, id",
+        "SELECT * FROM fixed_income_entries WHERE account_id = ? ORDER BY entry_date DESC, id DESC",
         (account_id,),
     )
+
+
+async def get_entry(db: Database, entry_id: int) -> Optional[Dict[str, Any]]:
+    return await db.fetchone("SELECT * FROM fixed_income_entries WHERE id = ?", (entry_id,))
+
+
+async def delete_entry(db: Database, entry_id: int) -> None:
+    await db.execute("DELETE FROM fixed_income_entries WHERE id = ?", (entry_id,))
 
 
 async def account_summary(db: Database, account: Dict[str, Any]) -> Dict[str, Any]:

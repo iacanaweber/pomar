@@ -369,6 +369,15 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .reserve-metric { display: flex; flex-direction: column; gap: 1px; font-size: 13px; min-width: 110px; }
 .reserve-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 0 14px 12px; }
 .reserve-archive { color: var(--danger); }
+.reserve-entries { list-style: none; margin: 0; padding: 0 14px 12px; display: flex; flex-direction: column; gap: 6px; }
+.reserve-entry { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
+.reserve-entry-tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--track); color: var(--ink); min-width: 64px; text-align: center; }
+.reserve-entry-tag.tag-balance { background: #e3f0e3; color: var(--green); }
+.reserve-entry-tag.tag-deposit { background: #e7eefc; color: #274690; }
+.reserve-entry-tag.tag-withdrawal { background: #fdecea; color: var(--danger); }
+.reserve-entry-date { font-size: 13px; color: var(--muted); }
+.reserve-entry-amount { margin-left: auto; }
+.reserve-suggestion .goal-status { font-size: 14px; }
 .reserve-suggestion .goal-status { font-size: 14px; }
 
 /* PortfolioPage — YoC + perfil BESST */

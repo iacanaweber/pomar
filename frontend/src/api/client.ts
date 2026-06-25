@@ -5,6 +5,7 @@ import type {
   AuthStatus,
   CalendarResponse,
   EntryIn,
+  FixedIncomeEntry,
   FixedIncomeSummary,
   Glossary,
   HealthStatus,
@@ -121,6 +122,13 @@ export const api = {
     request<{ ok: boolean }>(`/api/fixed-income/accounts/${id}`, { method: "DELETE" }),
   addEntry: (id: number, body: EntryIn) =>
     request<AccountSummary>(`/api/fixed-income/accounts/${id}/entries`, json(body)),
+  listEntries: (id: number) =>
+    request<{ items: FixedIncomeEntry[] }>(`/api/fixed-income/accounts/${id}/entries`),
+  deleteEntry: (accountId: number, entryId: number) =>
+    request<{ ok: boolean }>(
+      `/api/fixed-income/accounts/${accountId}/entries/${entryId}`,
+      { method: "DELETE" },
+    ),
 
   // ordens ("já comprei")
   orders: () => request<OrdersListResponse>("/api/orders"),

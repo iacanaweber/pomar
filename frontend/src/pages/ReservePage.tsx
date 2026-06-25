@@ -5,11 +5,51 @@ import {
   useAddEntry,
   useArchiveAccount,
   useCreateAccount,
+  useDeleteEntry,
+  useEntries,
   useFixedIncome,
 } from "../api/queries";
 import type { AccountSummary } from "../types";
-import { brToISO, money, parseBRL, pct, todayBR } from "../lib/format";
+import { brToISO, isoToBR, money, parseBRL, pct, todayBR } from "../lib/format";
 import { Tooltip } from "../components/Tooltip";
+
+const ENTRY_LABEL: Record<string, string> = {
+  balance: "Saldo",
+  deposit: "Aporte",
+  withdrawal: "Resgate",
+};
+
+/** Lista de lançamentos de uma conta, com remoção (corrigir erros). */
+function EntriesList({ accountId }: { accountId: number }) {
+  const { data, isLoading } = useEntries(accountId);
+  const del = useDeleteEntry();
+  if (isLoading) return <p className="muted" style={{ padding: "0 14px 12px" }}>Carregando lançamentos…</p>;
+  const items = data?.items ?? [];
+  if (!items.length)
+    return <p className="muted" style={{ padding: "0 14px 12px" }}>Nenhum lançamento ainda.</p>;
+  return (
+    <ul className="reserve-entries">
+      {items.map((e) => (
+        <li key={e.id} className="reserve-entry">
+          <span className={`reserve-entry-tag tag-${e.kind}`}>{ENTRY_LABEL[e.kind] ?? e.kind}</span>
+          <span className="reserve-entry-date">{isoToBR(e.entry_date)}</span>
+          <strong className="reserve-entry-amount">{money(e.amount)}</strong>
+          <button
+            className="link-button reserve-archive"
+            aria-label={`Remover ${ENTRY_LABEL[e.kind] ?? "lançamento"} de ${isoToBR(e.entry_date)}`}
+            disabled={del.isPending}
+            onClick={() => {
+              if (confirm("Remover este lançamento? O saldo e o rendimento serão recalculados."))
+                del.mutate({ accountId, entryId: e.id });
+            }}
+          >
+            🗑
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const KIND_LABEL: Record<string, string> = {
   cdb: "CDB",
@@ -82,6 +122,7 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
 function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnual?: number | null }) {
   const archive = useArchiveAccount();
   const [open, setOpen] = useState(false);
+  const [showEntries, setShowEntries] = useState(false);
 
   const pctCdiText =
     account.pct_of_cdi != null ? `${Math.round(account.pct_of_cdi * 100)}% do CDI` : null;
@@ -125,6 +166,9 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
         <button className="link-button" onClick={() => setOpen((v) => !v)}>
           {open ? "▲ Fechar lançamento" : "＋ Lançar aporte / atualizar saldo"}
         </button>
+        <button className="link-button" onClick={() => setShowEntries((v) => !v)}>
+          {showEntries ? "▲ Ocultar lançamentos" : "📜 Ver lançamentos"}
+        </button>
         <button
           className="link-button reserve-archive"
           onClick={() => {
@@ -138,11 +182,12 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
       </div>
 
       {open && <EntryForm account={account} onDone={() => setOpen(false)} />}
+      {showEntries && <EntriesList accountId={account.id} />}
 
       {account.last_yield_annual == null && (
         <p className="strategy-desc" style={{ padding: "0 14px 12px" }}>
-          O rendimento aparece quando há <strong>dois saldos em datas diferentes</strong>: atualize o
-          saldo num dia posterior ao saldo de partida.{cdiAnnual != null ? ` CDI hoje: ${pct(cdiAnnual)} a.a.` : ""}
+          O rendimento aparece quando há um <strong>ponto de partida (aporte ou saldo) e um saldo
+          atual em data posterior</strong>.{cdiAnnual != null ? ` CDI hoje: ${pct(cdiAnnual)} a.a.` : ""}
         </p>
       )}
     </li>

@@ -37,6 +37,16 @@ export type AccountSummary = Schemas["AccountSummary"];
 export type AccountIn = Schemas["AccountIn"];
 export type EntryIn = Schemas["EntryIn"];
 
+/** Lançamento de renda fixa (a rota GET .../entries devolve { items: FixedIncomeEntry[] }). */
+export interface FixedIncomeEntry {
+  id: number;
+  account_id: number;
+  kind: "balance" | "deposit" | "withdrawal";
+  amount: number;
+  entry_date: string;
+  note?: string | null;
+}
+
 // --- Ordens ("já comprei") ---
 export type OrderIn = Schemas["OrderIn"];
 export type OrderOut = Schemas["OrderOut"];

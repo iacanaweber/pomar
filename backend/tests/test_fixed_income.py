@@ -54,8 +54,31 @@ def test_last_yield_treats_midperiod_deposit_as_principal():
     assert ly["annualized"] is not None and ly["annualized"] > 0
 
 
-def test_last_yield_needs_two_balances():
+def test_last_yield_needs_a_baseline():
+    # um único saldo SEM nenhum aporte anterior não tem base para calcular
     entries = [{"id": 1, "kind": "balance", "amount": 10_000.0, "entry_date": "2025-01-02"}]
+    assert fi.last_yield(entries) is None
+
+
+def test_last_yield_from_deposit_baseline():
+    # 1 aporte + 1 atualização de saldo (datas diferentes) DEVE calcular
+    entries = [
+        {"id": 1, "kind": "deposit", "amount": 10_000.0, "entry_date": "2026-06-01"},
+        {"id": 2, "kind": "balance", "amount": 10_128.41, "entry_date": "2026-06-25"},
+    ]
+    ly = fi.last_yield(entries)
+    assert ly is not None
+    assert ly["principal_before"] == 10_000.0
+    assert abs(ly["gain"] - 128.41) < 1e-6
+    assert ly["annualized"] is not None and ly["annualized"] > 0
+
+
+def test_last_yield_deposit_same_day_as_balance_is_none():
+    # aporte e saldo no mesmo dia => 0 dias úteis => sem taxa
+    entries = [
+        {"id": 1, "kind": "deposit", "amount": 10_000.0, "entry_date": "2026-06-25"},
+        {"id": 2, "kind": "balance", "amount": 10_005.0, "entry_date": "2026-06-25"},
+    ]
     assert fi.last_yield(entries) is None
 
 
