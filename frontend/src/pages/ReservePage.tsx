@@ -8,7 +8,7 @@ import {
   useFixedIncome,
 } from "../api/queries";
 import type { AccountSummary } from "../types";
-import { money, parseBRL, pct } from "../lib/format";
+import { brToISO, money, parseBRL, pct, todayBR } from "../lib/format";
 import { Tooltip } from "../components/Tooltip";
 
 const KIND_LABEL: Record<string, string> = {
@@ -24,14 +24,16 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
   const addEntry = useAddEntry();
   const [kind, setKind] = useState<"balance" | "deposit" | "withdrawal">("balance");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState("");
+  const [date, setDate] = useState(todayBR());
+
+  const dateInvalid = date.trim() !== "" && brToISO(date) === null;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const value = parseBRL(amount);
-    if (!(value > 0)) return;
+    if (!(value > 0) || dateInvalid) return;
     addEntry.mutate(
-      { id: account.id, body: { kind, amount: value, entry_date: date || null } },
+      { id: account.id, body: { kind, amount: value, entry_date: brToISO(date) } },
       { onSuccess: () => { setAmount(""); onDone(); } },
     );
   };
@@ -52,13 +54,15 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
           <input inputMode="decimal" placeholder="ex.: 1.000,00" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </label>
         <label className="field">
-          <span>Data (opcional)</span>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <span>Data do saldo</span>
+          <input inputMode="numeric" placeholder="dd/mm/aaaa" maxLength={10} value={date}
+                 onChange={(e) => setDate(e.target.value)} />
+          {dateInvalid && <span className="field-error">Use o formato dd/mm/aaaa.</span>}
         </label>
       </div>
       <p className="strategy-desc" style={{ marginTop: 0 }}>
         {kind === "balance"
-          ? "Informe o saldo que aparece hoje no app do banco — calculamos o rendimento desde o último."
+          ? "Informe o saldo atual — havendo um saldo anterior em OUTRA data, calculamos o rendimento entre as duas."
           : kind === "deposit"
           ? "Dinheiro novo que você colocou (não conta como rendimento)."
           : "Dinheiro que você sacou."}
@@ -68,7 +72,7 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
           ⚠️ {addEntry.error instanceof ApiError ? addEntry.error.userMessage : "Erro ao lançar."}
         </div>
       )}
-      <button className="primary" type="submit" disabled={addEntry.isPending || !(parseBRL(amount) > 0)}>
+      <button className="primary" type="submit" disabled={addEntry.isPending || !(parseBRL(amount) > 0) || dateInvalid}>
         {addEntry.isPending ? "Salvando…" : "Salvar lançamento"}
       </button>
     </form>
@@ -135,9 +139,10 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
 
       {open && <EntryForm account={account} onDone={() => setOpen(false)} />}
 
-      {cdiAnnual != null && account.last_yield_annual == null && (
+      {account.last_yield_annual == null && (
         <p className="strategy-desc" style={{ padding: "0 14px 12px" }}>
-          Lance um saldo para calcularmos o rendimento (CDI hoje: {pct(cdiAnnual)} a.a.).
+          O rendimento aparece quando há <strong>dois saldos em datas diferentes</strong>: atualize o
+          saldo num dia posterior ao saldo de partida.{cdiAnnual != null ? ` CDI hoje: ${pct(cdiAnnual)} a.a.` : ""}
         </p>
       )}
     </li>
@@ -146,21 +151,31 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
 
 function NewAccountForm() {
   const create = useCreateAccount();
+  const addEntry = useAddEntry();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [institution, setInstitution] = useState("");
   const [kind, setKind] = useState("cdb");
+  const [amount, setAmount] = useState("");
+  const [date, setDate] = useState(todayBR());
+
+  const busy = create.isPending || addEntry.isPending;
+  const dateInvalid = date.trim() !== "" && brToISO(date) === null;
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || dateInvalid) return;
+    const value = parseBRL(amount);
     create.mutate(
       { name: name.trim(), institution: institution.trim() || null, kind, benchmark: "cdi" },
       {
-        onSuccess: () => {
-          setName("");
-          setInstitution("");
-          setOpen(false);
+        onSuccess: (acc) => {
+          // Se informou um saldo inicial, já registra como 1º "saldo" datado — assim a
+          // PRÓXIMA atualização de saldo já calcula o rendimento (precisa de 2 datas).
+          if (value > 0) {
+            addEntry.mutate({ id: acc.id, body: { kind: "balance", amount: value, entry_date: brToISO(date) } });
+          }
+          setName(""); setInstitution(""); setAmount(""); setDate(todayBR()); setOpen(false);
         },
       },
     );
@@ -195,14 +210,30 @@ function NewAccountForm() {
           </select>
         </label>
       </div>
-      {create.isError && (
+      <div className="adv-row">
+        <label className="field">
+          <span>Saldo de partida (R$, opcional)</span>
+          <input inputMode="decimal" placeholder="ex.: 10.000,00" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Data desse saldo</span>
+          <input inputMode="numeric" placeholder="dd/mm/aaaa" maxLength={10} value={date}
+                 onChange={(e) => setDate(e.target.value)} />
+          {dateInvalid && <span className="field-error">Use o formato dd/mm/aaaa.</span>}
+        </label>
+      </div>
+      <p className="strategy-desc" style={{ marginTop: 0 }}>
+        Dica: informe o saldo de partida com a <strong>data em que você aplicou</strong> (no passado).
+        Depois, ao <strong>atualizar o saldo</strong> num outro dia, calculamos o rendimento entre as duas datas.
+      </p>
+      {(create.isError || addEntry.isError) && (
         <div className="banner banner-error">
           ⚠️ {create.error instanceof ApiError ? create.error.userMessage : "Erro ao criar a conta."}
         </div>
       )}
       <div className="reserve-actions">
-        <button className="primary" type="submit" disabled={create.isPending || !name.trim()}>
-          {create.isPending ? "Criando…" : "Criar conta"}
+        <button className="primary" type="submit" disabled={busy || !name.trim() || dateInvalid}>
+          {busy ? "Criando…" : "Criar conta"}
         </button>
         <button className="link-button" type="button" onClick={() => setOpen(false)}>
           Cancelar

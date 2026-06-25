@@ -16,6 +16,37 @@ export function parseBRL(input: string): number {
   return Number.isFinite(n) ? n : NaN;
 }
 
+/** Hoje no formato ISO local "yyyy-mm-dd" (sem fuso/UTC surpresa). */
+export function todayISO(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/** "yyyy-mm-dd" -> "dd/mm/yyyy". */
+export function isoToBR(iso: string): string {
+  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : iso;
+}
+
+/** Hoje no formato brasileiro "dd/mm/yyyy". */
+export function todayBR(): string {
+  return isoToBR(todayISO());
+}
+
+/** "dd/mm/yyyy" -> "yyyy-mm-dd" (ou null se inválido). Aceita 1-2 dígitos em dia/mês. */
+export function brToISO(input: string): string | null {
+  const m = input.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (!m) return null;
+  const dd = m[1].padStart(2, "0");
+  const mm = m[2].padStart(2, "0");
+  const iso = `${m[3]}-${mm}-${dd}`;
+  const d = new Date(`${iso}T00:00:00`);
+  // valida o calendário (ex.: 31/02 não existe)
+  return Number.isNaN(d.getTime()) || d.getDate() !== Number(dd) ? null : iso;
+}
+
 /** Data ISO -> "HH:MM de DD/MM" (para carimbo de frescor). */
 export function shortDateTime(iso?: string | null): string {
   if (!iso) return "";
