@@ -59,6 +59,12 @@ class Settings(BaseSettings):
 
     # Persistência (SQLite, single-user)
     db_path: str = Field("data/pomar.db", alias="DB_PATH")
+    # Backup automático do SQLite: snapshot diário via API de backup, com retenção.
+    # Fica DENTRO do volume de dados (data/backups) — protege contra corrupção e erro
+    # de migração; para desastre de disco, copie o volume para fora periodicamente.
+    backup_enabled: bool = Field(True, alias="BACKUP_ENABLED")
+    backup_dir: str = Field("data/backups", alias="BACKUP_DIR")
+    backup_retention: int = Field(14, alias="BACKUP_RETENTION")
 
     # Alvos default de alocação por classe (somam 1.0). Renda fixa entra na Fase 1,
     # junto com o alocador que sabe tratá-la — por isso ainda não está aqui.
@@ -158,8 +164,11 @@ BESST_KEYWORDS: tuple = (
 # financeira). O matching é por substring (case-insensitive) e retorna a MAIOR afinidade
 # casada. Setor presente mas sem casar => 0.0; setor ausente => indisponível.
 SECTOR_AFFINITY_MAP: dict = {
-    # Bancos
+    # Bancos — o Fundamentus classifica bancos como "Intermediários Financeiros"; sem esta
+    # chave, qualquer banco fora da curadoria caía no "financ" 0.3 e virava inelegível no
+    # Barsi (o matching pega a MAIOR afinidade casada, então 1.0 vence o "financ").
     "banco": 1.0, "bank": 1.0,
+    "intermediários financeiros": 1.0, "intermediarios financeiros": 1.0,
     # Energia
     "energia elétrica": 1.0, "energia eletrica": 1.0, "energia": 1.0,
     "energy": 1.0, "electric": 1.0, "utilities": 1.0,

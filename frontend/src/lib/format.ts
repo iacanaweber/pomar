@@ -8,10 +8,21 @@ export function pct(value: number, digits = 1): string {
   return `${(value * 100).toFixed(digits)}%`;
 }
 
-/** Converte texto pt-BR ("1.234,56") em número. Remove separador de milhar e usa
- *  a vírgula como decimal — corrige o bug do parseFloat ingênuo ("1.000,50" -> 1). */
+/** Converte texto de dinheiro em número, aceitando pt-BR ("1.234,56") e o ponto
+ *  decimal ("1500.00"). Regra: com vírgula, pontos são milhar; só com ponto, um único
+ *  ponto seguido de 1-2 dígitos no fim é DECIMAL — antes, "1500.00" virava 150.000 e
+ *  um aporte digitado assim gerava plano para cem vezes o valor. */
 export function parseBRL(input: string): number {
-  const cleaned = input.trim().replace(/\./g, "").replace(",", ".");
+  const s = input.trim();
+  if (!s) return NaN;
+  let cleaned: string;
+  if (s.includes(",")) {
+    cleaned = s.replace(/\./g, "").replace(",", ".");
+  } else if (/^\d+\.\d{1,2}$/.test(s)) {
+    cleaned = s; // "1500.00" / "99.9": ponto decimal
+  } else {
+    cleaned = s.replace(/\./g, ""); // "1.500" / "1.234.567": separador de milhar
+  }
   const n = parseFloat(cleaned);
   return Number.isFinite(n) ? n : NaN;
 }

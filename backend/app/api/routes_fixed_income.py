@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from app.deps import get_db, get_sgs
 from app.models.fixed_income import (
     AccountIn,
+    AccountPatch,
     AccountSummary,
     EntryIn,
     EntryOut,
@@ -24,12 +25,13 @@ async def _summary_with_cdi(account: dict, cdi: float | None) -> AccountSummary:
 
 
 @router.get("/fixed-income/summary", response_model=FixedIncomeSummary)
-async def fixed_income_summary() -> FixedIncomeSummary:
+async def fixed_income_summary(include_archived: bool = False) -> FixedIncomeSummary:
     db = get_db()
     cdi = await get_sgs().cdi_annual()
-    accounts = await repo.list_accounts(db, include_archived=False)
+    accounts = await repo.list_accounts(db, include_archived=include_archived)
     summaries = [await _summary_with_cdi(a, cdi) for a in accounts]
-    total = round(sum(s.current_balance for s in summaries), 2)
+    # o total da reserva conta só as contas ATIVAS, mesmo listando as arquivadas
+    total = round(sum(s.current_balance for s in summaries if not s.archived), 2)
     return FixedIncomeSummary(accounts=summaries, total_balance=total, cdi_annual=cdi)
 
 
@@ -44,14 +46,17 @@ async def create_account(body: AccountIn) -> AccountSummary:
 
 
 @router.patch("/fixed-income/accounts/{account_id}", response_model=AccountSummary)
-async def update_account(account_id: int, body: AccountIn) -> AccountSummary:
+async def update_account(account_id: int, body: AccountPatch) -> AccountSummary:
     db = get_db()
     if not await repo.get_account(db, account_id):
         raise HTTPException(status_code=404, detail="Conta não encontrada.")
-    await repo.update_account(
-        db, account_id, name=body.name, institution=body.institution,
-        kind=body.kind, benchmark=body.benchmark,
-    )
+    fields = {k: v for k, v in body.model_dump().items() if v is not None}
+    if "archived" in fields:
+        fields["archived"] = int(fields["archived"])
+    if "name" in fields and not str(fields["name"]).strip():
+        raise HTTPException(status_code=422, detail="Nome da conta não pode ficar vazio.")
+    if fields:
+        await repo.update_account(db, account_id, **fields)
     return await _summary_with_cdi(await repo.get_account(db, account_id), await get_sgs().cdi_annual())
 
 

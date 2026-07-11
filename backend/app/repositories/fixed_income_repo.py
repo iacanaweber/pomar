@@ -53,7 +53,11 @@ async def add_entry(
     db: Database, account_id: int, kind: str, amount: float,
     entry_date: Optional[str] = None, note: Optional[str] = None,
 ) -> int:
-    entry_date = (entry_date or datetime.now(timezone.utc).date().isoformat())[:10]
+    # default = data LOCAL do Brasil: com UTC, um lançamento depois das ~21h ganhava a
+    # data de amanhã e distorcia a contagem de dias úteis do rendimento.
+    from zoneinfo import ZoneInfo
+
+    entry_date = (entry_date or datetime.now(ZoneInfo("America/Sao_Paulo")).date().isoformat())[:10]
     return await db.insert(
         """INSERT INTO fixed_income_entries (account_id, kind, amount, entry_date, note, created_at)
            VALUES (?, ?, ?, ?, ?, ?)""",

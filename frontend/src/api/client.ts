@@ -1,6 +1,7 @@
 import type {
   AccountIn,
   AccountSummary,
+  AnnouncedResponse,
   AssetDetailResponse,
   AuthStatus,
   CalendarResponse,
@@ -16,13 +17,18 @@ import type {
   OrdersListResponse,
   PlanRequest,
   PlanResponse,
+  PlanSummary,
   Portfolio,
   Preferences,
   PreferencesBody,
   ProjectionRequest,
   ProjectionResponse,
+  RadarResponse,
+  RealizedIncomeResponse,
+  SnapshotsResponse,
   StrategiesResponse,
   WatchlistItem,
+  YocPoint,
 } from "../types";
 
 /** Erro de API com mensagem amigável já traduzida para o usuário. */
@@ -41,10 +47,12 @@ export class ApiError extends Error {
 
 function translate(status: number, path: string, detail?: string): string {
   if (status === 401) return "Sessão necessária. Entre com sua senha.";
-  if (status === 503) return "Servidor sem senha configurada (APP_PASSWORD).";
+  // 503 com detail é mensagem específica do backend (ex.: plano abortado sem carteira)
+  if (status === 503) return detail || "Servidor sem senha configurada (APP_PASSWORD).";
   if ([502, 504].includes(status)) {
     if (path.includes("/portfolio")) {
-      return "Não consegui falar com o Ghostfolio. Verifique a conexão em Ajustes.";
+      return "Não consegui falar com o Ghostfolio. Confira se o container dele está no ar "
+        + "(e o GHOSTFOLIO_URL/token no servidor) e tente de novo.";
     }
     return "Uma fonte de dados externa está indisponível. Tente de novo em instantes.";
   }
@@ -104,6 +112,11 @@ export const api = {
     request<{ ticker: string; asset_class: string }>("/api/watchlist", json({ ticker, note })),
   removeWatchlist: (ticker: string) =>
     request<{ ok: boolean }>(`/api/watchlist/${ticker}`, { method: "DELETE" }),
+  setFavorite: (ticker: string, favorite: boolean) =>
+    request<{ ticker: string; favorite: boolean }>(
+      `/api/watchlist/${ticker}`,
+      { ...json({ favorite }), method: "PATCH" },
+    ),
 
   // renda passiva
   income: () => request<IncomeResponse>("/api/income", {}, 60000),
@@ -111,9 +124,13 @@ export const api = {
     request<ProjectionResponse>("/api/income/projection", json(body)),
   incomeGoal: () => request<IncomeGoalResponse>("/api/income/goal", {}, 60000),
   incomeCalendar: () => request<CalendarResponse>("/api/income/calendar", {}, 60000),
+  incomeRealized: () => request<RealizedIncomeResponse>("/api/income/realized", {}, 30000),
+  incomeSnapshots: () => request<SnapshotsResponse>("/api/income/snapshots"),
+  incomeAnnounced: () => request<AnnouncedResponse>("/api/income/announced", {}, 60000),
+  yocHistory: (ticker: string) => request<YocPoint[]>(`/api/income/yoc/${ticker}`),
 
-  // renda fixa (rastreador / reserva)
-  fixedIncome: () => request<FixedIncomeSummary>("/api/fixed-income/summary"),
+  // renda fixa (rastreador / reserva) — lista TUDO; a UI separa ativas de arquivadas
+  fixedIncome: () => request<FixedIncomeSummary>("/api/fixed-income/summary?include_archived=true"),
   createAccount: (body: AccountIn) =>
     request<AccountSummary>("/api/fixed-income/accounts", json(body)),
   updateAccount: (id: number, body: Partial<AccountIn> & { archived?: boolean }) =>
@@ -138,4 +155,9 @@ export const api = {
 
   // plano (mais lento -> timeout maior)
   plan: (req: PlanRequest) => request<PlanResponse>("/api/plan", json(req), 60000),
+  planLatest: () => request<PlanResponse>("/api/plan/latest"),
+  planHistory: () => request<PlanSummary[]>("/api/plan/history"),
+
+  // radar da watchlist (preço-teto de todos os observados)
+  watchlistRadar: () => request<RadarResponse>("/api/watchlist/radar", {}, 60000),
 };

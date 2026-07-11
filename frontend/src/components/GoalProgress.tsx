@@ -1,20 +1,17 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
-import { useIncomeGoal, usePlan, usePreferences, useSavePreferences } from "../api/queries";
-import type { IncomeGoalResponse } from "../types";
+import { useIncomeGoal, useNextBuy, usePreferences, useSavePreferences, useStrategies } from "../api/queries";
+import type { IncomeGoalResponse, Preferences } from "../types";
 import { money, parseBRL, pct } from "../lib/format";
 import { SavedToast } from "./SavedToast";
 import { Tooltip } from "./Tooltip";
 
-/** "Próximo melhor aporte" — roda /plan com o aporte padrão e mostra o 1º sugerido. */
-function NextBuyCard({ defaultAporte }: { defaultAporte: number }) {
-  const plan = usePlan();
-  useEffect(() => {
-    if (defaultAporte > 0) plan.mutate({ aporte: defaultAporte, strategy: "equilibrado", max_assets: 5, max_weight_per_asset: 0.2, min_ticket: 100 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [defaultAporte]);
+/** "Próximo melhor aporte" — usa a ESTRATÉGIA e os parâmetros salvos (cacheado). */
+function NextBuyCard({ prefs }: { prefs?: Preferences }) {
+  const plan = useNextBuy(prefs);
+  const strategies = useStrategies();
 
-  if (plan.isPending) return <p className="muted" style={{ margin: "8px 0 0" }}>Buscando o próximo melhor aporte…</p>;
+  if (plan.isLoading) return <p className="muted" style={{ margin: "8px 0 0" }}>Buscando o próximo melhor aporte…</p>;
   const first = (plan.data?.ranking ?? []).find((a) => a.suggested);
   if (!first || !first.suggested) {
     return (
@@ -24,11 +21,14 @@ function NextBuyCard({ defaultAporte }: { defaultAporte: number }) {
     );
   }
   const s = first.suggested;
+  const stratLabel =
+    (prefs && strategies.data?.presets?.[prefs.strategy]?.label) || prefs?.strategy || "";
   return (
     <div className="goal-nextbuy">
       <span>
         ➜ Próximo melhor aporte: <strong>{first.ticker}</strong> {money(s.invested_exact)}{" "}
         <span className="muted">({s.shares} × {s.price ? money(s.price) : "—"})</span>
+        {stratLabel && <span className="muted"> · segundo sua estratégia {stratLabel}</span>}
       </span>
       <Link to="/plano" className="asset-link">Ver plano completo →</Link>
     </div>
@@ -90,7 +90,6 @@ export function GoalProgress() {
 
   if (isLoading) return <p className="muted">Calculando seu objetivo de renda…</p>;
 
-  const defaultAporte = prefs.data?.aporte_default ?? 1000;
   const achieved = !!goal && goal.pct_achieved >= 1;
 
   return (
@@ -160,20 +159,42 @@ export function GoalProgress() {
             </p>
           ) : (
             <p className="goal-status">
-              Você recebe <strong>{money(goal.current_monthly_income, goal.currency)}/mês</strong> ·
-              faltam <strong>{money(goal.gap_monthly, goal.currency)}/mês</strong>
+              Você recebe <strong>{money(goal.current_monthly_income, goal.currency)}/mês</strong>
+              {goal.include_reserve_income && goal.reserve_monthly_income != null && goal.reserve_monthly_income > 0 && (
+                <> (+ <strong>{money(goal.reserve_monthly_income, goal.currency)}</strong> da reserva)</>
+              )}{" "}
+              · faltam <strong>{money(goal.gap_monthly, goal.currency)}/mês</strong>
               {goal.estimated_years_to_goal != null && (
-                <> · em ~{goal.estimated_years_to_goal} {goal.estimated_years_to_goal === 1 ? "ano" : "anos"}</>
+                <>
+                  {" "}· em ~{goal.estimated_years_to_goal} {goal.estimated_years_to_goal === 1 ? "ano" : "anos"}
+                  {(goal.expected_inflation ?? 0) > 0 ? " (em reais de hoje)" : ""}
+                </>
+              )}
+            </p>
+          )}
+          {!goal.include_reserve_income && goal.reserve_monthly_income != null && goal.reserve_monthly_income > 0 && !achieved && (
+            <p className="muted" style={{ fontSize: 12, margin: "4px 0 0" }}>
+              Sua reserva rende ~{money(goal.reserve_monthly_income, goal.currency)}/mês (não conta
+              na meta — ative em Plantar → Ajustes avançados se quiser somar).
+            </p>
+          )}
+          {goal.next_milestone != null && goal.milestone_gap != null && !achieved && (
+            <p className="goal-milestone">
+              🎯 Próximo marco: <strong>{money(goal.next_milestone, goal.currency)}/mês</strong> — faltam{" "}
+              {money(goal.milestone_gap, goal.currency)} de renda
+              {goal.milestone_capital_needed != null && (
+                <> (≈ {money(goal.milestone_capital_needed, goal.currency)} investidos ao seu yield)</>
               )}
             </p>
           )}
           {goal.required_monthly_contribution != null && !achieved && (
             <p className="strategy-desc" style={{ marginTop: 4 }}>
               Aportando <strong>{money(goal.required_monthly_contribution, goal.currency)}/mês</strong>{" "}
-              por {goal.horizon_years} anos (yield {pct(goal.portfolio_yield)}).
+              por {goal.horizon_years} anos (yield {pct(goal.portfolio_yield)}
+              {(goal.expected_inflation ?? 0) > 0 ? `, inflação ${pct(goal.expected_inflation ?? 0)}` : ""}).
             </p>
           )}
-          {!achieved && <NextBuyCard defaultAporte={defaultAporte} />}
+          {!achieved && <NextBuyCard prefs={prefs.data} />}
           {(goal.warnings ?? []).map((w, i) => (
             <p key={i} className="muted" style={{ fontSize: 12, margin: "6px 0 0" }}>• {w}</p>
           ))}

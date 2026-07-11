@@ -36,7 +36,7 @@ log = logging.getLogger("pomar")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Pré-aquece o cache do universo no boot, para o primeiro plano não estourar timeout."""
+    """Pré-aquece o cache do universo no boot e agenda o backup diário do SQLite."""
 
     async def warm() -> None:
         try:
@@ -49,8 +49,24 @@ async def lifespan(app: FastAPI):
         except Exception as exc:  # noqa: BLE001
             log.warning("warmup do universo falhou: %r", exc)
 
+    async def backup_loop() -> None:
+        settings = getattr(app.state, "settings", None) or get_settings()
+        if not settings.backup_enabled or settings.db_path == ":memory:":
+            return
+        from app.deps import get_db
+
+        while True:
+            try:
+                path = await get_db().backup_now(settings.backup_dir, settings.backup_retention)
+                log.info("backup do SQLite gravado em %s", path)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("backup do SQLite falhou: %r", exc)
+            await asyncio.sleep(24 * 3600)
+
     app.state.warmup_task = asyncio.create_task(warm())
+    app.state.backup_task = asyncio.create_task(backup_loop())
     yield
+    app.state.backup_task.cancel()
     # shutdown: fecha a conexão do SQLite, se aberta
     try:
         from app.deps import get_db
@@ -72,6 +88,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url="/redoc" if settings.debug else None,
         openapi_url="/openapi.json" if settings.debug else None,
     )
+
+    # settings no app.state para o lifespan (backup) usar a MESMA config dos testes.
+    app.state.settings = settings
 
     # Auth primeiro (interno); CORS por fora, para tratar preflight antes da auth.
     app.add_middleware(AuthMiddleware)

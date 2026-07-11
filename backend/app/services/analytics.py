@@ -61,41 +61,64 @@ def snowball(
     annual_growth: float = 0.0,
     years: int = 20,
     reinvest: bool = True,
+    annual_inflation: float = 0.0,
 ) -> dict:
     """Simula a bola de neve de dividendos mês a mês.
 
-    A cada mês: recebe dividendos (yield/12 do patrimônio), aporta o valor mensal e, se
-    `reinvest`, soma os dividendos ao patrimônio. O yield cresce `annual_growth` ao ano.
-    Retorna a série anual e o resumo final.
+    Modelo (v4): o DY é CONSTANTE ao longo da simulação — quando os proventos de uma
+    empresa crescem, o preço tende a acompanhar e o yield fica ~estável. Por isso
+    `annual_growth` aplica-se ao PATRIMÔNIO (valorização de preço que acompanha o
+    crescimento dos proventos), não ao yield. (O modelo anterior expandia o yield
+    perpetuamente — 8% virava 21% em 20 anos — sobre um patrimônio parado, inflando a
+    renda projetada em até ~3×.)
+
+    Taxas mensais equivalentes ((1+a)^(1/12)−1) evitam o viés de compor a/12.
+    `annual_inflation` deflaciona a renda para reais DE HOJE (campos *_real) — a meta
+    do usuário é digitada em reais de hoje, então é contra o real que se compara.
+
+    A cada mês: recebe dividendos (yield mensal do patrimônio), o patrimônio valoriza
+    pelo growth mensal, entra o aporte e, se `reinvest`, os dividendos voltam ao bolo.
+    `annual_income` da série = dividendos efetivamente creditados no ano (não o
+    patrimônio de dezembro × yield, que superestimava).
     """
     years = max(1, min(years, 80))
+    m_yield = (1 + annual_yield) ** (1 / 12) - 1 if annual_yield > 0 else 0.0
+    m_growth = (1 + max(annual_growth, -0.9)) ** (1 / 12) - 1
     value = current_value
     total_invested = current_value
     total_dividends = 0.0
+    year_dividends = 0.0
     series: List[dict] = []
     for m in range(1, years * 12 + 1):
-        cur_yield = annual_yield * ((1 + annual_growth) ** ((m - 1) // 12))
-        income = value * (cur_yield / 12)
+        income = value * m_yield
         total_dividends += income
+        year_dividends += income
+        value *= 1 + m_growth
         value += monthly_contribution
         total_invested += monthly_contribution
         if reinvest:
             value += income
         if m % 12 == 0:
+            y = m // 12
+            deflator = (1 + annual_inflation) ** y
+            run_rate = value * annual_yield / 12  # renda mensal ao ritmo do fim do ano
             series.append(
                 {
-                    "year": m // 12,
+                    "year": y,
                     "value": round(value, 2),
                     "invested": round(total_invested, 2),
-                    "annual_income": round(value * cur_yield, 2),
-                    "monthly_income": round(value * cur_yield / 12, 2),
+                    "annual_income": round(year_dividends, 2),
+                    "monthly_income": round(run_rate, 2),
+                    "monthly_income_real": round(run_rate / deflator, 2),
                 }
             )
+            year_dividends = 0.0
     final = series[-1] if series else {}
     return {
         "series": series,
         "final_value": final.get("value", round(value, 2)),
         "final_monthly_income": final.get("monthly_income", 0.0),
+        "final_monthly_income_real": final.get("monthly_income_real", 0.0),
         "total_invested": round(total_invested, 2),
         "total_dividends": round(total_dividends, 2),
     }
@@ -108,15 +131,22 @@ def required_monthly_contribution(
     annual_growth: float = 0.0,
     years: int = 20,
     reinvest: bool = True,
+    annual_inflation: float = 0.0,
 ) -> Optional[float]:
-    """Quanto aportar por mês para atingir uma renda mensal-alvo em `years` (busca binária)."""
-    if target_monthly_income <= 0 or annual_yield <= 0:
+    """Quanto aportar por mês para atingir uma renda mensal-alvo em `years` (busca binária).
+
+    A meta é em reais de hoje, então a comparação usa a renda DEFLACIONADA.
+    Sem yield não há renda de dividendos: retorna None (impossível), não R$ 0.
+    """
+    if target_monthly_income <= 0:
         return 0.0
+    if annual_yield <= 0:
+        return None
 
     def income_at(contrib: float) -> float:
-        return snowball(current_value, contrib, annual_yield, annual_growth, years, reinvest)[
-            "final_monthly_income"
-        ]
+        return snowball(
+            current_value, contrib, annual_yield, annual_growth, years, reinvest, annual_inflation
+        )["final_monthly_income_real"]
 
     if income_at(0.0) >= target_monthly_income:
         return 0.0  # a carteira atual já chega lá
@@ -143,12 +173,16 @@ def estimated_years_to_goal(
     annual_growth: float = 0.0,
     reinvest: bool = True,
     max_years: int = 80,
+    annual_inflation: float = 0.0,
 ) -> Optional[int]:
-    """Menor nº de anos para a renda mensal atingir a meta, com o aporte atual. None se nunca."""
+    """Menor nº de anos para a renda mensal (em reais de hoje) atingir a meta. None se nunca."""
     if target_monthly_income <= 0 or annual_yield <= 0:
         return None
-    for y in range(1, max_years + 1):
-        sb = snowball(current_value, monthly_contribution, annual_yield, annual_growth, y, reinvest)
-        if sb["final_monthly_income"] >= target_monthly_income:
-            return y
+    sb = snowball(
+        current_value, monthly_contribution, annual_yield, annual_growth,
+        max_years, reinvest, annual_inflation,
+    )
+    for point in sb["series"]:
+        if point["monthly_income_real"] >= target_monthly_income:
+            return point["year"]
     return None

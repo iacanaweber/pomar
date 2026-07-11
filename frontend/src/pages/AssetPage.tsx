@@ -1,11 +1,36 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../api/client";
-import { useAsset } from "../api/queries";
+import { useAsset, useYocHistory } from "../api/queries";
 import { CeilingBadge } from "../components/CeilingBadge";
 import { ScoreBreakdown } from "../components/ScoreBreakdown";
 import { Tooltip } from "../components/Tooltip";
 import type { Fundamentals } from "../types";
 import { money, pct } from "../lib/format";
+
+/** Evolução do Yield on Cost (dos snapshots mensais) — a prova visual do método:
+ *  as ações que pagam cada vez mais sobre o que você pagou. */
+function YocEvolution({ ticker }: { ticker: string }) {
+  const { data } = useYocHistory(ticker);
+  const points = (data ?? []).filter((p) => p.yoc != null);
+  if (points.length < 2) return null;
+  const first = points[0];
+  const last = points[points.length - 1];
+  const trend = (last.yoc ?? 0) - (first.yoc ?? 0);
+  return (
+    <div className="alloc">
+      <h3>
+        <Tooltip metricKey="yield_on_cost">
+          <span>Evolução do Yield on Cost</span>
+        </Tooltip>
+      </h3>
+      <p style={{ marginTop: 0 }}>
+        De <strong>{pct(first.yoc ?? 0)}</strong> em {first.month} para{" "}
+        <strong>{pct(last.yoc ?? 0)}</strong> em {last.month}
+        {trend > 0.001 ? " — sua renda sobre o custo está crescendo. 🌱" : ""}
+      </p>
+    </div>
+  );
+}
 
 const RISK_CLASS: Record<string, string> = {
   verde: "risk-verde",
@@ -122,11 +147,13 @@ export function AssetPage() {
           <Fund label="VPA" value={f.vpa != null ? f.vpa.toFixed(2) : null} />
           <Fund label="ROE" value={f.roe != null ? pct(f.roe) : null} />
           <Fund label="Margem líquida" value={f.net_margin != null ? pct(f.net_margin) : null} />
-          <Fund label="Dív. líq./EBITDA" value={f.net_debt_to_ebitda != null ? f.net_debt_to_ebitda.toFixed(2) : null} />
+          <Fund label="Dív. líq./EBIT (proxy)" value={f.net_debt_to_ebitda != null ? f.net_debt_to_ebitda.toFixed(2) : null} />
           <Fund label="Liquidez corrente" value={f.current_ratio != null ? f.current_ratio.toFixed(2) : null} />
         </div>
         <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>Fonte: {asset.source}</p>
       </div>
+
+      <YocEvolution ticker={asset.ticker} />
 
       {years.length > 0 && (
         <div className="alloc">

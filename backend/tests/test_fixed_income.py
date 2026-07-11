@@ -96,3 +96,55 @@ async def test_sgs_cdi_annual_from_cache():
     sgs = SgsClient(cache)
     cdi = await sgs.cdi_annual()
     assert cdi is not None and abs(cdi - 0.1415) < 0.002
+
+
+def test_dietz_resgate_no_meio_nao_infla_taxa():
+    """Cenário da auditoria: 10k aportados em jan, 5k resgatados em nov, saldo 5.600 em
+    dez. O método antigo dava ~13,9% a.a. (dividia o ganho por 5.000, como se os 10k
+    nunca tivessem rendido); o Modified Dietz pondera o resgate pelo tempo."""
+    entries = [
+        {"id": 1, "kind": "deposit", "amount": 10_000.0, "entry_date": "2026-01-02"},
+        {"id": 2, "kind": "withdrawal", "amount": 5_000.0, "entry_date": "2026-11-03"},
+        {"id": 3, "kind": "balance", "amount": 5_600.0, "entry_date": "2026-12-01"},
+    ]
+    res = fi.last_yield(entries)
+    assert res is not None and res["annualized"] is not None
+    assert res["gain"] == 600.0
+    assert res["annualized"] < 0.10  # antigo: ~0.139
+    assert res["annualized"] > 0.04
+
+
+def test_dietz_um_aporte_um_saldo_continua_exato():
+    """O caso simples (1 aporte + 1 saldo) não muda com o Dietz: peso do aporte = 1."""
+    entries = [
+        {"id": 1, "kind": "deposit", "amount": 10_000.0, "entry_date": "2026-01-02"},
+        {"id": 2, "kind": "balance", "amount": 10_100.0, "entry_date": "2026-02-02"},
+    ]
+    res = fi.last_yield(entries)
+    assert res is not None
+    assert abs(res["period_return"] - 0.01) < 1e-9
+
+
+def test_feriados_gerados_batem_com_a_lista_curada_2024_2027():
+    """Golden test: o gerador algorítmico reproduz exatamente a antiga lista curada
+    (2024–2027) — e segue funcionando em 2028+ sem manutenção anual."""
+    from datetime import date
+
+    from app.data.holidays_b3 import B3_HOLIDAYS, b3_holidays_for_year
+
+    curado = {
+        2024: {(1, 1), (2, 12), (2, 13), (3, 29), (4, 21), (5, 1), (5, 30), (9, 7),
+               (10, 12), (11, 2), (11, 15), (11, 20), (12, 24), (12, 25), (12, 31)},
+        2025: {(1, 1), (3, 3), (3, 4), (4, 18), (4, 21), (5, 1), (6, 19), (9, 7),
+               (10, 12), (11, 2), (11, 15), (11, 20), (12, 24), (12, 25), (12, 31)},
+        2026: {(1, 1), (2, 16), (2, 17), (4, 3), (4, 21), (5, 1), (6, 4), (9, 7),
+               (10, 12), (11, 2), (11, 15), (11, 20), (12, 24), (12, 25), (12, 31)},
+        2027: {(1, 1), (2, 8), (2, 9), (3, 26), (4, 21), (5, 1), (5, 27), (9, 7),
+               (10, 12), (11, 2), (11, 15), (11, 20), (12, 24), (12, 25), (12, 31)},
+    }
+    for year, mmdd in curado.items():
+        gerado = {(d.month, d.day) for d in b3_holidays_for_year(year)}
+        assert gerado == mmdd, f"divergência em {year}"
+    # 2028+ coberto (era o ponto cego): Sexta-feira Santa de 2028 = 14/04
+    assert date(2028, 4, 14) in B3_HOLIDAYS
+    assert date(2030, 1, 1) in B3_HOLIDAYS

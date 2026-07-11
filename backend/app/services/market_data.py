@@ -100,7 +100,10 @@ async def build_assets(
                 avg_daily_liquidity=fund.get("avg_daily_liquidity"),
             ),
             dividends_by_year=by_year,
-            lot_size=1,
+            # Lote padrão da B3: ações negociam em lotes de 100 no mercado principal
+            # (o fracionário aceita 1); FII/ETF/BDR negociam por 1 cota. O plano usa o
+            # lote conforme a preferência lot_mode ('integral' respeita o lote de 100).
+            lot_size=100 if cls == "STOCK" else 1,
             missing=missing,
             as_of=datetime.now(timezone.utc).isoformat(),
             source="+".join(src) or "indisponível",

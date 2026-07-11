@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { ApiError } from "../api/client";
-import { useIncome, usePortfolio } from "../api/queries";
+import { useFixedIncome, useIncome, usePortfolio } from "../api/queries";
 import type { Position } from "../types";
 import { PieChart, type Slice } from "../components/PieChart";
 import { AssetLink } from "../components/AssetLink";
@@ -77,6 +77,7 @@ function aggregate(positions: Position[], by: GroupBy): Group[] {
 export function PortfolioPage() {
   const { data: pf, isLoading, error } = usePortfolio();
   const income = useIncome();
+  const fixedIncome = useFixedIncome(); // só pelo CDI de referência (SGS/BCB)
   const [by, setBy] = useState<GroupBy>("class");
   const [active, setActive] = useState<number | null>(null);
 
@@ -161,6 +162,9 @@ export function PortfolioPage() {
                 <span> · DY <strong>{pct(portfolioDy)}</strong></span>
               </Tooltip>
             )}
+            {fixedIncome.data?.cdi_annual != null && (
+              <span className="muted"> · CDI referência {pct(fixedIncome.data.cdi_annual)} a.a.</span>
+            )}
           </span>
         )}
       </div>
@@ -219,7 +223,7 @@ export function PortfolioPage() {
 
       {by === "asset" && (
         <div className="pf-drill">
-          <h3>Por ativo · DY e Yield on Cost</h3>
+          <h3>Por ativo · DY, Yield on Cost e retorno</h3>
           <ul className="pf-drill-list">
             {[...positions]
               .sort((a, b) => b.value - a.value)
@@ -232,10 +236,23 @@ export function PortfolioPage() {
                       {money(p.value)} <span className="muted">· {pct(p.value / pf.total_value)}</span>
                     </span>
                     <YocCell dividendYield={y?.dy} yieldOnCost={y?.yoc} />
+                    {p.net_performance_pct != null && (
+                      <Tooltip metricKey="net_performance">
+                        <span
+                          className={`pf-perf ${p.net_performance_pct >= 0 ? "pf-perf-up" : "pf-perf-down"}`}
+                        >
+                          {p.net_performance_pct >= 0 ? "▲" : "▼"} {pct(Math.abs(p.net_performance_pct))}
+                        </span>
+                      </Tooltip>
+                    )}
                   </li>
                 );
               })}
           </ul>
+          <p className="muted" style={{ fontSize: 12 }}>
+            Retorno = valorização + proventos desde a compra (Ghostfolio). Compare com o CDI do
+            período antes de tirar conclusões — anos ruins fazem parte do método.
+          </p>
         </div>
       )}
 

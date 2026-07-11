@@ -27,6 +27,8 @@ def _windowed(payments: list) -> Dict[str, float]:
     current_year = datetime.now(timezone.utc).year
     by_year: Dict[int, float] = {}
     for it in payments:
+        if not _is_income(it.get("et")):
+            continue
         date = it.get("pd") or it.get("ed") or ""  # dd/mm/yyyy
         value = it.get("v")
         if len(str(date)) >= 4 and value is not None:
@@ -61,6 +63,13 @@ def _net_factor(et: Optional[str]) -> float:
     return 1.0  # 'Dividendo' (isento) e 'Rendimento' de FII (isento p/ PF)
 
 
+def _is_income(et: Optional[str]) -> bool:
+    """Só conta como RENDA o que é renda: amortização (devolução do próprio principal, comum
+    em FIIs) e direitos de subscrição inflavam DY, preço-teto e calendário."""
+    s = (et or "").lower()
+    return not ("amortiza" in s or "subscri" in s)
+
+
 def _trailing_365(payments: List[dict], today: date, net: bool) -> float:
     """Soma dos proventos PAGOS nos últimos 365 dias (por data de pagamento `pd`/`ed`).
 
@@ -69,6 +78,8 @@ def _trailing_365(payments: List[dict], today: date, net: bool) -> float:
     cutoff = today - timedelta(days=365)
     total = 0.0
     for it in payments:
+        if not _is_income(it.get("et")):
+            continue
         d = _parse_date(it.get("pd") or it.get("ed"))
         v = it.get("v")
         if d is None or v is None or not (cutoff < d <= today):
@@ -159,20 +170,72 @@ async def fetch(ticker: str, cache: Cache, asset_class: str = "STOCK") -> Dict:
     }
 
 
+async def announced_payments(ticker: str, cache: Cache, asset_class: str = "STOCK") -> List[dict]:
+    """Pagamentos futuros JÁ ANUNCIADOS — vêm no mesmo JSON e eram descartados.
+
+    Inclui: (a) pagamento com data futura conhecida; (b) anunciado com data-com recente
+    mas pagamento ainda indefinido (o StatusInvest manda pd='-' nesses casos).
+    Valores por cota, bruto e líquido (JCP ×0,85).
+    """
+    payments = await _fetch_payments(ticker, cache, asset_class)
+    if not payments:
+        return []
+    today = datetime.now(timezone.utc).date()
+    recent_ex = today - timedelta(days=45)
+    out: List[dict] = []
+    for it in payments:
+        if not _is_income(it.get("et")):
+            continue
+        v = it.get("v")
+        if v is None:
+            continue
+        pay = _parse_date(it.get("pd"))
+        ex = _parse_date(it.get("ed"))
+        announced_future = pay is not None and pay >= today
+        announced_pending = pay is None and ex is not None and ex >= recent_ex
+        if not (announced_future or announced_pending):
+            continue
+        out.append(
+            {
+                "ticker": ticker.upper(),
+                "payment_date": pay.isoformat() if pay else None,  # None = "a definir"
+                "ex_date": ex.isoformat() if ex else None,
+                "value_per_share": round(float(v), 6),
+                "net_value_per_share": round(float(v) * _net_factor(it.get("et")), 6),
+                "type": it.get("et"),
+            }
+        )
+    out.sort(key=lambda x: (x["payment_date"] or "9999-12-31"))
+    return out
+
+
 async def monthly_seasonality(ticker: str, cache: Cache, asset_class: str = "STOCK") -> Dict[int, float]:
-    """Provento MÉDIO por mês (1..12) por cota, dos últimos anos completos — mapa sazonal."""
+    """Provento MÉDIO por mês (1..12) por cota, dos últimos anos completos — mapa sazonal.
+
+    Valores LÍQUIDOS (JCP ×0,85): o calendário estima o que cai na conta.
+    """
     payments = await _fetch_payments(ticker, cache, asset_class)
     if not payments:
         return {}
     current_year = datetime.now(timezone.utc).year
     by_month: Dict[int, float] = {m: 0.0 for m in range(1, 13)}
-    years: set[int] = set()
+    first_year: Optional[int] = None
     for it in payments:
+        if not _is_income(it.get("et")):
+            continue
         d = _parse_date(it.get("pd") or it.get("ed"))
         v = it.get("v")
-        if d is None or v is None or not (current_year - _WINDOW <= d.year < current_year):
+        if d is None or v is None:
             continue
-        by_month[d.month] += float(v)
-        years.add(d.year)
-    n = len(years) or 1
+        first_year = d.year if first_year is None else min(first_year, d.year)
+        if not (current_year - _WINDOW <= d.year < current_year):
+            continue
+        by_month[d.month] += float(v) * _net_factor(it.get("et"))
+    if first_year is None:
+        return {}
+    # Divide pela JANELA de anos completos (ano sem pagamento conta como zero) — a mesma
+    # convenção do _windowed. Dividir só pelos anos COM pagamento fazia o pagador
+    # irregular parecer pagador anual (viés sempre para cima). Empresa recém-listada
+    # divide pelos anos desde a estreia (não pela janela cheia).
+    n = max(1, min(_WINDOW, current_year - first_year))
     return {m: round(by_month[m] / n, 6) for m in range(1, 13)}

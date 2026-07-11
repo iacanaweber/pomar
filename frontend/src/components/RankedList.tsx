@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCreateOrder } from "../api/queries";
 import type { PlanResponse, ScoredAsset } from "../types";
 import { money } from "../lib/format";
 import { AssetLink } from "./AssetLink";
@@ -12,7 +13,36 @@ const RISK_CLASS: Record<string, string> = {
   vermelho: "risk-vermelho",
 };
 
-function AssetCard({ asset }: { asset: ScoredAsset }) {
+/** Fecha o ciclo do aporte: comprou na corretora → um toque registra a execução
+ *  (pré-preenchida com a sugestão do plano) e alimenta histórico + disciplina. */
+function RegisterBuyButton({ asset, planId }: { asset: ScoredAsset; planId?: number | null }) {
+  const create = useCreateOrder();
+  const s = asset.suggested;
+  if (!s) return null;
+  if (create.isSuccess) return <span className="order-registered">✓ compra registrada</span>;
+  return (
+    <button
+      className="link-button order-register"
+      disabled={create.isPending}
+      onClick={(e) => {
+        e.stopPropagation();
+        create.mutate({
+          ticker: asset.ticker,
+          asset_class: asset.asset_class,
+          shares: s.shares,
+          price: s.price ?? 0,
+          fees: 0,
+          plan_id: planId ?? null,
+          note: "registrado do plano",
+        });
+      }}
+    >
+      {create.isPending ? "registrando…" : "🛒 Registrei a compra"}
+    </button>
+  );
+}
+
+function AssetCard({ asset, planId }: { asset: ScoredAsset; planId?: number | null }) {
   const [open, setOpen] = useState(false);
   const score = Math.round(asset.composite_score * 100);
   const reasons = asset.reasons ?? [];
@@ -74,6 +104,7 @@ function AssetCard({ asset }: { asset: ScoredAsset }) {
 
       <div className="card-detail-link">
         <AssetLink ticker={asset.ticker}>ver detalhes de {asset.ticker} →</AssetLink>
+        {asset.suggested && <RegisterBuyButton asset={asset} planId={planId} />}
       </div>
 
       {open && <ScoreBreakdown asset={asset} />}
@@ -96,7 +127,7 @@ export function RankedList({ plan }: { plan: PlanResponse }) {
           </h2>
           <ul className="cards">
             {buys.map((a) => (
-              <AssetCard key={a.ticker} asset={a} />
+              <AssetCard key={a.ticker} asset={a} planId={plan.plan_id} />
             ))}
           </ul>
         </>
@@ -106,7 +137,7 @@ export function RankedList({ plan }: { plan: PlanResponse }) {
           <h3 className="muted">Outros candidatos no ranking</h3>
           <ul className="cards">
             {rest.map((a) => (
-              <AssetCard key={a.ticker} asset={a} />
+              <AssetCard key={a.ticker} asset={a} planId={plan.plan_id} />
             ))}
           </ul>
         </>

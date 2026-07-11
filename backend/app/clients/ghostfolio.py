@@ -100,6 +100,43 @@ class GhostfolioClient:
             as_of=datetime.now(timezone.utc).isoformat(),
         )
 
+    async def get_dividends_by_month(self) -> list[dict]:
+        """Dividendos efetivamente RECEBIDOS, agregados por mês pelo próprio Ghostfolio.
+
+        GET /api/v1/portfolio/dividends?range=max&groupBy=month →
+        {"dividends": [{"date": "2026-05-01", "investment": 6.15}, ...]}
+        Retorna [{"month": "2026-05", "total": 6.15}, ...] em ordem cronológica.
+        """
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            data = await self._get(client, "/api/v1/portfolio/dividends?range=max&groupBy=month")
+        out: list[dict] = []
+        for it in data.get("dividends") or []:
+            date = str(it.get("date") or "")[:7]  # yyyy-mm
+            total = _num(it.get("investment") if it.get("investment") is not None else it.get("value"))
+            if len(date) == 7 and total is not None:
+                out.append({"month": date, "total": round(total, 2)})
+        out.sort(key=lambda x: x["month"])
+        return out
+
+    async def get_dividend_activities(self) -> list[dict]:
+        """Atividades DIVIDEND individuais (data, ticker, valor) — para o detalhamento
+        por ativo e o 'último provento recebido'. GET /api/v1/order, tipo DIVIDEND."""
+        async with httpx.AsyncClient(timeout=20.0) as client:
+            data = await self._get(client, "/api/v1/order")
+        out: list[dict] = []
+        for a in data.get("activities") or []:
+            if str(a.get("type") or "").upper() != "DIVIDEND":
+                continue
+            value = _num(a.get("valueInBaseCurrency") if a.get("valueInBaseCurrency") is not None
+                         else a.get("value"))
+            date = str(a.get("date") or "")[:10]
+            symbol = (a.get("SymbolProfile") or {}).get("symbol") or ""
+            if value is None or len(date) != 10:
+                continue
+            out.append({"date": date, "ticker": normalize_ticker(symbol), "value": round(value, 2)})
+        out.sort(key=lambda x: x["date"])
+        return out
+
     async def health(self) -> bool:
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:

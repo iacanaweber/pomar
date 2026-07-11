@@ -8,10 +8,109 @@ import {
   useDeleteEntry,
   useEntries,
   useFixedIncome,
+  usePortfolio,
+  usePreferences,
+  useSavePreferences,
+  useUpdateAccount,
 } from "../api/queries";
 import type { AccountSummary } from "../types";
 import { brToISO, isoToBR, money, parseBRL, pct, todayBR } from "../lib/format";
 import { Tooltip } from "../components/Tooltip";
+
+/** Barra alvo × atual da reserva, NA PRÓPRIA página (antes só existia dentro do plano e
+ *  só com alvo configurado nos ajustes avançados — a J4 'como está minha reserva?' não
+ *  tinha tela). Permite definir/editar o alvo aqui mesmo. */
+function ReserveGoal({ totalReserve }: { totalReserve: number }) {
+  const prefs = usePreferences();
+  const savePrefs = useSavePreferences();
+  const portfolio = usePortfolio();
+  const [editing, setEditing] = useState(false);
+  const [targetPct, setTargetPct] = useState<number | null>(null);
+
+  const savedTarget = prefs.data?.reserve_target ?? 0;
+  const shownPct = targetPct ?? Math.round(savedTarget * 100);
+  const totalRV = portfolio.data?.total_value ?? 0;
+
+  const save = () => {
+    savePrefs.mutate(
+      { reserve_target: (shownPct || 0) / 100 },
+      { onSuccess: () => setEditing(false) },
+    );
+  };
+
+  if (savedTarget <= 0 && !editing) {
+    return (
+      <div className="alloc reserve-goal">
+        <p className="muted" style={{ margin: 0 }}>
+          Sem reserva-alvo definida. No método Barsi, completar a reserva vem <strong>antes</strong>{" "}
+          da renda variável — defina um alvo e o plano prioriza automaticamente.
+        </p>
+        <button className="link-button" onClick={() => setEditing(true)}>
+          Definir reserva-alvo
+        </button>
+      </div>
+    );
+  }
+
+  const targetAmount = (shownPct / 100) * (totalRV + totalReserve);
+  const gap = Math.max(0, targetAmount - totalReserve);
+  const filled = targetAmount > 0 ? Math.min(1, totalReserve / targetAmount) : 1;
+
+  return (
+    <div className="alloc reserve-goal">
+      <div className="goal-head">
+        <Tooltip metricKey="reserve_target">
+          <h3 style={{ margin: 0 }}>Meta da reserva</h3>
+        </Tooltip>
+        {!editing && (
+          <button className="link-button" onClick={() => setEditing(true)}>editar</button>
+        )}
+      </div>
+      {editing ? (
+        <div className="reserve-actions" style={{ alignItems: "center" }}>
+          <label className="field" style={{ maxWidth: 160 }}>
+            <span>Reserva-alvo (% do patrimônio)</span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={shownPct}
+              onChange={(e) => setTargetPct(Number(e.target.value))}
+              autoFocus
+            />
+          </label>
+          <button className="primary" onClick={save} disabled={savePrefs.isPending}>
+            {savePrefs.isPending ? "Salvando…" : "Salvar"}
+          </button>
+          <button className="link-button" onClick={() => { setEditing(false); setTargetPct(null); }}>
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <>
+          <div className="goal-bar" role="progressbar" aria-valuenow={Math.round(filled * 100)}
+               aria-valuemin={0} aria-valuemax={100} aria-label={`Reserva: ${Math.round(filled * 100)}% do alvo`}>
+            <div className="alloc-track" style={{ height: 18 }}>
+              <div className="alloc-cur" style={{ width: `${Math.round(filled * 100)}%`,
+                background: filled >= 1 ? "var(--green)" : "var(--leaf)" }} />
+            </div>
+            <span className="goal-bar-label">{Math.round(filled * 100)}% do alvo</span>
+          </div>
+          <p className="goal-status" style={{ marginBottom: 0 }}>
+            Alvo: <strong>{money(targetAmount)}</strong> ({shownPct}% do patrimônio) · atual{" "}
+            <strong>{money(totalReserve)}</strong>
+            {gap > 0 ? <> · faltam <strong>{money(gap)}</strong></> : <> · ✅ completa</>}
+          </p>
+          {portfolio.isError && (
+            <p className="muted" style={{ fontSize: 12 }}>
+              (carteira indisponível — o alvo considera só a reserva por enquanto)
+            </p>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
 
 const ENTRY_LABEL: Record<string, string> = {
   balance: "Saldo",
@@ -121,17 +220,30 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
 
 function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnual?: number | null }) {
   const archive = useArchiveAccount();
+  const update = useUpdateAccount();
   const [open, setOpen] = useState(false);
   const [showEntries, setShowEntries] = useState(false);
 
   const pctCdiText =
     account.pct_of_cdi != null ? `${Math.round(account.pct_of_cdi * 100)}% do CDI` : null;
 
+  const rename = () => {
+    const name = window.prompt("Novo nome da conta:", account.name);
+    if (name && name.trim() && name.trim() !== account.name) {
+      update.mutate({ id: account.id, body: { name: name.trim() } });
+    }
+  };
+
   return (
     <li className="card">
       <div className="reserve-card-head">
         <div className="card-id">
-          <span className="card-ticker">{account.name}</span>
+          <span className="card-ticker">
+            {account.name}{" "}
+            <button className="link-button reserve-rename" onClick={rename} aria-label={`Renomear ${account.name}`}>
+              ✏️
+            </button>
+          </span>
           <span className="card-name">
             {[account.institution, account.kind ? KIND_LABEL[account.kind] ?? account.kind : null]
               .filter(Boolean)
@@ -143,7 +255,7 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
 
       <div className="reserve-metrics">
         <div className="reserve-metric">
-          <Tooltip metricKey="net_yield">
+          <Tooltip metricKey="fixed_income_yield">
             <span className="muted">Último rendimento</span>
           </Tooltip>
           <strong>
@@ -172,12 +284,13 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
         <button
           className="link-button reserve-archive"
           onClick={() => {
-            if (confirm(`Arquivar a conta "${account.name}"?`)) archive.mutate(account.id);
+            if (confirm(`Arquivar "${account.name}"? Os lançamentos ficam guardados e dá para desarquivar depois.`))
+              archive.mutate(account.id);
           }}
           disabled={archive.isPending}
-          aria-label={`Arquivar conta ${account.name}`}
+          aria-label={`Arquivar conta ${account.name} (reversível)`}
         >
-          🗑 Arquivar
+          📦 Arquivar
         </button>
       </div>
 
@@ -291,8 +404,11 @@ function NewAccountForm() {
 export function ReservePage() {
   const navigate = useNavigate();
   const { data, isLoading, error } = useFixedIncome();
+  const update = useUpdateAccount();
+  const [showArchived, setShowArchived] = useState(false);
 
   const accounts = (data?.accounts ?? []).filter((a) => !a.archived);
+  const archived = (data?.accounts ?? []).filter((a) => a.archived);
 
   return (
     <main className="page">
@@ -322,6 +438,8 @@ export function ReservePage() {
         </div>
       )}
 
+      {data && <ReserveGoal totalReserve={data.total_balance} />}
+
       {data && accounts.length === 0 && (
         <div className="banner banner-warn">
           Nenhuma aplicação ainda. Adicione sua reserva (conta, CDB, Tesouro) para acompanhar o
@@ -338,6 +456,35 @@ export function ReservePage() {
       )}
 
       <NewAccountForm />
+
+      {archived.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          <button className="link-button" onClick={() => setShowArchived((v) => !v)}>
+            {showArchived ? "▲ Ocultar arquivadas" : `▼ Mostrar arquivadas (${archived.length})`}
+          </button>
+          {showArchived && (
+            <ul className="cards" style={{ marginTop: 8 }}>
+              {archived.map((a) => (
+                <li key={a.id} className="card reserve-archived-row">
+                  <div className="reserve-card-head">
+                    <div className="card-id">
+                      <span className="card-ticker">{a.name}</span>
+                      <span className="card-name">arquivada · último saldo {money(a.current_balance)}</span>
+                    </div>
+                    <button
+                      className="link-button"
+                      disabled={update.isPending}
+                      onClick={() => update.mutate({ id: a.id, body: { archived: false } })}
+                    >
+                      ↩ Desarquivar
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <p className="disclaimer">
         Rendimentos calculados a partir dos saldos que você informa. Não é recomendação de

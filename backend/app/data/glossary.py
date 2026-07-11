@@ -63,20 +63,33 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     "bazin_ceiling": {
         "label": "Margem Bazin (preço-teto)",
         "definition": "Método de Décio Bazin: o 'preço-teto' justo é o dividendo médio anual "
-        "dividido por 6% (DY-alvo). Comprar abaixo desse teto garante um yield mínimo de 6%. "
-        "A margem mostra o quanto o preço atual está abaixo (positivo) ou acima do teto.",
-        "source": "calculado: preço-teto = dividendo médio (5 anos) ÷ DY-alvo; margem = (teto − preço) ÷ teto",
+        "dividido pelo DY-alvo (6% por padrão). Comprar abaixo desse teto garante um yield "
+        "mínimo. A margem mostra o quanto o preço atual está abaixo (positivo) ou acima do teto.",
+        "source": "calculado: preço-teto = média de proventos da janela de 5 anos (ano sem pagar "
+        "conta como zero) ÷ DY-alvo; margem = (teto − preço) ÷ teto",
         "interpretation": "Margem positiva = comprando abaixo do teto (bom). Negativa = caro "
-        "frente ao histórico de proventos. O DY-alvo é 6% por padrão, configurável (ou atrelado à Selic).",
+        "frente ao histórico — e no score a margem negativa vale zero, mesmo que os pares "
+        "estejam piores. O DY-alvo é configurável (ou atrelado à Selic).",
     },
     "bazin_ceiling_price": {
         "label": "Preço-teto (Bazin)",
         "definition": "O preço máximo a pagar pela ação, em reais, para garantir o DY-alvo "
-        "(6% por padrão), usando a média dos proventos pagos dos últimos 5 anos. Comprar abaixo "
-        "dele dá margem de segurança de renda.",
-        "source": "calculado: média de proventos (5 anos) ÷ DY-alvo",
+        "(6% por padrão), usando a média dos proventos da janela de 5 anos — anos sem pagamento "
+        "contam como zero, então pagadora irregular tem teto menor. Comprar abaixo dele dá "
+        "margem de segurança de renda.",
+        "source": "calculado: média de proventos (janela de 5 anos, zeros incluídos) ÷ DY-alvo",
         "interpretation": "Se o preço atual está ABAIXO do teto, é zona de compra pelo método "
         "Bazin. Acima do teto, o yield esperado fica abaixo da sua meta.",
+    },
+    "dividend_growth": {
+        "label": "Crescimento dos proventos",
+        "definition": "Ritmo anual de crescimento dos proventos por cota na janela de 5 anos "
+        "(compara a média dos 2 últimos anos com a dos 2 primeiros). É o segundo motor da bola "
+        "de neve: além de reinvestir, os próprios dividendos aumentam.",
+        "source": "calculado: CAGR dos proventos por ano (StatusInvest)",
+        "interpretation": "Positivo = dividendos crescendo. Negativo = encolhendo (cuidado: "
+        "yield alto com proventos caindo costuma ser armadilha). O preset Dividend Growth "
+        "exige crescimento positivo.",
     },
     "yield_on_cost": {
         "label": "Yield on Cost (YoC)",
@@ -89,11 +102,12 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     },
     "dividend_consistency": {
         "label": "Consistência de dividendos",
-        "definition": "Há quantos dos últimos anos o ativo pagou dividendos de forma recorrente. "
+        "definition": "Há quantos dos últimos anos o ativo pagou dividendos de forma recorrente, "
+        "com penalidade para CORTES fortes (queda de mais de 50% de um ano para o outro). "
         "Recompensa pagadoras regulares (estilo Barsi/Bazin) e desconfia de proventos pontuais.",
-        "source": "calculado: anos com pagamento ÷ anos analisados (StatusInvest)",
-        "interpretation": "Perto de 1 = paga quase todo ano. Baixo = renda irregular, menos "
-        "confiável para viver de dividendos.",
+        "source": "calculado: anos pagos ÷ anos analisados, ×0,75 por corte >50% (StatusInvest)",
+        "interpretation": "Perto de 1 = paga quase todo ano sem cortes bruscos. Baixo = renda "
+        "irregular ou em queda, menos confiável para viver de dividendos.",
     },
     "sector_besst": {
         "label": "Setor perene (Barsi/BESST)",
@@ -106,12 +120,14 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     },
     "strategy": {
         "label": "Estratégia",
-        "definition": "Conjunto de pesos pré-definidos inspirados em grandes investidores. "
-        "'Barsi' favorece dividendos e setores perenes; 'Bazin' o preço-teto; 'Graham' o "
-        "desconto/valor; 'Equilibrado' mistura tudo. Mudar a estratégia só muda os pesos.",
-        "source": "configuração (presets em config.py)",
-        "interpretation": "Escolha conforme seu objetivo. Os pesos resultantes ficam sempre "
-        "visíveis na tela.",
+        "definition": "Preset inspirado em grandes investidores, com DOIS efeitos: muda os pesos "
+        "das métricas E filtra o universo. 'Barsi' exige setor BESST + consistência alta + "
+        "liquidez; 'Bazin' exige preço abaixo do teto; 'Graham' exige lucro positivo e "
+        "P/L×P/VP ≤ 22,5; 'Dividend Growth' exige proventos crescendo. Quem não passa no filtro "
+        "recebe score 0 com o motivo explicado.",
+        "source": "configuração (presets + filtros de elegibilidade)",
+        "interpretation": "Escolha conforme seu objetivo. Os pesos ficam visíveis na tela, e os "
+        "excluídos mostram 'Não elegível' com a razão.",
     },
     "rebalance_gap": {
         "label": "Rebalanceamento",
@@ -122,11 +138,23 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     },
     "composite_score": {
         "label": "Score",
-        "definition": "Nota final de 0 a 1 que combina desconto (valuation), dividendos e "
-        "necessidade de rebalanceamento, cada um com um peso. É a média ponderada das métricas.",
-        "source": "calculado: soma de (peso × valor normalizado) de cada métrica",
-        "interpretation": "Use como ranking, não como verdade absoluta. Abra a decomposição "
-        "para ver de onde veio a nota.",
+        "definition": "Nota final de 0 a 1 em três passos: (1) média ponderada das métricas das "
+        "4 famílias — desconto, dividendos, rebalanceamento e setor perene; (2) MULTIPLICADA "
+        "pelo fator de qualidade (selo 🟢/🟡/🔴 — prejuízo, dívida alta, payout insustentável e "
+        "baixa liquidez derrubam a nota); (3) zerada se o ativo não passa no filtro da "
+        "estratégia escolhida.",
+        "source": "calculado: (Σ peso × valor normalizado) × fator de qualidade, com filtro de elegibilidade",
+        "interpretation": "Use como ranking, não como verdade absoluta. A soma das contribuições "
+        "do detalhamento dá a nota-base; o fator de qualidade explica a diferença até o score final.",
+    },
+    "quality_factor": {
+        "label": "Fator de qualidade",
+        "definition": "Multiplicador de 0 a 1 aplicado sobre a nota-base para afundar 'value "
+        "traps' (barato que paga muito porque está afundando): prejuízo ×0,5, dívida alta, "
+        "payout acima do sustentável e liquidez baixa reduzem o fator. Dado ausente é neutro.",
+        "source": "calculado: penalidades sobre P/L, dívida/EBIT, payout e liquidez (Fundamentus)",
+        "interpretation": "1,0 = nenhum alerta. Abaixo de ~0,6 o selo fica vermelho — leia as "
+        "red flags antes de comprar.",
     },
     "weight": {
         "label": "Peso",
@@ -137,10 +165,13 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     },
     "normalized": {
         "label": "Valor normalizado",
-        "definition": "O valor cru convertido para uma escala de 0 a 1 comparando o ativo com "
-        "seus pares do mesmo tipo/setor (percentil). 1 = melhor do grupo naquele critério.",
-        "source": "calculado: percentil dentro do grupo de pares",
-        "interpretation": "Permite somar coisas de unidades diferentes (P/VP, %, etc.) de forma justa.",
+        "definition": "O valor cru convertido para a escala 0–1, por UMA de três regras: "
+        "percentil entre pares do mesmo macro-setor/classe (P/VP, P/L, DY); âncora absoluta — "
+        "distância a um valor justo conhecido (margens de Graham e de Bazin, crescimento); ou "
+        "direto, quando o valor já é 0–1 (consistência, rebalanceamento, setor).",
+        "source": "calculado: percentil entre pares, âncora absoluta ou valor direto, conforme a métrica",
+        "interpretation": "Permite somar coisas de unidades diferentes de forma justa. Nas "
+        "métricas com âncora, estar acima do teto vale 0 mesmo que todos os pares estejam piores.",
     },
     "weight_position": {
         "label": "Peso na carteira",
@@ -158,9 +189,47 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     "data_completeness": {
         "label": "Completude dos dados",
         "definition": "Quantas das métricas previstas tinham dado disponível para este ativo. "
-        "Quando falta dado, removemos a métrica e redistribuímos o peso — nunca inventamos número.",
+        "Quando falta dado, a métrica sai e o peso é redividido só DENTRO da mesma família — "
+        "família inteira sem dado contribui zero, então pouca cobertura limita a nota máxima. "
+        "Nunca inventamos número.",
         "source": "calculado: métricas disponíveis ÷ métricas previstas",
-        "interpretation": "Ranking com completude baixa (ex: 2/4) merece mais cautela.",
+        "interpretation": "Ranking com completude baixa (ex: 2/9) tem nota naturalmente limitada "
+        "e merece mais cautela.",
+    },
+    "reserve_target": {
+        "label": "Reserva-alvo",
+        "definition": "A fração do seu patrimônio total (renda variável + reserva) que deve "
+        "ficar em renda fixa/caixa. Disciplina Barsi: completar a reserva vem ANTES de comprar "
+        "renda variável — o plano desvia parte do aporte para cá até o alvo ser atingido.",
+        "source": "configuração (preferências) + saldo do rastreador de renda fixa",
+        "interpretation": "Ex.: 10% = a cada aporte, a reserva é completada primeiro; o restante "
+        "vai para as compras sugeridas.",
+    },
+    "income_target": {
+        "label": "Meta de renda mensal",
+        "definition": "A renda passiva mensal (em reais DE HOJE) com que você quer viver de "
+        "dividendos. O Aportador compara essa meta com a renda atual estimada da carteira e "
+        "calcula quanto aportar por mês e em quantos anos você chega lá.",
+        "source": "configuração (preferências: meta, horizonte, crescimento e inflação esperada)",
+        "interpretation": "A comparação usa a renda LÍQUIDA (após IR do JCP) e desconta a "
+        "inflação esperada — R$ 5.000 daqui a 20 anos valem menos que R$ 5.000 hoje.",
+    },
+    "fixed_income_yield": {
+        "label": "Rendimento da reserva",
+        "definition": "Taxa anualizada (base 252 dias úteis) derivada das suas atualizações de "
+        "saldo, ponderando aportes e resgates pelo tempo em que o dinheiro ficou aplicado "
+        "(método Modified Dietz). Comparada ao CDI do período (% do CDI).",
+        "source": "calculado: lançamentos da conta (saldos, aportes, resgates) + CDI do Banco Central",
+        "interpretation": "~100% do CDI é o esperado para uma boa reserva líquida. Muito abaixo, "
+        "considere trocar de produto; o número fica mais preciso a cada atualização de saldo.",
+    },
+    "net_performance": {
+        "label": "Retorno da posição",
+        "definition": "Rentabilidade total líquida da posição desde a compra (valorização + "
+        "proventos, conforme o Ghostfolio calcula), em percentual.",
+        "source": "Ghostfolio (netPerformancePercent)",
+        "interpretation": "Compare com o CDI acumulado do mesmo período antes de concluir se "
+        "valeu a pena — anos ruins de bolsa fazem parte do método de décadas.",
     },
 }
 

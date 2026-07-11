@@ -5,6 +5,7 @@ import type {
   EntryIn,
   OrderIn,
   PlanRequest,
+  Preferences,
   PreferencesBody,
   ProjectionRequest,
 } from "../types";
@@ -20,8 +21,14 @@ export const keys = {
   income: ["income"] as const,
   incomeGoal: ["income-goal"] as const,
   incomeCalendar: ["income-calendar"] as const,
+  incomeRealized: ["income-realized"] as const,
+  incomeSnapshots: ["income-snapshots"] as const,
+  incomeAnnounced: ["income-announced"] as const,
   fixedIncome: ["fixed-income"] as const,
   orders: ["orders"] as const,
+  planLatest: ["plan-latest"] as const,
+  planHistory: ["plan-history"] as const,
+  watchlistRadar: ["watchlist-radar"] as const,
 };
 
 export const useHealth = () => useQuery({ queryKey: keys.health, queryFn: api.health });
@@ -77,8 +84,66 @@ export function useRemoveWatchlist() {
   });
 }
 
-/** Gerar plano é uma ação (POST com efeito), por isso é uma mutation, não query. */
-export const usePlan = () => useMutation({ mutationFn: (req: PlanRequest) => api.plan(req) });
+/** Favorito (⭐): tipos com favoritos têm o plano restrito a eles. */
+export function useToggleFavorite() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ticker, favorite }: { ticker: string; favorite: boolean }) =>
+      api.setFavorite(ticker, favorite),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.watchlist }),
+  });
+}
+
+/** Gerar plano é uma ação (POST com efeito), por isso é uma mutation, não query.
+ *  O resultado alimenta o cache de 'último plano': navegar para outra aba e voltar
+ *  NÃO perde mais o plano (nem força um novo POST de até 60s). */
+export function usePlan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (req: PlanRequest) => api.plan(req),
+    onSuccess: (data) => {
+      qc.setQueryData(keys.planLatest, data);
+      qc.invalidateQueries({ queryKey: keys.planHistory });
+    },
+  });
+}
+
+/** Último plano persistido no servidor (restaura a PlanPage ao montar). */
+export const usePlanLatest = () =>
+  useQuery({
+    queryKey: keys.planLatest,
+    queryFn: api.planLatest,
+    staleTime: Infinity, // só muda quando um novo plano é gerado (setQueryData acima)
+    retry: false, // 404 = nunca gerou plano; não é erro a repetir
+  });
+
+export const usePlanHistory = () =>
+  useQuery({ queryKey: keys.planHistory, queryFn: api.planHistory });
+
+/** 'Próximo melhor aporte' — plano com a ESTRATÉGIA e parâmetros salvos do usuário
+ *  (antes rodava 'equilibrado' hardcoded: um barsista via conselho de outra filosofia).
+ *  Query cacheada: o POST /plan é caro (até 60s) e não deve rodar a cada mount. */
+export function useNextBuy(prefs?: Preferences) {
+  const req: PlanRequest | null = prefs
+    ? {
+        aporte: prefs.aporte_default && prefs.aporte_default > 0 ? prefs.aporte_default : 1000,
+        strategy: prefs.strategy,
+        targets: prefs.targets,
+        max_assets: prefs.max_assets,
+        max_weight_per_asset: prefs.max_weight_per_asset,
+        min_ticket: prefs.min_ticket,
+        allow_empty_portfolio: false,
+        focus: prefs.focus, // mesmo foco da aba Plantar — conselho coerente entre abas
+      }
+    : null;
+  return useQuery({
+    queryKey: ["next-buy", req],
+    queryFn: () => api.plan(req!),
+    enabled: req != null,
+    staleTime: 10 * 60 * 1000,
+    retry: false,
+  });
+}
 
 export const useIncome = () => useQuery({ queryKey: keys.income, queryFn: api.income });
 
@@ -87,6 +152,29 @@ export const useIncomeGoal = () =>
 
 export const useIncomeCalendar = () =>
   useQuery({ queryKey: keys.incomeCalendar, queryFn: api.incomeCalendar });
+
+export const useIncomeRealized = () =>
+  useQuery({ queryKey: keys.incomeRealized, queryFn: api.incomeRealized });
+
+export const useIncomeSnapshots = () =>
+  useQuery({ queryKey: keys.incomeSnapshots, queryFn: api.incomeSnapshots });
+
+export const useIncomeAnnounced = () =>
+  useQuery({ queryKey: keys.incomeAnnounced, queryFn: api.incomeAnnounced });
+
+export const useYocHistory = (ticker: string) =>
+  useQuery({
+    queryKey: ["yoc-history", ticker],
+    queryFn: () => api.yocHistory(ticker),
+    enabled: !!ticker,
+  });
+
+export const useWatchlistRadar = () =>
+  useQuery({
+    queryKey: keys.watchlistRadar,
+    queryFn: api.watchlistRadar,
+    staleTime: 5 * 60 * 1000, // radar é caro (varre a watchlist inteira)
+  });
 
 // --- Renda fixa (rastreador / reserva) ---
 export const useFixedIncome = () =>
@@ -129,6 +217,16 @@ export function useArchiveAccount() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => api.archiveAccount(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.fixedIncome }),
+  });
+}
+
+/** PATCH parcial da conta: renomear, trocar instituição/tipo e DESARQUIVAR. */
+export function useUpdateAccount() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: Parameters<typeof api.updateAccount>[1] }) =>
+      api.updateAccount(id, body),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.fixedIncome }),
   });
 }

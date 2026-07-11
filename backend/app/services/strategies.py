@@ -66,6 +66,12 @@ def _dividend_growth(asset: Asset, mbk: Dict[str, Metric]) -> Optional[str]:
     cons = _avail(mbk, "dividend_consistency")
     if cons is None or (cons.raw_value or 0) < 0.6:
         return "Histórico de proventos insuficiente para crescimento de dividendos"
+    # O preset agora exige o que o nome promete: proventos de fato CRESCENDO.
+    g = _avail(mbk, "dividend_growth")
+    if g is None:
+        return "Sem histórico suficiente para medir o crescimento dos proventos"
+    if (g.raw_value or 0) <= 0:
+        return "Proventos estagnados ou em queda na janela de 5 anos"
     return None
 
 

@@ -126,11 +126,57 @@ _MIGRATIONS: list[tuple[int, str]] = [
         ALTER TABLE preferences ADD COLUMN annual_growth         REAL    NOT NULL DEFAULT 0.0;
         """,
     ),
+    (
+        4,
+        # v4: série histórica da bola de neve REAL — um snapshot por mês (gravado
+        # oportunisticamente no 1º acesso à renda do mês) + premissa de inflação e
+        # opt-in de contar a renda fixa na meta. Migração ADITIVA: nada existente muda.
+        """
+        CREATE TABLE IF NOT EXISTS portfolio_snapshots (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            month           TEXT NOT NULL UNIQUE,      -- 'yyyy-mm'
+            created_at      TEXT,
+            total_value     REAL,
+            annual_income   REAL,                      -- estimada, líquida
+            monthly_income  REAL,
+            portfolio_yield REAL,
+            yield_on_cost   REAL,
+            snapshot_json   TEXT                       -- detalhe por ativo (yoc, renda)
+        );
+        ALTER TABLE preferences ADD COLUMN expected_inflation     REAL    NOT NULL DEFAULT 0.04;
+        ALTER TABLE preferences ADD COLUMN include_reserve_income INTEGER NOT NULL DEFAULT 0;
+        """,
+    ),
+    (
+        5,
+        # v5: foco do aporte (BALANCE ou uma classe específica) + carteira alvo por classe
+        # ({"FII": {"BTGL11": 0.4, ...}}). A coluna watchlist.favorite (v1) passa a ser usada.
+        """
+        ALTER TABLE preferences ADD COLUMN focus              TEXT NOT NULL DEFAULT 'BALANCE';
+        ALTER TABLE preferences ADD COLUMN class_targets_json TEXT;
+        """,
+    ),
 ]
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _split_statements(sql: str) -> list[str]:
+    """Divide um script de migração em statements individuais.
+
+    Necessário porque `executescript` faz COMMIT implícito antes de rodar — o que
+    quebra a atomicidade da migração (ver `_migrate`). O split por ';' é suficiente
+    aqui: as migrações são DDL simples, sem ';' embutido em literais.
+    """
+    stmts: list[str] = []
+    for chunk in sql.split(";"):
+        # descarta fragmentos que são só comentários/vazio (ex.: cauda após o último ';')
+        meaningful = any(line.split("--")[0].strip() for line in chunk.splitlines())
+        if meaningful:
+            stmts.append(chunk.strip())
+    return stmts
 
 
 class Database:
@@ -156,16 +202,29 @@ class Database:
         conn.execute(
             "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT)"
         )
+        conn.commit()
         row = conn.execute("SELECT COALESCE(MAX(version), 0) AS v FROM schema_migrations").fetchone()
         current = row["v"] if row else 0
+        # Cada migração roda numa transação ÚNICA junto com o registro da versão: ou o
+        # schema muda E a versão é gravada, ou nada acontece. (Antes, `executescript`
+        # comitava antes do INSERT — um crash entre os dois re-executava a migração no
+        # boot seguinte e ALTER TABLE estourava "duplicate column", derrubando o app.)
+        # O BEGIN explícito é necessário: DDL fora de transação roda em autocommit.
         for version, sql in _MIGRATIONS:
-            if version > current:
-                conn.executescript(sql)
+            if version <= current:
+                continue
+            try:
+                conn.execute("BEGIN")
+                for stmt in _split_statements(sql):
+                    conn.execute(stmt)
                 conn.execute(
                     "INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)",
                     (version, _now()),
                 )
-        conn.commit()
+                conn.commit()
+            except Exception:
+                conn.rollback()
+                raise
 
     def _setup(self) -> sqlite3.Connection:
         conn = self._open()
@@ -215,6 +274,41 @@ class Database:
         async with self._lock:
             rows = await asyncio.to_thread(lambda: self._conn.execute(sql, tuple(params)).fetchall())  # type: ignore[union-attr]
         return [dict(r) for r in rows]
+
+    async def backup_now(self, dest_dir: str, retention: int = 14) -> str:
+        """Grava um snapshot consistente do banco (API de backup do SQLite) e aplica retenção.
+
+        Um arquivo por dia (`pomar-AAAAMMDD.db`); rodar de novo no mesmo dia substitui o
+        snapshot do dia. Mantém os `retention` mais recentes.
+        """
+        await self.ensure_ready()
+        async with self._lock:
+            return await asyncio.to_thread(self._backup, dest_dir, retention)
+
+    def _backup(self, dest_dir: str, retention: int) -> str:
+        assert self._conn is not None
+        os.makedirs(dest_dir, exist_ok=True)
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d")
+        dest = os.path.join(dest_dir, f"pomar-{stamp}.db")
+        tmp = dest + ".tmp"
+        dst = sqlite3.connect(tmp)
+        try:
+            self._conn.backup(dst)
+            dst.close()
+            os.replace(tmp, dest)  # troca atômica — nunca deixa snapshot pela metade
+        finally:
+            try:
+                dst.close()
+            except sqlite3.ProgrammingError:
+                pass  # já fechada
+            if os.path.exists(tmp):
+                os.remove(tmp)
+        snapshots = sorted(
+            f for f in os.listdir(dest_dir) if f.startswith("pomar-") and f.endswith(".db")
+        )
+        for old in snapshots[: max(0, len(snapshots) - max(1, retention))]:
+            os.remove(os.path.join(dest_dir, old))
+        return dest
 
     async def close(self) -> None:
         async with self._lock:

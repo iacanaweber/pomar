@@ -29,6 +29,10 @@ def _defaults(settings: Settings) -> Dict[str, Any]:
         "target_monthly_income": 0.0,
         "target_horizon_years": 20,
         "annual_growth": 0.0,
+        "expected_inflation": 0.04,
+        "include_reserve_income": False,
+        "focus": "BALANCE",
+        "class_targets": {},
     }
 
 
@@ -50,6 +54,12 @@ def _row_to_prefs(row: Dict[str, Any], settings: Settings) -> Dict[str, Any]:
             "target_monthly_income": row["target_monthly_income"],
             "target_horizon_years": row["target_horizon_years"],
             "annual_growth": row["annual_growth"],
+            "expected_inflation": row.get("expected_inflation", 0.04),
+            "include_reserve_income": bool(row.get("include_reserve_income", 0)),
+            "focus": row.get("focus") or "BALANCE",
+            "class_targets": (
+                json.loads(row["class_targets_json"]) if row.get("class_targets_json") else {}
+            ),
         }
     )
     return base
@@ -67,8 +77,9 @@ async def put(db: Database, prefs: Dict[str, Any], settings: Settings) -> Dict[s
         INSERT INTO preferences
             (id, strategy, aporte_default, targets_json, weights_json, max_assets,
              max_weight_per_asset, min_ticket, lot_mode, reserve_target, bazin_target_mode,
-             bazin_target_yield, target_monthly_income, target_horizon_years, annual_growth, updated_at)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             bazin_target_yield, target_monthly_income, target_horizon_years, annual_growth,
+             expected_inflation, include_reserve_income, focus, class_targets_json, updated_at)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             strategy=excluded.strategy,
             aporte_default=excluded.aporte_default,
@@ -84,6 +95,10 @@ async def put(db: Database, prefs: Dict[str, Any], settings: Settings) -> Dict[s
             target_monthly_income=excluded.target_monthly_income,
             target_horizon_years=excluded.target_horizon_years,
             annual_growth=excluded.annual_growth,
+            expected_inflation=excluded.expected_inflation,
+            include_reserve_income=excluded.include_reserve_income,
+            focus=excluded.focus,
+            class_targets_json=excluded.class_targets_json,
             updated_at=excluded.updated_at
         """,
         (
@@ -101,6 +116,10 @@ async def put(db: Database, prefs: Dict[str, Any], settings: Settings) -> Dict[s
             merged["target_monthly_income"],
             merged["target_horizon_years"],
             merged["annual_growth"],
+            merged["expected_inflation"],
+            int(bool(merged["include_reserve_income"])),
+            merged["focus"],
+            json.dumps(merged["class_targets"]),
             datetime.now(timezone.utc).isoformat(),
         ),
     )

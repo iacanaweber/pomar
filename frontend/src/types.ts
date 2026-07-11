@@ -31,6 +31,20 @@ export type IncomeGoalResponse = Schemas["IncomeGoalResponse"];
 export type CalendarResponse = Schemas["CalendarResponse"];
 export type CalendarMonth = Schemas["CalendarMonth"];
 
+// --- Renda realizada, snapshots (bola de neve real) e proventos anunciados (v4) ---
+export type RealizedIncomeResponse = Schemas["RealizedIncomeResponse"];
+export type RealizedMonth = Schemas["RealizedMonth"];
+export type SnapshotsResponse = Schemas["SnapshotsResponse"];
+export type SnapshotPoint = Schemas["SnapshotPoint"];
+export type YocPoint = Schemas["YocPoint"];
+export type AnnouncedResponse = Schemas["AnnouncedResponse"];
+export type AnnouncedPayment = Schemas["AnnouncedPayment"];
+
+// --- Planos salvos e radar da watchlist (v4) ---
+export type PlanSummary = Schemas["PlanSummary"];
+export type RadarResponse = Schemas["RadarResponse"];
+export type RadarItem = Schemas["RadarItem"];
+
 // --- Renda fixa (rastreador) ---
 export type FixedIncomeSummary = Schemas["FixedIncomeSummary"];
 export type AccountSummary = Schemas["AccountSummary"];
@@ -93,6 +107,10 @@ export interface Preferences {
   target_monthly_income?: number | null;
   target_horizon_years?: number | null;
   annual_growth?: number | null;
+  expected_inflation?: number | null;
+  include_reserve_income?: boolean | null;
+  focus: string;
+  class_targets: Record<string, Record<string, number>>;
 }
 
 export interface WatchlistItem {

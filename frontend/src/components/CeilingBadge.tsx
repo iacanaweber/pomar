@@ -16,16 +16,27 @@ interface Props {
 
 type Status = "verde" | "amarelo" | "vermelho" | "na";
 
-/** Classifica preço vs teto. Cor NUNCA sozinha — sempre acompanha texto. */
-function classify(ceiling?: number | null, price?: number | null, margin?: number | null): {
-  status: Status;
-  label: string;
-} {
-  if (ceiling == null || price == null) {
+/** Classifica preço vs teto. Cor NUNCA sozinha — sempre acompanha texto.
+ *  A margem do backend basta: antes, sem `price` (ativos não sugeridos do ranking) o
+ *  chip dizia "teto não calculado" mesmo com teto e margem calculados — escondendo
+ *  oportunidades Bazin de quase todo o ranking. (Exportada para teste.) */
+export function classify(
+  ceiling?: number | null,
+  price?: number | null,
+  margin?: number | null,
+  belowCeiling?: boolean | null,
+): { status: Status; label: string } {
+  const m = margin != null ? margin
+    : ceiling != null && price != null ? (ceiling - price) / ceiling
+    : null;
+  if (m == null) {
+    if (belowCeiling != null) {
+      return belowCeiling
+        ? { status: "verde", label: "abaixo do teto" }
+        : { status: "vermelho", label: "acima do teto" };
+    }
     return { status: "na", label: "teto não calculado" };
   }
-  // margem = (teto - preço) / teto; quando não vier, calculamos.
-  const m = margin != null ? margin : (ceiling - price) / ceiling;
   if (m > 0.03) return { status: "verde", label: "abaixo do teto" };
   if (m >= -0.0001) return { status: "amarelo", label: "no teto" };
   return { status: "vermelho", label: "acima do teto" };
@@ -44,16 +55,18 @@ const RISK_CLASS: Record<Status, string> = {
   na: "metric-na",
 };
 
-export function CeilingBadge({ ceiling, price, margin, variant = "chip" }: Props) {
-  const { status, label } = classify(ceiling, price, margin);
+export function CeilingBadge({ ceiling, price, margin, belowCeiling, variant = "chip" }: Props) {
+  const { status, label } = classify(ceiling, price, margin, belowCeiling);
   const m = margin != null ? margin : ceiling != null && price != null ? (ceiling - price) / ceiling : null;
-  const marginText = m != null ? `${m >= 0 ? "−" : "+"}${pct(Math.abs(m), 0)}` : null;
+  // Convenção ÚNICA do app (glossário e ScoreBreakdown): margem POSITIVA = desconto
+  // (abaixo do teto, bom). Antes o chip invertia o sinal e contradizia o tooltip.
+  const marginText = m != null ? `margem ${m >= 0 ? "+" : "−"}${pct(Math.abs(m), 0)}` : null;
 
   if (variant === "chip") {
     const aria =
       status === "na"
         ? "Preço-teto de Bazin não calculado"
-        : `${label}${marginText ? `, margem ${marginText}` : ""}`;
+        : `${label}${marginText ? `, ${marginText}` : ""}`;
     return (
       <span className={`ceiling-chip ${RISK_CLASS[status]}`} aria-label={aria}>
         <span aria-hidden="true">{ICON[status]}</span>
@@ -99,7 +112,7 @@ export function CeilingBadge({ ceiling, price, margin, variant = "chip" }: Props
           <p className={`ceiling-verdict ${RISK_CLASS[status]}`}>
             <span aria-hidden="true">{ICON[status]}</span>{" "}
             <strong>{label.toUpperCase()}</strong>
-            {marginText ? ` · margem ${marginText}` : ""}
+            {marginText ? ` · ${marginText}` : ""}
             {status === "verde" ? " (pode comprar)" : status === "vermelho" ? " (caro)" : ""}
           </p>
         </>

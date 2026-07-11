@@ -1,5 +1,9 @@
 """Leitura enriquecida da carteira: classifica corretamente cada posição (FII/ETF/...)
 e recalcula a alocação por classe. Usado pela aba 'Minha carteira' e pelo plano.
+
+A carteira é a fonte de metade das telas e era o ÚNICO dado sem fallback stale: um
+restart do Ghostfolio derrubava Carteira, Renda, Meta e Calendário juntos. Agora ela
+tem cache curto (menos chamadas repetidas) + cópia stale para degradar com aviso.
 """
 from __future__ import annotations
 
@@ -8,9 +12,28 @@ from app.clients.ghostfolio import GhostfolioClient
 from app.models.portfolio import Allocations, Portfolio
 from app.services.classify import classify_ticker, resolve_sector
 
+_TTL = 120  # 2 min: Carteira/Renda/Meta/Calendário iteram positions em sequência
+_KEY = "portfolio:enriched"
+
 
 async def get_enriched_portfolio(ghostfolio: GhostfolioClient, cache: Cache) -> Portfolio:
-    pf = await ghostfolio.get_portfolio()
+    cached = cache.get(_KEY)
+    if cached is not None:
+        return Portfolio.model_validate(cached)
+
+    try:
+        pf = await ghostfolio.get_portfolio()
+    except Exception:
+        stale = cache.get_stale(_KEY)
+        if stale is None:
+            raise
+        pf = Portfolio.model_validate(stale)
+        pf.source = "ghostfolio (cache defasado)"
+        pf.warnings = [
+            *pf.warnings,
+            f"Ghostfolio indisponível — usando a última carteira conhecida (de {pf.as_of}).",
+        ]
+        return pf
 
     by_class: dict[str, float] = {}
     by_sector: dict[str, float] = {}
@@ -21,4 +44,5 @@ async def get_enriched_portfolio(ghostfolio: GhostfolioClient, cache: Cache) -> 
         by_sector[p.sector] = by_sector.get(p.sector, 0.0) + p.weight
 
     pf.allocations = Allocations(by_class=by_class, by_sector=by_sector)
+    cache.set(_KEY, pf.model_dump(), _TTL)
     return pf

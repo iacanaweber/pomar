@@ -14,9 +14,12 @@ Normalização HÍBRIDA (v2):
 - "raw": valor já em 0..1 (consistência, rebalance, setor).
 
 Regras de ouro:
-- Dado faltante nunca é inventado: a métrica vira `available=False` e seu peso é redistribuído.
+- Dado faltante nunca é inventado: a métrica vira `available=False`; o peso é redividido
+  só DENTRO da família (peso não migra entre famílias — ativo com pouca cobertura de
+  dados tem score naturalmente limitado, não inflado).
 - P/L<=0 (prejuízo) não é "desconto": vira indisponível, coerente com o Número de Graham.
-- Média de Bazin só sobre anos efetivamente pagos (não deflaciona por anos sem pagamento).
+- Média de Bazin pela janela completa de 5 anos (ano sem pagar conta como zero), com
+  mínimo de anos pagos — pagadora irregular não ganha teto de pagadora perene.
 """
 from __future__ import annotations
 
@@ -36,7 +39,34 @@ BAZIN_MIN_PAID_YEARS = 3  # nº mínimo de anos pagos para calcular o preço-tet
 BAZIN_AVG_WINDOW = 5  # janela (anos) da média de proventos do preço-teto de Bazin
 CONSISTENCY_MIN_YEARS = 3  # histórico mínimo para medir consistência (evita 100% trivial)
 ROE_GOOD = 0.15  # ROE consistente acima disto é sinal positivo (Barsi/Bazin)
-SECTOR_PEER_MIN = 4  # mínimo de pares no setor para normalizar por setor (senão, por classe)
+SECTOR_PEER_MIN = 3  # mínimo de pares no MACRO-setor para normalizar por setor (senão, classe)
+
+# Macro-setores para o percentil: no universo enxuto do Pomar, setores BESST isolados
+# (Saneamento=3, Seguros=3, Telecom=2) nunca atingiam a massa mínima e caíam no percentil
+# por classe — SBSP3 comparada com VALE3. Agrupar por regime econômico semelhante
+# (utilities reguladas; seguros/previdência; financeiro) devolve a comparação justa.
+_MACRO_SECTOR_MAP: List[tuple[tuple[str, ...], str]] = [
+    (("energia", "energy", "electric", "utilities", "utilidade", "saneament", "água", "agua",
+      "water"), "Utilities reguladas"),
+    (("seguro", "insurance", "previdência", "previdencia"), "Seguros e previdência"),
+    (("banco", "bank", "intermediários financeiros", "intermediarios financeiros", "financ",
+      "corretora", "fintech"), "Financeiro"),
+    (("telecom",), "Telecom"),
+]
+
+
+def _macro_sector(sector: Optional[str]) -> Optional[str]:
+    if not sector:
+        return None
+    s = sector.strip().lower()
+    for keywords, name in _MACRO_SECTOR_MAP:
+        if any(kw in s for kw in keywords):
+            return name
+    return sector
+# Limiar de endividamento para o PROXY Dív.Líq/EBIT do Fundamentus (EBIT < EBITDA →
+# razão maior). Equivale a ~3/4 sobre EBITDA em empresas típicas.
+DEBT_PROXY_PENALTY_START = 4.0
+DEBT_PROXY_FLAG = 5.0
 
 # Piso de liquidez média diária (R$) por classe — abaixo disso, penaliza o score.
 LIQUIDITY_MIN: Dict[str, float] = {
@@ -71,6 +101,24 @@ def _graham_anchor(raw: float) -> float:
     return _clamp((GRAHAM_CEILING - raw) / GRAHAM_CEILING)
 
 
+def _bazin_anchor(margin: float) -> float:
+    """Margem de Bazin como ÂNCORA absoluta: a própria margem, clampada em [0,1].
+
+    Acima do teto (margem negativa) → 0, sempre — mesmo que os pares estejam piores.
+    O percentil premiava a 'menos cara' de um grupo todo acima do teto, tornando a
+    métrica-símbolo do método decorativa; e descartava a magnitude (+50% vs +2%).
+    """
+    return _clamp(margin)
+
+
+GROWTH_ANCHOR_SPAN = 0.15  # ±15% a.a. mapeiam para [0,1] (0% de crescimento = 0.5)
+
+
+def _growth_anchor(cagr: float) -> float:
+    """CAGR de proventos como âncora: −15% a.a. → 0, estável → 0.5, +15% a.a. → 1."""
+    return _clamp(0.5 + cagr / (2 * GROWTH_ANCHOR_SPAN))
+
+
 # Especificação das métricas. `norm`: "anchor" (distância ao justo) | "pct" (percentil intra-classe)
 # | "raw" (valor já em 0..1). `anchor` é a função aplicada quando norm == "anchor".
 _METRIC_SPECS: List[dict] = [
@@ -87,9 +135,13 @@ _METRIC_SPECS: List[dict] = [
     {"key": "div_yield", "label": "Dividend Yield", "family": "dividend",
      "classes": {"STOCK", "FII", "ETF", "BDR"}, "higher_better": True, "norm": "pct", "subweight": 0.5},
     {"key": "bazin_ceiling", "label": "Margem Bazin", "family": "dividend",
-     "classes": {"STOCK", "FII"}, "higher_better": True, "norm": "pct", "subweight": 0.5},
+     "classes": {"STOCK", "FII"}, "higher_better": True, "norm": "anchor",
+     "anchor": _bazin_anchor, "subweight": 0.5},
     {"key": "dividend_consistency", "label": "Consistência de dividendos", "family": "dividend",
      "classes": {"STOCK", "FII"}, "higher_better": True, "norm": "raw"},
+    {"key": "dividend_growth", "label": "Crescimento dos proventos", "family": "dividend",
+     "classes": {"STOCK", "FII"}, "higher_better": True, "norm": "anchor",
+     "anchor": _growth_anchor, "subweight": 0.5},
     {"key": "rebalance_gap", "label": "Rebalanceamento", "family": "rebalance",
      "classes": {"STOCK", "FII", "ETF", "BDR"}, "higher_better": True, "norm": "raw"},
     {"key": "sector_besst", "label": "Setor perene (BESST)", "family": "sector",
@@ -109,6 +161,8 @@ def _fmt(key: str, raw: Optional[float]) -> Optional[str]:
         return None
     if key == "div_yield":
         return f"{raw * 100:.1f}%"
+    if key == "dividend_growth":
+        return f"{raw * 100:+.1f}% a.a."
     if key in _PERCENT_KEYS:
         return f"{raw * 100:.0f}%"
     return f"{raw:.2f}"
@@ -137,16 +191,23 @@ def _bazin_paid_window(asset: Asset) -> list[float]:
 
 
 def _bazin_ceiling_price(asset: Asset, target_yield: float = BAZIN_TARGET_YIELD) -> Optional[float]:
-    """Preço-teto de Bazin em R$ = média dos proventos pagos (janela de 5 anos) ÷ DY-alvo.
+    """Preço-teto de Bazin em R$ = média dos proventos na janela de 5 anos ÷ DY-alvo.
 
-    None sem preço, sem histórico mínimo de anos pagos, ou DY-alvo inválido.
+    A média divide pela JANELA COMPLETA (anos sem pagamento contam como zero): quem pagou
+    R$2 em 3 de 5 anos tem teto menor do que quem pagou todo ano — pagadora irregular não
+    ganha teto de pagadora perene. Exige um mínimo de anos pagos (BAZIN_MIN_PAID_YEARS).
+    None sem preço, sem histórico mínimo, ou DY-alvo inválido.
     """
     if not asset.price or target_yield <= 0:
         return None
-    paid = _bazin_paid_window(asset)
+    years = sorted(asset.dividends_by_year.keys())[-BAZIN_AVG_WINDOW:]
+    if not years:
+        return None
+    values = [asset.dividends_by_year[y] or 0.0 for y in years]
+    paid = [v for v in values if v > 0]
     if len(paid) < BAZIN_MIN_PAID_YEARS:
         return None
-    ceiling = (sum(paid) / len(paid)) / target_yield
+    ceiling = (sum(values) / len(values)) / target_yield
     return ceiling if ceiling > 0 else None
 
 
@@ -175,11 +236,43 @@ def _graham_intrinsic_margin(asset: Asset) -> Optional[float]:
 
 
 def _dividend_consistency(asset: Asset) -> Optional[float]:
+    """Anos pagos ÷ anos analisados, penalizando CORTES fortes (>50% a/a).
+
+    Antes, um corte de 90% no provento mantinha consistência 1,0 — a nota media presença,
+    não perenidade. Cada corte >50% multiplica por 0,75 (dois cortes já derrubam abaixo
+    do piso 0,8 dos filtros Barsi/Bazin).
+    """
     years = asset.dividends_by_year
     if not years or len(years) < CONSISTENCY_MIN_YEARS:
         return None  # histórico curto não vira "100% consistente" trivial
-    paid = sum(1 for v in years.values() if v and v > 0)
-    return paid / len(years)
+    ordered = [years[y] or 0.0 for y in sorted(years)]
+    paid = sum(1 for v in ordered if v > 0)
+    base = paid / len(ordered)
+    cuts = sum(
+        1 for prev, cur in zip(ordered, ordered[1:]) if prev > 0 and cur < 0.5 * prev
+    )
+    return round(base * (0.75 ** cuts), 4)
+
+
+def _dividend_cagr(asset: Asset) -> Optional[float]:
+    """CAGR aproximado dos proventos na janela: média dos 2 últimos anos ÷ média dos 2
+    primeiros, anualizada pelo intervalo entre os centros das janelas.
+
+    None com histórico < 4 anos ou base zero (crescimento de quem não pagava não é
+    mensurável — vira indisponível, nunca inventado).
+    """
+    years = sorted(asset.dividends_by_year)
+    if len(years) < 4:
+        return None
+    vals = [asset.dividends_by_year[y] or 0.0 for y in years]
+    first = (vals[0] + vals[1]) / 2
+    last = (vals[-1] + vals[-2]) / 2
+    if first <= 0:
+        return None
+    span = len(years) - 2  # distância entre os centros das duas janelas de 2 anos
+    if span <= 0:
+        return None
+    return round((last / first) ** (1 / span) - 1, 4)
 
 
 def _graham_value(asset: Asset) -> Optional[float]:
@@ -207,6 +300,7 @@ def _raw_values(
         "div_yield": asset.fundamentals.dividend_yield,
         "bazin_ceiling": _bazin_margin(asset, bazin_target_yield),
         "dividend_consistency": _dividend_consistency(asset),
+        "dividend_growth": _dividend_cagr(asset),
         "rebalance_gap": class_gap,
         "sector_besst": _besst_affinity(asset.sector),
     }
@@ -265,10 +359,14 @@ def _quality_assessment(asset: Asset, metrics_by_key: Dict[str, Metric]) -> tupl
     if f.pl is not None and f.pl <= 0:
         q *= 0.5
         flags.append("Empresa com prejuízo (P/L ≤ 0)")
-    if f.net_debt_to_ebitda is not None and f.net_debt_to_ebitda > 3:
-        q *= max(0.3, 1 - 0.15 * (f.net_debt_to_ebitda - 3))
-        if f.net_debt_to_ebitda > 4:
-            flags.append("Endividamento elevado (dív. líq./EBITDA)")
+    # O dado do Fundamentus é Dív.Líquida ÷ EBIT (proxy — EBIT < EBITDA, a razão sai
+    # maior). Limiar calibrado para o proxy: 4/5, não os 3/4 clássicos de EBITDA —
+    # senão utilities de capital intensivo (energia/saneamento, coração do BESST)
+    # tomavam corte indevido com dívida/EBITDA real na faixa saudável.
+    if f.net_debt_to_ebitda is not None and f.net_debt_to_ebitda > DEBT_PROXY_PENALTY_START:
+        q *= max(0.3, 1 - 0.15 * (f.net_debt_to_ebitda - DEBT_PROXY_PENALTY_START))
+        if f.net_debt_to_ebitda > DEBT_PROXY_FLAG:
+            flags.append("Endividamento elevado (dív. líq./EBIT, proxy)")
     payout = _payout_ratio(asset)
     # FII distribui ~95–100% do resultado por lei: payout alto é normal, não penaliza.
     if payout is not None and asset.asset_class != "FII":
@@ -304,6 +402,7 @@ def score_assets(
     weights: Dict[str, float],
     strategy: Optional[str] = None,
     bazin_target_yield: float = BAZIN_TARGET_YIELD,
+    user_picked: Optional[set] = None,
 ) -> List[ScoredAsset]:
     """Pontua e ordena os ativos candidatos. Não aloca dinheiro (isso é da allocation)."""
     current_by_class = portfolio.allocations.by_class
@@ -329,13 +428,15 @@ def score_assets(
     sector_counts: Dict[tuple, int] = {}
     for spec in pct_specs:
         for a in assets:
-            if per_asset_raw[a.ticker][spec["key"]] is not None and a.sector:
-                k = (spec["key"], a.sector)
+            macro = _macro_sector(a.sector)
+            if per_asset_raw[a.ticker][spec["key"]] is not None and macro:
+                k = (spec["key"], macro)
                 sector_counts[k] = sector_counts.get(k, 0) + 1
 
     def _peer_key(metric_key: str, asset: Asset) -> tuple:
-        if asset.sector and sector_counts.get((metric_key, asset.sector), 0) >= SECTOR_PEER_MIN:
-            return (metric_key, "sector", asset.sector)
+        macro = _macro_sector(asset.sector)
+        if macro and sector_counts.get((metric_key, macro), 0) >= SECTOR_PEER_MIN:
+            return (metric_key, "sector", macro)
         return (metric_key, "class", asset.asset_class)
 
     peers: Dict[tuple, List[float]] = {}
@@ -372,23 +473,23 @@ def score_assets(
             built.append({"spec": spec, "raw": v, "available": available,
                           "normalized": normalized, "peer_group": peer_group})
 
-        # redistribui pesos: família sem métrica disponível cede peso às demais; dentro da
-        # família, o peso é dividido pelos SUBPESOS das métricas disponíveis (não igualmente).
+        # Pesos (v4): o peso NÃO migra entre famílias. Dentro da família, o peso é dividido
+        # pelos SUBPESOS das métricas disponíveis; família sem dado contribui 0 e o score
+        # máximo do ativo fica limitado à fração coberta por dados. (Antes, um ETF/BDR só
+        # com o gap de rebalanceamento herdava 100% do peso e podia virar rank nº 1 com
+        # score "perfeito" de uma única métrica.)
         subw_by_family: Dict[str, float] = {f: 0.0 for f in _FAMILIES}
         for b in built:
             if b["available"]:
                 subw_by_family[b["spec"]["family"]] += b["spec"].get("subweight", 1.0)
-        total_family_weight = sum(
-            weights.get(f, 0.0) for f in _FAMILIES if subw_by_family[f] > 0
-        )
 
         metrics: List[Metric] = []
         composite = 0.0
         for b in built:
             spec = b["spec"]
             fam = spec["family"]
-            if b["available"] and total_family_weight > 0 and subw_by_family[fam] > 0:
-                w = weights.get(fam, 0.0) * (spec.get("subweight", 1.0) / subw_by_family[fam]) / total_family_weight
+            if b["available"] and subw_by_family[fam] > 0:
+                w = weights.get(fam, 0.0) * (spec.get("subweight", 1.0) / subw_by_family[fam])
             else:
                 w = 0.0
             contribution = (b["normalized"] or 0.0) * w if b["available"] else None
@@ -416,9 +517,16 @@ def score_assets(
         final_score = round(composite * q, 4)
         elig = eligibility_reason(strategy, a, metrics_by_key)
         if elig:
-            # fora dos critérios da estratégia escolhida: não é comprável (score 0), com motivo
-            final_score = 0.0
-            red_flags = [f"Não elegível ({strategy}): {elig}", *red_flags]
+            if user_picked and a.ticker in user_picked:
+                # Escolha explícita do usuário (favorito/carteira alvo) prevalece sobre o
+                # filtro da estratégia: continua comprável, mas o alerta fica visível.
+                red_flags = [
+                    f"Não passaria no filtro da estratégia '{strategy}': {elig}", *red_flags
+                ]
+            else:
+                # fora dos critérios da estratégia escolhida: não é comprável (score 0), com motivo
+                final_score = 0.0
+                red_flags = [f"Não elegível ({strategy}): {elig}", *red_flags]
 
         # preço-teto de Bazin (R$) exposto para a UI
         ceiling_price = _bazin_ceiling_price(a, bazin_target_yield)
@@ -459,8 +567,9 @@ def _source_for(key: str) -> str:
         "graham": "calculado: distância de P/L×P/VP ao teto 22,5 (Graham)",
         "graham_intrinsic": "calculado: √(22,5×LPA×VPA) vs preço (Número de Graham, Fundamentus)",
         "div_yield": "calculado: proventos recentes (StatusInvest) ÷ preço",
-        "bazin_ceiling": "calculado: preço-teto = média de proventos pagos ÷ 6% (Bazin/StatusInvest)",
-        "dividend_consistency": "calculado: anos pagos ÷ anos analisados (StatusInvest)",
+        "bazin_ceiling": "calculado: preço-teto = média de proventos (janela 5a, zeros contam) ÷ DY-alvo (Bazin/StatusInvest)",
+        "dividend_consistency": "calculado: anos pagos ÷ anos analisados, com corte >50% penalizado (StatusInvest)",
+        "dividend_growth": "calculado: CAGR dos proventos na janela de 5 anos (StatusInvest)",
         "rebalance_gap": "calculado: alvo − atual (Ghostfolio)",
         "sector_besst": "calculado: setor (Fundamentus) ∈ BESST (Barsi)",
     }.get(key, "calculado")
@@ -480,6 +589,8 @@ def _reasons(metrics: List[Metric], asset: Asset) -> List[str]:
         out.append("Preço abaixo do valor intrínseco (Número de Graham)")
     if "dividend_consistency" in by_key and (by_key["dividend_consistency"].raw_value or 0) >= 0.8:
         out.append("Histórico consistente de dividendos")
+    if "dividend_growth" in by_key and (by_key["dividend_growth"].raw_value or 0) >= 0.03:
+        out.append(f"Proventos crescendo ~{by_key['dividend_growth'].raw_value * 100:.0f}% a.a.")
     if asset.fundamentals.roe is not None and asset.fundamentals.roe >= ROE_GOOD:
         out.append(f"ROE alto ({asset.fundamentals.roe * 100:.0f}%)")
     if "rebalance_gap" in by_key and (by_key["rebalance_gap"].normalized or 0) >= 0.6:

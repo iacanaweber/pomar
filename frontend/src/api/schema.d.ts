@@ -201,6 +201,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plan/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan Latest
+         * @description Último plano gerado (persistido) — para a PlanPage restaurar ao montar.
+         */
+        get: operations["plan_latest_api_plan_latest_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plan/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan History
+         * @description Planos anteriores (resumo): quando, quanto, qual estratégia, nº de sugestões.
+         */
+        get: operations["plan_history_api_plan_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/preferences": {
         parameters: {
             query?: never;
@@ -251,6 +291,32 @@ export interface paths {
         delete: operations["remove_from_watchlist_api_watchlist__ticker__delete"];
         options?: never;
         head?: never;
+        /**
+         * Patch Watchlist
+         * @description Marca/desmarca favorito (⭐). Tipos com favoritos têm o plano restrito a eles.
+         */
+        patch: operations["patch_watchlist_api_watchlist__ticker__patch"];
+        trace?: never;
+    };
+    "/api/watchlist/radar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Watchlist Radar
+         * @description Radar de zona de compra: preço, DY e situação vs preço-teto de Bazin de TODOS os
+         *     ativos observados — a watchlist deixa de ser lista inerte e responde 'é hora de
+         *     comprar?' sem abrir ativo por ativo. Ordenado pela margem sobre o teto.
+         */
+        get: operations["watchlist_radar_api_watchlist_radar_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
         trace?: never;
     };
@@ -266,6 +332,46 @@ export interface paths {
          * @description Renda passiva atual estimada da carteira (Σ valor × DY) + Yield on Cost por ativo.
          */
         get: operations["income_api_income_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/income/snapshots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Income Snapshots
+         * @description Série mensal registrada da carteira (patrimônio, renda, YoC) — bola de neve real.
+         */
+        get: operations["income_snapshots_api_income_snapshots_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/income/yoc/{ticker}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Yoc History
+         * @description Histórico mensal do Yield on Cost de um ativo (dos snapshots).
+         */
+        get: operations["yoc_history_api_income_yoc__ticker__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -307,6 +413,48 @@ export interface paths {
          *     o gap, o % atingido, quanto aportar/mês e em quantos anos você chega lá (Aportador).
          */
         get: operations["income_goal_api_income_goal_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/income/realized": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Income Realized
+         * @description Renda REALIZADA mês a mês — os dividendos que de fato caíram na conta, lidos das
+         *     atividades do Ghostfolio (você já os registra lá; nada precisa ser redigitado).
+         */
+        get: operations["income_realized_api_income_realized_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/income/announced": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Income Announced
+         * @description Proventos JÁ ANUNCIADOS dos ativos da carteira: 'BBAS3 paga R$ 0,45 dia 12/08 →
+         *     você recebe R$ 213'. Agenda real (data-com e pagamento conhecidos), não estimativa.
+         */
+        get: operations["income_announced_api_income_announced_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -405,6 +553,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/fixed-income/accounts/{account_id}/entries/{entry_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Entry */
+        delete: operations["delete_entry_api_fixed_income_accounts__account_id__entries__entry_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/orders": {
         parameters: {
             query?: never;
@@ -481,6 +646,23 @@ export interface components {
              */
             benchmark?: string | null;
         };
+        /**
+         * AccountPatch
+         * @description PATCH parcial da conta: só os campos enviados mudam. `archived=False` desarquiva —
+         *     arquivar deixou de ser sem-volta na UI.
+         */
+        AccountPatch: {
+            /** Name */
+            name?: string | null;
+            /** Institution */
+            institution?: string | null;
+            /** Kind */
+            kind?: string | null;
+            /** Benchmark */
+            benchmark?: string | null;
+            /** Archived */
+            archived?: boolean | null;
+        };
         /** AccountSummary */
         AccountSummary: {
             /** Id */
@@ -541,6 +723,55 @@ export interface components {
             by_sector?: {
                 [key: string]: number;
             };
+        };
+        /** AnnouncedPayment */
+        AnnouncedPayment: {
+            /** Ticker */
+            ticker: string;
+            /**
+             * Payment Date
+             * @description Data de pagamento (None = anunciado, a definir).
+             */
+            payment_date?: string | null;
+            /** Ex Date */
+            ex_date?: string | null;
+            /** Value Per Share */
+            value_per_share: number;
+            /** Net Value Per Share */
+            net_value_per_share: number;
+            /** Type */
+            type?: string | null;
+            /**
+             * Quantity
+             * @description Cotas na carteira.
+             */
+            quantity?: number | null;
+            /**
+             * Total Net
+             * @description R$ líquidos a receber (valor × cotas).
+             */
+            total_net?: number | null;
+        };
+        /**
+         * AnnouncedResponse
+         * @description Proventos futuros JÁ ANUNCIADOS para os ativos da carteira — agenda real, não sazonalidade.
+         */
+        AnnouncedResponse: {
+            /** Items */
+            items?: components["schemas"]["AnnouncedPayment"][];
+            /**
+             * Total Net
+             * @description Soma líquida do que já está anunciado.
+             * @default 0
+             */
+            total_net: number;
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+            /** Warnings */
+            warnings?: string[];
         };
         /** Asset */
         Asset: {
@@ -636,7 +867,7 @@ export interface components {
             currency: string;
             /**
              * Basis
-             * @default média sazonal dos últimos anos (estimativa)
+             * @default média sazonal dos últimos anos (estimativa, líquida de IR do JCP)
              */
             basis: string;
             /** Warnings */
@@ -657,7 +888,7 @@ export interface components {
             amount: number;
             /**
              * Entry Date
-             * @description Data ISO yyyy-mm-dd (padrão: hoje).
+             * @description Data ISO yyyy-mm-dd (padrão: hoje, Brasil).
              */
             entry_date?: string | null;
             /** Note */
@@ -777,6 +1008,10 @@ export interface components {
         /**
          * IncomeGoalResponse
          * @description Objetivo de renda: quanto falta e quanto aportar para viver de dividendos.
+         *
+         *     v4: meta comparada em reais DE HOJE (inflação das preferências), aporte projetado é o
+         *     que sobra APÓS o desvio para a reserva, renda da reserva pode contar (opt-in) e há
+         *     marcos intermediários ('próximos R$ 100/mês') para a jornada de décadas ter vitórias.
          */
         IncomeGoalResponse: {
             /**
@@ -814,6 +1049,43 @@ export interface components {
             /** Estimated Years To Goal */
             estimated_years_to_goal?: number | null;
             /**
+             * Expected Inflation
+             * @description Inflação anual usada (preferências).
+             * @default 0
+             */
+            expected_inflation: number;
+            /**
+             * Reserve Monthly Income
+             * @description Renda mensal estimada da reserva/RF (Σ saldo × último rendimento ÷ 12).
+             */
+            reserve_monthly_income?: number | null;
+            /**
+             * Include Reserve Income
+             * @description Se a renda da RF conta na meta (opt-in).
+             * @default false
+             */
+            include_reserve_income: boolean;
+            /**
+             * Aporte Rv Estimated
+             * @description Aporte que sobra para RV após o desvio para a reserva (usado na projeção).
+             */
+            aporte_rv_estimated?: number | null;
+            /**
+             * Next Milestone
+             * @description Próximo marco de renda mensal (R$).
+             */
+            next_milestone?: number | null;
+            /**
+             * Milestone Gap
+             * @description Quanto falta de renda para o marco.
+             */
+            milestone_gap?: number | null;
+            /**
+             * Milestone Capital Needed
+             * @description Capital adicional ~necessário para o marco (gap×12 ÷ yield).
+             */
+            milestone_capital_needed?: number | null;
+            /**
              * Currency
              * @default BRL
              */
@@ -833,6 +1105,16 @@ export interface components {
              * @default 0
              */
             monthly_income: number;
+            /**
+             * Annual Income Gross
+             * @description Renda anual bruta (antes do IR do JCP).
+             */
+            annual_income_gross?: number | null;
+            /**
+             * Monthly Income Gross
+             * @description Renda mensal bruta (antes do IR do JCP).
+             */
+            monthly_income_gross?: number | null;
             /**
              * Portfolio Yield
              * @default 0
@@ -1060,6 +1342,17 @@ export interface components {
              * @description Reserva já existente (BRL). Se omitido, usa o total do rastreador de RF.
              */
             reserve_current?: number | null;
+            /**
+             * Allow Empty Portfolio
+             * @description Permite gerar plano SEM conseguir ler a carteira (fail-open explícito). Por padrão o plano é abortado: alocar dinheiro real sobre carteira vazia produz sugestões materialmente erradas.
+             * @default false
+             */
+            allow_empty_portfolio: boolean;
+            /**
+             * Focus
+             * @description Foco do aporte: 'BALANCE' distribui entre as classes conforme as metas; uma classe (STOCK/FII/ETF/BDR) concentra todo o aporte de RV nela. Se omitido, usa a preferência salva.
+             */
+            focus?: string | null;
         };
         /** PlanResponse */
         PlanResponse: {
@@ -1100,10 +1393,41 @@ export interface components {
             /** Warnings */
             warnings?: string[];
             /**
+             * Focus
+             * @description Foco usado no plano: 'BALANCE' ou uma classe (STOCK/FII/ETF/BDR).
+             */
+            focus?: string | null;
+            /**
+             * Plan Id
+             * @description Id do plano persistido (plan_history).
+             */
+            plan_id?: number | null;
+            /**
+             * Created At
+             * @description Quando o plano foi gerado (planos salvos).
+             */
+            created_at?: string | null;
+            /**
              * Disclaimer
              * @default Conteúdo educativo. Não é recomendação de investimento. Os dados podem estar defasados; confira antes de operar.
              */
             disclaimer: string;
+        };
+        /**
+         * PlanSummary
+         * @description Resumo de um plano salvo (lista 'Planos anteriores').
+         */
+        PlanSummary: {
+            /** Id */
+            id: number;
+            /** Created At */
+            created_at?: string | null;
+            /** Aporte */
+            aporte?: number | null;
+            /** Strategy */
+            strategy?: string | null;
+            /** Suggested Count */
+            suggested_count?: number | null;
         };
         /** Portfolio */
         Portfolio: {
@@ -1237,6 +1561,18 @@ export interface components {
             target_horizon_years?: number | null;
             /** Annual Growth */
             annual_growth?: number | null;
+            /** Expected Inflation */
+            expected_inflation?: number | null;
+            /** Include Reserve Income */
+            include_reserve_income?: boolean | null;
+            /** Focus */
+            focus?: string | null;
+            /** Class Targets */
+            class_targets?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
         };
         /** ProjectionPoint */
         ProjectionPoint: {
@@ -1250,6 +1586,11 @@ export interface components {
             annual_income: number;
             /** Monthly Income */
             monthly_income: number;
+            /**
+             * Monthly Income Real
+             * @description Renda mensal em reais DE HOJE (deflacionada pela inflação esperada).
+             */
+            monthly_income_real?: number | null;
         };
         /** ProjectionRequest */
         ProjectionRequest: {
@@ -1270,10 +1611,16 @@ export interface components {
             annual_yield: number;
             /**
              * Annual Growth
-             * @description Crescimento anual dos proventos (0..1).
+             * @description Crescimento anual do patrimônio que acompanha os proventos (-0.5..1).
              * @default 0
              */
             annual_growth: number;
+            /**
+             * Annual Inflation
+             * @description Inflação anual esperada — deflaciona para reais de hoje.
+             * @default 0
+             */
+            annual_inflation: number;
             /**
              * Years
              * @default 20
@@ -1305,6 +1652,11 @@ export interface components {
              */
             final_monthly_income: number;
             /**
+             * Final Monthly Income Real
+             * @description Renda mensal final em reais de hoje (igual à nominal com inflação 0).
+             */
+            final_monthly_income_real?: number | null;
+            /**
              * Total Invested
              * @default 0
              */
@@ -1316,6 +1668,128 @@ export interface components {
             total_dividends: number;
             /** Required Monthly Contribution */
             required_monthly_contribution?: number | null;
+        };
+        /**
+         * RadarItem
+         * @description Linha do radar: os dados de DECISÃO de cada ativo observado.
+         */
+        RadarItem: {
+            /** Ticker */
+            ticker: string;
+            /**
+             * Asset Class
+             * @default STOCK
+             */
+            asset_class: string;
+            /** Price */
+            price?: number | null;
+            /** Dividend Yield */
+            dividend_yield?: number | null;
+            /** Dividend Yield Net */
+            dividend_yield_net?: number | null;
+            /** Ceiling Price */
+            ceiling_price?: number | null;
+            /**
+             * Margin
+             * @description (teto − preço) ÷ teto; positivo = desconto.
+             */
+            margin?: number | null;
+            /** Below Ceiling */
+            below_ceiling?: boolean | null;
+            /**
+             * In Portfolio
+             * @default false
+             */
+            in_portfolio: boolean;
+        };
+        /** RadarResponse */
+        RadarResponse: {
+            /** Items */
+            items?: components["schemas"]["RadarItem"][];
+            /**
+             * Bazin Target Yield
+             * @default 0.06
+             */
+            bazin_target_yield: number;
+            /**
+             * Below Count
+             * @default 0
+             */
+            below_count: number;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /** RealizedAsset */
+        RealizedAsset: {
+            /** Ticker */
+            ticker: string;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /**
+         * RealizedIncomeResponse
+         * @description Renda REALIZADA: dividendos que efetivamente caíram na conta (fonte: Ghostfolio).
+         *
+         *     É o contraponto da renda estimada (valor × DY): a série real da bola de neve.
+         */
+        RealizedIncomeResponse: {
+            /**
+             * Months
+             * @description Últimos 24 meses.
+             */
+            months?: components["schemas"]["RealizedMonth"][];
+            /**
+             * Total 12M
+             * @default 0
+             */
+            total_12m: number;
+            /**
+             * Monthly Avg 12M
+             * @default 0
+             */
+            monthly_avg_12m: number;
+            /** By Asset 12M */
+            by_asset_12m?: components["schemas"]["RealizedAsset"][];
+            /**
+             * Last Payments
+             * @description Pagamentos mais recentes.
+             */
+            last_payments?: components["schemas"]["RealizedPayment"][];
+            /**
+             * Total 30D
+             * @description Recebido nos últimos 30 dias (base do reinvestimento).
+             * @default 0
+             */
+            total_30d: number;
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+            /** Warnings */
+            warnings?: string[];
+        };
+        /** RealizedMonth */
+        RealizedMonth: {
+            /** Month */
+            month: string;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
+        };
+        /** RealizedPayment */
+        RealizedPayment: {
+            /** Date */
+            date: string;
+            /** Ticker */
+            ticker: string;
+            /** Value */
+            value: number;
         };
         /**
          * ReserveSuggestion
@@ -1434,6 +1908,35 @@ export interface components {
              */
             bazin_margin?: number | null;
         };
+        /** SnapshotPoint */
+        SnapshotPoint: {
+            /** Month */
+            month: string;
+            /** Total Value */
+            total_value?: number | null;
+            /** Annual Income */
+            annual_income?: number | null;
+            /** Monthly Income */
+            monthly_income?: number | null;
+            /** Portfolio Yield */
+            portfolio_yield?: number | null;
+            /** Yield On Cost */
+            yield_on_cost?: number | null;
+        };
+        /**
+         * SnapshotsResponse
+         * @description Série mensal REAL da carteira (patrimônio, renda estimada, YoC) — a prova visual
+         *     da bola de neve. Alimentada por um snapshot automático por mês.
+         */
+        SnapshotsResponse: {
+            /** Months */
+            months?: components["schemas"]["SnapshotPoint"][];
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+        };
         /**
          * SuggestedBuy
          * @description Quanto comprar de um ativo — com a aritmética completa, auditável.
@@ -1492,6 +1995,18 @@ export interface components {
             ticker: string;
             /** Note */
             note?: string | null;
+        };
+        /** WatchlistPatch */
+        WatchlistPatch: {
+            /** Favorite */
+            favorite: boolean;
+        };
+        /** YocPoint */
+        YocPoint: {
+            /** Month */
+            month: string;
+            /** Yoc */
+            yoc?: number | null;
         };
     };
     responses: never;
@@ -1786,6 +2301,57 @@ export interface operations {
             };
         };
     };
+    plan_latest_api_plan_latest_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanResponse"];
+                };
+            };
+        };
+    };
+    plan_history_api_plan_history_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSummary"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_preferences_api_preferences_get: {
         parameters: {
             query?: never;
@@ -1933,6 +2499,63 @@ export interface operations {
             };
         };
     };
+    patch_watchlist_api_watchlist__ticker__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatchlistPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    watchlist_radar_api_watchlist_radar_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RadarResponse"];
+                };
+            };
+        };
+    };
     income_api_income_get: {
         parameters: {
             query?: never;
@@ -1949,6 +2572,57 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IncomeResponse"];
+                };
+            };
+        };
+    };
+    income_snapshots_api_income_snapshots_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SnapshotsResponse"];
+                };
+            };
+        };
+    };
+    yoc_history_api_income_yoc__ticker__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticker: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["YocPoint"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2006,6 +2680,46 @@ export interface operations {
             };
         };
     };
+    income_realized_api_income_realized_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RealizedIncomeResponse"];
+                };
+            };
+        };
+    };
+    income_announced_api_income_announced_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AnnouncedResponse"];
+                };
+            };
+        };
+    };
     income_calendar_api_income_calendar_get: {
         parameters: {
             query?: never;
@@ -2028,7 +2742,9 @@ export interface operations {
     };
     fixed_income_summary_api_fixed_income_summary_get: {
         parameters: {
-            query?: never;
+            query?: {
+                include_archived?: boolean;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -2042,6 +2758,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FixedIncomeSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2123,7 +2848,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AccountIn"];
+                "application/json": components["schemas"]["AccountPatch"];
             };
         };
         responses: {
@@ -2202,6 +2927,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AccountSummary"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_entry_api_fixed_income_accounts__account_id__entries__entry_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                account_id: number;
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

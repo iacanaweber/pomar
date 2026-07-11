@@ -1,32 +1,61 @@
 """Feriados da B3 (dias sem pregão) — para contar dias úteis no rendimento da renda fixa.
 
-Lista curada dos feriados nacionais e específicos da B3 (que não abre em 24/12 e 31/12).
-Feriados que caem em fim de semana são inofensivos (já são excluídos pela contagem seg–sex).
-Cobertura 2024–2027; fora dessa janela a contagem cai para seg–sex puro (aproximação — o
-impacto de ±1 feriado sobre a taxa anualizada é < 1%). Atualize anualmente.
+GERADOS POR ALGORITMO (não mais curados à mão): os feriados móveis (Carnaval, Sexta-feira
+Santa, Corpus Christi) derivam da Páscoa pelo cálculo de Gauss; os fixos valem todo ano.
+Isso elimina a bomba-relógio da lista curada, que expirava em 2027 e degradava a contagem
+silenciosamente. A geração cobre 1994–2100 (frozenset pré-computado; ~1,4 mil datas).
+
+Regras da B3: sem pregão em Confraternização (1/1), Carnaval (seg+ter), Sexta-feira Santa,
+Tiradentes (21/4), Dia do Trabalho (1/5), Corpus Christi, Independência (7/9), N. Sra.
+Aparecida (12/10), Finados (2/11), Proclamação da República (15/11), Consciência Negra
+(20/11, feriado nacional desde 2024), véspera de Natal (24/12), Natal (25/12) e último dia
+do ano (31/12). Feriados em fim de semana são inofensivos (a contagem já exclui sáb/dom).
 """
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
-# (ano, mês, dia)
-_RAW: tuple[tuple[int, int, int], ...] = (
-    # 2024
-    (2024, 1, 1), (2024, 2, 12), (2024, 2, 13), (2024, 3, 29), (2024, 4, 21),
-    (2024, 5, 1), (2024, 5, 30), (2024, 9, 7), (2024, 10, 12), (2024, 11, 2),
-    (2024, 11, 15), (2024, 11, 20), (2024, 12, 24), (2024, 12, 25), (2024, 12, 31),
-    # 2025
-    (2025, 1, 1), (2025, 3, 3), (2025, 3, 4), (2025, 4, 18), (2025, 4, 21),
-    (2025, 5, 1), (2025, 6, 19), (2025, 9, 7), (2025, 10, 12), (2025, 11, 2),
-    (2025, 11, 15), (2025, 11, 20), (2025, 12, 24), (2025, 12, 25), (2025, 12, 31),
-    # 2026
-    (2026, 1, 1), (2026, 2, 16), (2026, 2, 17), (2026, 4, 3), (2026, 4, 21),
-    (2026, 5, 1), (2026, 6, 4), (2026, 9, 7), (2026, 10, 12), (2026, 11, 2),
-    (2026, 11, 15), (2026, 11, 20), (2026, 12, 24), (2026, 12, 25), (2026, 12, 31),
-    # 2027
-    (2027, 1, 1), (2027, 2, 8), (2027, 2, 9), (2027, 3, 26), (2027, 4, 21),
-    (2027, 5, 1), (2027, 5, 27), (2027, 9, 7), (2027, 10, 12), (2027, 11, 2),
-    (2027, 11, 15), (2027, 11, 20), (2027, 12, 24), (2027, 12, 25), (2027, 12, 31),
+_YEARS = range(1994, 2101)  # Plano Real em diante; folga generosa para o futuro
+
+
+def easter_sunday(year: int) -> date:
+    """Domingo de Páscoa pelo algoritmo de Gauss (calendário gregoriano)."""
+    a = year % 19
+    b, c = divmod(year, 100)
+    d, e = divmod(b, 4)
+    g = (8 * b + 13) // 25
+    h = (19 * a + b - d - g + 15) % 30
+    i, k = divmod(c, 4)
+    l = (32 + 2 * e + 2 * i - h - k) % 7  # noqa: E741
+    m = (a + 11 * h + 19 * l) // 433
+    month = (h + l - 7 * m + 90) // 25
+    day = (h + l - 7 * m + 33 * month + 19) % 32
+    return date(year, month, day)
+
+
+def b3_holidays_for_year(year: int) -> set[date]:
+    easter = easter_sunday(year)
+    holidays = {
+        date(year, 1, 1),                   # Confraternização Universal
+        easter - timedelta(days=48),        # Carnaval (segunda)
+        easter - timedelta(days=47),        # Carnaval (terça)
+        easter - timedelta(days=2),         # Sexta-feira Santa
+        date(year, 4, 21),                  # Tiradentes
+        date(year, 5, 1),                   # Dia do Trabalho
+        easter + timedelta(days=60),        # Corpus Christi
+        date(year, 9, 7),                   # Independência
+        date(year, 10, 12),                 # N. Sra. Aparecida
+        date(year, 11, 2),                  # Finados
+        date(year, 11, 15),                 # Proclamação da República
+        date(year, 12, 24),                 # véspera de Natal (B3 fechada)
+        date(year, 12, 25),                 # Natal
+        date(year, 12, 31),                 # último dia do ano (B3 fechada)
+    }
+    if year >= 2024:                        # Consciência Negra: feriado nacional desde 2024
+        holidays.add(date(year, 11, 20))
+    return holidays
+
+
+B3_HOLIDAYS: frozenset[date] = frozenset(
+    d for y in _YEARS for d in b3_holidays_for_year(y)
 )
-
-B3_HOLIDAYS: frozenset[date] = frozenset(date(y, m, d) for (y, m, d) in _RAW)

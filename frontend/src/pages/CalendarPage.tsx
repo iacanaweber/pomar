@@ -1,8 +1,45 @@
 import { useState } from "react";
-import { useIncomeCalendar } from "../api/queries";
+import { useIncomeAnnounced, useIncomeCalendar } from "../api/queries";
 import { AssetLink } from "../components/AssetLink";
 import type { CalendarByAsset } from "../types";
-import { money } from "../lib/format";
+import { isoToBR, money } from "../lib/format";
+
+/** Proventos JÁ ANUNCIADOS (data e valor conhecidos) — agenda real, acima da sazonalidade. */
+function AnnouncedSection() {
+  const { data } = useIncomeAnnounced();
+  const items = data?.items ?? [];
+  if (items.length === 0) return null;
+  return (
+    <div className="alloc announced">
+      <h3>
+        Proventos anunciados{" "}
+        {data && data.total_net > 0 && (
+          <span className="cal-total">
+            a receber <strong>{money(data.total_net, data.currency)}</strong>
+          </span>
+        )}
+      </h3>
+      <ul className="pf-drill-list">
+        {items.map((a, i) => (
+          <li key={`${a.ticker}-${i}`} className="pf-drill-item">
+            <span className="pf-drill-ticker"><AssetLink ticker={a.ticker} /></span>
+            <span className="muted">
+              {a.payment_date ? `paga ${isoToBR(a.payment_date)}` : "pagamento a definir"}
+              {a.type ? ` · ${a.type}` : ""} · {money(a.net_value_per_share)}/cota líq.
+            </span>
+            <span className="pf-drill-val">
+              {a.total_net != null ? money(a.total_net, data?.currency) : "—"}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted" style={{ fontSize: 12 }}>
+        Anunciados pelas empresas (StatusInvest) para posições da sua carteira, líquidos de IR
+        do JCP. Um anúncio que some pode indicar corte.
+      </p>
+    </div>
+  );
+}
 
 const MONTH_NAMES = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
@@ -56,6 +93,8 @@ export function CalendarPage() {
         )}
       </div>
       {data && <p className="muted" style={{ marginTop: 0 }}>{data.basis}</p>}
+
+      <AnnouncedSection />
 
       {(data?.warnings ?? []).length > 0 && (
         <div className="banner banner-warn">

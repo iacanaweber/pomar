@@ -50,6 +50,29 @@ async def remove(db: Database, ticker: str) -> None:
     await db.execute("DELETE FROM watchlist WHERE ticker = ?", (ticker.strip().upper(),))
 
 
+async def set_favorite(db: Database, ticker: str, favorite: bool) -> bool:
+    """Marca/desmarca um ⭐. Retorna False se o ticker não está na watchlist."""
+    ticker = ticker.strip().upper()
+    row = await db.fetchone("SELECT ticker FROM watchlist WHERE ticker = ?", (ticker,))
+    if not row:
+        return False
+    await db.execute(
+        "UPDATE watchlist SET favorite = ? WHERE ticker = ?", (1 if favorite else 0, ticker)
+    )
+    return True
+
+
+async def favorites(db: Database) -> Dict[str, List[str]]:
+    """Favoritos válidos agrupados por classe: {'FII': ['BTGL11', ...], ...}."""
+    rows = await db.fetchall(
+        "SELECT ticker, asset_class FROM watchlist WHERE favorite = 1 AND valid = 1 ORDER BY ticker"
+    )
+    out: Dict[str, List[str]] = {}
+    for r in rows:
+        out.setdefault(r["asset_class"] or "STOCK", []).append(r["ticker"])
+    return out
+
+
 async def seed_if_empty(db: Database) -> int:
     """Popula a watchlist com a lista curada se ela estiver vazia. Retorna quantos inseriu."""
     if await count(db) > 0:

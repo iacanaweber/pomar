@@ -3,10 +3,23 @@ from __future__ import annotations
 
 from typing import Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.models.common import Metric
 from app.models.market import Asset
+
+# Classes que recebem aporte de renda variável (FIXED_INCOME fica com a reserva).
+INVESTABLE_CLASSES = ("STOCK", "FII", "ETF", "BDR")
+FOCUS_CHOICES = ("BALANCE",) + INVESTABLE_CLASSES
+
+
+def validate_focus(value: Optional[str]) -> Optional[str]:
+    if value is None:
+        return None
+    v = value.strip().upper()
+    if v not in FOCUS_CHOICES:
+        raise ValueError(f"focus deve ser um de {', '.join(FOCUS_CHOICES)}; recebi '{value}'.")
+    return v
 
 
 class SuggestedBuy(BaseModel):
@@ -84,10 +97,25 @@ class PlanResponse(BaseModel):
         None, description="Sugestão de reserva/renda fixa (quando há reserve_target)."
     )
     warnings: List[str] = Field(default_factory=list)
+    focus: Optional[str] = Field(
+        None, description="Foco usado no plano: 'BALANCE' ou uma classe (STOCK/FII/ETF/BDR)."
+    )
+    plan_id: Optional[int] = Field(None, description="Id do plano persistido (plan_history).")
+    created_at: Optional[str] = Field(None, description="Quando o plano foi gerado (planos salvos).")
     disclaimer: str = Field(
         "Conteúdo educativo. Não é recomendação de investimento. "
         "Os dados podem estar defasados; confira antes de operar.",
     )
+
+
+class PlanSummary(BaseModel):
+    """Resumo de um plano salvo (lista 'Planos anteriores')."""
+
+    id: int
+    created_at: Optional[str] = None
+    aporte: Optional[float] = None
+    strategy: Optional[str] = None
+    suggested_count: Optional[int] = None
 
 
 class AssetDetailResponse(BaseModel):
@@ -127,3 +155,20 @@ class PlanRequest(BaseModel):
     reserve_current: Optional[float] = Field(
         None, ge=0, description="Reserva já existente (BRL). Se omitido, usa o total do rastreador de RF."
     )
+    allow_empty_portfolio: bool = Field(
+        False,
+        description="Permite gerar plano SEM conseguir ler a carteira (fail-open explícito). "
+        "Por padrão o plano é abortado: alocar dinheiro real sobre carteira vazia produz "
+        "sugestões materialmente erradas.",
+    )
+    focus: Optional[str] = Field(
+        None,
+        description="Foco do aporte: 'BALANCE' distribui entre as classes conforme as metas; "
+        "uma classe (STOCK/FII/ETF/BDR) concentra todo o aporte de RV nela. "
+        "Se omitido, usa a preferência salva.",
+    )
+
+    @field_validator("focus")
+    @classmethod
+    def _focus_valido(cls, v: Optional[str]) -> Optional[str]:
+        return validate_focus(v)

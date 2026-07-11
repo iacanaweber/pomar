@@ -112,8 +112,9 @@ h3 { font-size: 15px; margin: 18px 0 8px; }
   border-radius: 10px; padding: 10px 12px; font-size: 22px; }
 .money span { color: var(--muted); }
 .money input { border: 0; outline: 0; font-size: 22px; width: 100%; font-weight: 700; }
+/* 16px mínimo em campos de formulário: abaixo disso o Safari iOS força zoom ao focar. */
 select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
-  font-size: 15px; background: var(--card); color: var(--ink); min-height: 44px; }
+  font-size: 16px; background: var(--card); color: var(--ink); min-height: 44px; }
 .strategy-desc { margin: 0; font-size: 13px; color: var(--muted); }
 .weights { display: flex; flex-wrap: wrap; gap: 6px; }
 .weight-chip { background: var(--chip-bg); color: var(--green); border-radius: 999px;
@@ -263,6 +264,7 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 140px; }
 .income-stat strong { font-size: 18px; }
 .income-big { font-size: 26px; color: var(--green); }
+.income-gross-note { font-size: 12px; }
 .snowball-svg { width: 100%; height: auto; margin: 8px 0; }
 
 /* Links de ativo + detalhe */
@@ -309,7 +311,7 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   border: 1px solid var(--line); border-radius: 10px; }
 .adv-row { display: flex; flex-wrap: wrap; gap: 10px; }
 .adv-row .field { flex: 1; min-width: 110px; }
-.advanced input { padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; font-size: 14px;
+.advanced input { padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; font-size: 16px;
   background: var(--card); color: var(--ink); }
 .targets-editor { display: flex; flex-direction: column; gap: 6px; }
 .targets-title { font-weight: 600; font-size: 13px; }
@@ -372,9 +374,28 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .reserve-entries { list-style: none; margin: 0; padding: 0 14px 12px; display: flex; flex-direction: column; gap: 6px; }
 .reserve-entry { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); }
 .reserve-entry-tag { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--track); color: var(--ink); min-width: 64px; text-align: center; }
-.reserve-entry-tag.tag-balance { background: #e3f0e3; color: var(--green); }
-.reserve-entry-tag.tag-deposit { background: #e7eefc; color: #274690; }
-.reserve-entry-tag.tag-withdrawal { background: #fdecea; color: var(--danger); }
+/* Tags de lançamento por TOKEN (com variante dark) — pastéis hardcoded quebravam no
+   modo escuro justamente na distinção Saldo/Aporte/Resgate. */
+:root {
+  --tag-balance-bg: #e3f0e3; --tag-balance-fg: var(--green);
+  --tag-deposit-bg: #e7eefc; --tag-deposit-fg: #274690;
+  --tag-withdrawal-bg: #fdecea; --tag-withdrawal-fg: var(--danger);
+}
+:root[data-theme="dark"] {
+  --tag-balance-bg: #1d3320; --tag-balance-fg: #86d992;
+  --tag-deposit-bg: #1b2740; --tag-deposit-fg: #9db8f0;
+  --tag-withdrawal-bg: #3a1f1d; --tag-withdrawal-fg: #f0a49b;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --tag-balance-bg: #1d3320; --tag-balance-fg: #86d992;
+    --tag-deposit-bg: #1b2740; --tag-deposit-fg: #9db8f0;
+    --tag-withdrawal-bg: #3a1f1d; --tag-withdrawal-fg: #f0a49b;
+  }
+}
+.reserve-entry-tag.tag-balance { background: var(--tag-balance-bg); color: var(--tag-balance-fg); }
+.reserve-entry-tag.tag-deposit { background: var(--tag-deposit-bg); color: var(--tag-deposit-fg); }
+.reserve-entry-tag.tag-withdrawal { background: var(--tag-withdrawal-bg); color: var(--tag-withdrawal-fg); }
 .reserve-entry-date { font-size: 13px; color: var(--muted); }
 .reserve-entry-amount { margin-left: auto; }
 .reserve-suggestion .goal-status { font-size: 14px; }
@@ -418,7 +439,7 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 /* Watchlist */
 .watchlist-add { display: flex; gap: 8px; margin-bottom: 8px; }
 .watchlist-add input { flex: 1; padding: 12px; border: 2px solid var(--line); border-radius: 10px;
-  font-size: 15px; background: var(--card); color: var(--ink); min-height: 44px; }
+  font-size: 16px; background: var(--card); color: var(--ink); min-height: 44px; }
 .watchlist-add .primary { width: auto; }
 .watchlist-row { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
 .watchlist-main { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -442,3 +463,65 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 @media (prefers-reduced-motion: no-preference) {
   .card, .seg-btn, .tab, .legend-item { transition: background .15s, color .15s, border-color .15s; }
 }
+
+/* ===== v4: renda realizada, radar, marcos, planos e reserva ===== */
+
+/* Renda recebida (barras mensais dos dividendos do Ghostfolio) */
+.realized-bars { display: flex; align-items: flex-end; gap: 6px; margin: 12px 0 4px;
+  overflow-x: auto; padding-bottom: 4px; }
+.realized-bar-col { display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 44px; }
+.realized-bar { width: 26px; border-radius: 4px 4px 0 0; background: var(--green);
+  opacity: 0.85; }
+.realized-bar-val { font-size: 10px; color: var(--muted); white-space: nowrap; }
+.realized-bar-label { font-size: 11px; color: var(--muted); }
+
+/* Marcos de renda e 'e se aportar mais' */
+.goal-milestone { font-size: 13px; margin: 6px 0 0; }
+.whatif-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
+.whatif-chip { background: var(--chip-bg); color: var(--green); border-radius: 999px;
+  padding: 4px 12px; font-size: 12px; font-weight: 600; }
+
+/* Reinvestimento assistido + radar de teto */
+.reinvest-banner { background: var(--chip-bg); border: 1px solid var(--line);
+  color: var(--ink); margin: 0 0 4px; }
+.radar-banner { background: var(--chip-bg); border: 1px solid var(--line); color: var(--ink); }
+.watchlist-radar-data { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.watchlist-own { font-size: 11px; font-weight: 400; }
+
+/* Registro de compra + histórico de aportes */
+.order-register { padding: 4px 0; }
+.order-registered { color: var(--green); font-weight: 600; font-size: 13px; }
+.orders-streak { color: var(--green); font-weight: 700; }
+.orders-history .pf-drill-item { align-items: center; }
+
+/* Plano restaurado */
+.plan-restored { font-size: 13px; margin: 10px 0 0; }
+
+/* Retorno da posição (Carteira) */
+.pf-perf { font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pf-perf-up { color: var(--green); }
+.pf-perf-down { color: var(--danger); }
+
+/* Meta da reserva na própria página */
+.reserve-goal { display: flex; flex-direction: column; gap: 8px; }
+.reserve-rename { padding: 0 4px; min-height: 0; font-size: 12px; }
+.reserve-archived-row { opacity: 0.75; }
+
+/* Proventos anunciados (Calendário) */
+.announced .pf-drill-item { align-items: center; }
+
+/* Foco do aporte + carteira alvo (v5) */
+.focus-seg { margin-bottom: 2px; }
+.focus-context { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
+.basket-editor { display: flex; flex-direction: column; gap: 6px; }
+.basket-editor .link-button { align-self: flex-start; }
+.basket-rows { display: flex; flex-direction: column; gap: 6px; }
+.basket-row { display: flex; align-items: center; gap: 8px; }
+.basket-row .card-ticker { min-width: 84px; }
+.basket-row input[type="number"] { width: 84px; padding: 8px; border: 2px solid var(--line);
+  border-radius: 10px; background: var(--card); color: var(--ink); font-size: 16px; }
+.basket-add { display: flex; gap: 8px; align-items: center; }
+.basket-add input { flex: 1; max-width: 220px; padding: 8px; border: 2px solid var(--line);
+  border-radius: 10px; background: var(--card); color: var(--ink); font-size: 16px; }
+.watchlist-fav { font-size: 18px; min-width: 34px; text-align: center; padding: 0 2px; }

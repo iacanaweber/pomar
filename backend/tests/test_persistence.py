@@ -1,10 +1,14 @@
 """Testes da persistência SQLite: migrações, preferências e watchlist."""
 from __future__ import annotations
 
+import os
+import sqlite3
+
 import pytest
 
 from app.config import Settings
 from app.repositories import preferences_repo, watchlist_repo
+from app.repositories import db as db_module
 from app.repositories.db import Database
 
 
@@ -26,10 +30,10 @@ async def test_migrations_create_tables(db):
     names = {r["name"] for r in rows}
     assert {
         "preferences", "watchlist", "scenarios", "plan_history", "executed_orders", "alerts",
-        "fixed_income_accounts", "fixed_income_entries",
+        "fixed_income_accounts", "fixed_income_entries", "portfolio_snapshots",
     } <= names
     ver = await db.fetchone("SELECT MAX(version) AS v FROM schema_migrations")
-    assert ver["v"] == 3
+    assert ver["v"] == max(v for v, _ in db_module._MIGRATIONS)
 
 
 async def test_preferences_defaults_when_empty(db, settings):
@@ -72,9 +76,120 @@ async def test_db_survives_reopen(tmp_path, settings):
     await second.close()
 
 
+async def test_migracao_com_erro_nao_deixa_rastro(tmp_path, monkeypatch):
+    """Atomicidade: se uma migração falha no meio, NADA dela é aplicado (nem a versão).
+    Antes, `executescript` comitava a parte boa e o boot seguinte re-executava a
+    migração — ALTER TABLE estourava 'duplicate column' e derrubava todas as rotas."""
+    path = str(tmp_path / "atomic.db")
+    bad = (
+        99,
+        """
+        CREATE TABLE meia_migracao (id INTEGER PRIMARY KEY);
+        INSERT INTO tabela_que_nao_existe VALUES (1);
+        """,
+    )
+    monkeypatch.setattr(db_module, "_MIGRATIONS", db_module._MIGRATIONS + [bad])
+    broken = Database(path)
+    with pytest.raises(sqlite3.OperationalError):
+        await broken.ensure_ready()
+
+    # reabre com as migrações corretas: a 99 não deixou rastro e o app sobe normal
+    monkeypatch.setattr(db_module, "_MIGRATIONS", [m for m in db_module._MIGRATIONS if m[0] != 99])
+    recovered = Database(path)
+    await recovered.ensure_ready()
+    tables = {r["name"] for r in await recovered.fetchall("SELECT name FROM sqlite_master WHERE type='table'")}
+    assert "meia_migracao" not in tables
+    ver = await recovered.fetchone("SELECT MAX(version) AS v FROM schema_migrations")
+    assert ver["v"] == max(v for v, _ in db_module._MIGRATIONS)
+    await recovered.close()
+
+
+async def test_migracao_reexecutada_e_inofensiva(tmp_path):
+    """ensure_ready em instância nova sobre o mesmo arquivo não re-aplica nada."""
+    path = str(tmp_path / "rerun.db")
+    for _ in range(2):
+        d = Database(path)
+        await d.ensure_ready()
+        await d.close()
+
+
+async def test_backup_snapshot_e_retencao(tmp_path, settings):
+    path = str(tmp_path / "orig.db")
+    d = Database(path)
+    await d.ensure_ready()
+    await preferences_repo.put(d, {"max_assets": 7}, settings)
+
+    dest_dir = str(tmp_path / "backups")
+    # snapshots antigos para exercitar a retenção
+    os.makedirs(dest_dir)
+    for stamp in ("20200101", "20200102", "20200103"):
+        with open(os.path.join(dest_dir, f"pomar-{stamp}.db"), "wb"):
+            pass
+    dest = await d.backup_now(dest_dir, retention=3)
+    await d.close()
+
+    # o snapshot é um banco íntegro com os dados
+    restored = Database(dest)
+    await restored.ensure_ready()
+    p = await preferences_repo.get(restored, settings)
+    assert p["max_assets"] == 7
+    await restored.close()
+
+    remaining = sorted(os.listdir(dest_dir))
+    assert len(remaining) == 3 and os.path.basename(dest) in remaining
+    assert "pomar-20200101.db" not in remaining  # o mais antigo saiu
+
+
 async def test_watchlist_crud(db):
     await watchlist_repo.add(db, "petr4", "STOCK", note="teste")
     ts = await watchlist_repo.tickers(db)
     assert "PETR4" in ts  # normalizado para maiúsculas
     await watchlist_repo.remove(db, "petr4")
     assert "PETR4" not in await watchlist_repo.tickers(db)
+
+
+async def test_migration_v5_adds_focus_columns(db):
+    cols = {r["name"] for r in await db.fetchall("PRAGMA table_info(preferences)")}
+    assert {"focus", "class_targets_json"} <= cols
+
+
+async def test_preferences_focus_e_class_targets_roundtrip(db, settings):
+    p = await preferences_repo.get(db, settings)
+    assert p["focus"] == "BALANCE" and p["class_targets"] == {}
+    basket = {"FII": {"BTGL11": 0.4, "HGRE11": 0.3, "KNCR11": 0.3}}
+    await preferences_repo.put(db, {"focus": "FII", "class_targets": basket}, settings)
+    p = await preferences_repo.get(db, settings)
+    assert p["focus"] == "FII" and p["class_targets"] == basket
+    # patch parcial de outro campo preserva foco e cesta
+    await preferences_repo.put(db, {"max_assets": 7}, settings)
+    p = await preferences_repo.get(db, settings)
+    assert p["focus"] == "FII" and p["class_targets"] == basket
+
+
+async def test_watchlist_favoritos(db):
+    await watchlist_repo.add(db, "btgl11", "FII")
+    await watchlist_repo.add(db, "bbas3", "STOCK")
+    assert await watchlist_repo.set_favorite(db, "btgl11", True) is True
+    assert await watchlist_repo.set_favorite(db, "NAOEXISTE11", True) is False
+    assert await watchlist_repo.favorites(db) == {"FII": ["BTGL11"]}
+    # ticker invalidado sai dos favoritos efetivos
+    await watchlist_repo.add(db, "btgl11", "FII", valid=False)
+    assert await watchlist_repo.favorites(db) == {}
+
+
+async def test_snapshot_mensal_grava_uma_vez_e_le_yoc(db):
+    from app.repositories import snapshots_repo
+
+    income = {
+        "total_value": 50_000.0, "annual_income": 3_000.0, "monthly_income": 250.0,
+        "portfolio_yield": 0.06, "yield_on_cost": 0.08,
+        "by_asset": [{"ticker": "ITSA4", "yield_on_cost": 0.11, "annual_income": 900.0}],
+    }
+    assert await snapshots_repo.save_if_new_month(db, income) is True
+    assert await snapshots_repo.save_if_new_month(db, income) is False  # 1 por mês
+    rows = await snapshots_repo.list_all(db)
+    assert len(rows) == 1 and rows[0]["total_value"] == 50_000.0
+    hist = await snapshots_repo.yoc_history(db, "itsa4")
+    assert len(hist) == 1 and hist[0]["yoc"] == 0.11
+    # carteira vazia nunca vira histórico
+    assert await snapshots_repo.save_if_new_month(db, {"total_value": 0.0}) is False

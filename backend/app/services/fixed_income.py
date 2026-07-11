@@ -41,16 +41,15 @@ def business_days_between(d1: date, d2: date, holidays: frozenset[date] = B3_HOL
     return count
 
 
-def annualized_return(principal_before: float, new_balance: float, business_days: int) -> Optional[Dict]:
-    """Rendimento de uma atualização de saldo, anualizado em base 252 dias úteis.
+def annualized_from(gain: float, base: float, business_days: int) -> Optional[Dict]:
+    """Anualiza (base 252) um ganho sobre uma base de capital — núcleo do Modified Dietz.
 
-    Retorna None quando não dá para inferir taxa (sem principal anterior, sem dias úteis ou
-    principal <= 0). O ganho em R$ ainda pode ser exibido pelo chamador nesses casos.
+    `base` é o capital MÉDIO ponderado pelo tempo (não o principal nominal). Retorna None
+    quando não dá para inferir taxa (base <= 0 ou sem dias úteis).
     """
-    if principal_before <= 0 or business_days <= 0:
+    if base <= 0 or business_days <= 0:
         return None
-    gain = new_balance - principal_before
-    period_return = gain / principal_before
+    period_return = gain / base
     if period_return <= -1:  # zerou/negativou além do principal: taxa não faz sentido
         return {"gain": round(gain, 2), "period_return": round(period_return, 6),
                 "annualized": None, "business_days": business_days}
@@ -62,6 +61,13 @@ def annualized_return(principal_before: float, new_balance: float, business_days
         "annualized": round(annualized, 6),
         "business_days": business_days,
     }
+
+
+def annualized_return(principal_before: float, new_balance: float, business_days: int) -> Optional[Dict]:
+    """Rendimento simples (sem fluxos no meio), anualizado em base 252 dias úteis."""
+    if principal_before <= 0:
+        return None
+    return annualized_from(new_balance - principal_before, principal_before, business_days)
 
 
 def _sorted(entries: List[Dict]) -> List[Dict]:
@@ -89,12 +95,14 @@ def current_balance(entries: List[Dict]) -> float:
 def last_yield(entries: List[Dict], holidays: frozenset[date] = B3_HOLIDAYS) -> Optional[Dict]:
     """Rendimento da ÚLTIMA atualização de saldo vs o ponto de partida anterior.
 
-    O ponto de partida é, em ordem de preferência:
-    1. o SALDO anterior (+ aportes − resgates no período) — mais preciso; ou
-    2. quando não há saldo anterior, os APORTES (líq. de resgates) até a data do saldo, com a
-       data do primeiro aporte como início — exato p/ "1 aporte + 1 saldo"; conservador p/ vários.
+    Método: **Modified Dietz** com tempo em dias úteis — cada aporte/resgate do período
+    pesa pela fração do período em que o dinheiro ficou aplicado. Sem isso, um RESGATE
+    no meio do período inflava a taxa (o ganho era dividido por um principal que já
+    havia saído), distorcendo o % do CDI usado para comparar contas.
 
-    Retorna o dict de `annualized_return` com as datas, ou None se não há base/dias úteis.
+    Ponto de partida: o SALDO anterior; ou, sem saldo anterior, os aportes líquidos até
+    a data do saldo (a data do primeiro aporte abre o período, com peso integral).
+    Retorna o dict de `annualized_from` com as datas, ou None se não há base/dias úteis.
     """
     ev = _sorted(entries)
     balances = [e for e in ev if e["kind"] == "balance"]
@@ -105,35 +113,43 @@ def last_yield(entries: List[Dict], holidays: frozenset[date] = B3_HOLIDAYS) -> 
     if d2 is None:
         return None
 
+    flows: List[tuple[date, float]] = []  # (data, valor com sinal)
     if len(balances) >= 2:
         prev = balances[-2]
         d1 = parse_date(prev["entry_date"])
         if d1 is None:
             return None
-        principal = float(prev["amount"])
+        start_capital = float(prev["amount"])
         for e in ev:
             if e["kind"] in ("deposit", "withdrawal"):
                 d = parse_date(e["entry_date"])
                 if d is not None and d1 < d <= d2:
-                    principal += float(e["amount"]) if e["kind"] == "deposit" else -float(e["amount"])
+                    flows.append((d, float(e["amount"]) if e["kind"] == "deposit" else -float(e["amount"])))
     else:
-        flows = []
         for e in ev:
             if e["kind"] in ("deposit", "withdrawal"):
                 d = parse_date(e["entry_date"])
                 if d is not None and d <= d2:
-                    flows.append((d, e["kind"], float(e["amount"])))
+                    flows.append((d, float(e["amount"]) if e["kind"] == "deposit" else -float(e["amount"])))
         if not flows:
             return None
-        principal = sum(a if k == "deposit" else -a for (_, k, a) in flows)
-        d1 = min(d for (d, _, _) in flows)
+        start_capital = 0.0
+        d1 = min(d for d, _ in flows)
 
-    bd = business_days_between(d1, d2, holidays)
-    res = annualized_return(principal, float(last["amount"]), bd)
+    total_bd = business_days_between(d1, d2, holidays)
+    if total_bd <= 0:
+        return None
+    net_flows = sum(a for _, a in flows)
+    gain = float(last["amount"]) - start_capital - net_flows
+    # capital médio: fluxo na abertura pesa 1.0; na data do saldo final pesa 0.0
+    base = start_capital + sum(
+        a * (business_days_between(d, d2, holidays) / total_bd) for d, a in flows
+    )
+    res = annualized_from(gain, base, total_bd)
     if res is None:
         return None
     res.update({"from_date": d1.isoformat(), "to_date": d2.isoformat(),
-                "principal_before": round(principal, 2)})
+                "principal_before": round(start_capital + net_flows, 2)})
     return res
 
 
