@@ -2,159 +2,109 @@
 
 **Plante seus aportes, colha dividendos.**
 
-Pomar é um app web **pessoal e educativo** para planejar aportes na B3. Você define a
-**carteira alvo** — quanto cada classe (Ações/FIIs/ETFs/BDRs) deve pesar e, dentro de cada
-classe, quais ativos a compõem e com que percentual. Na hora de investir, informa quanto tem
-disponível e o Pomar responde **quantas cotas comprar de quê** para chegar mais perto dessa
-carteira.
+App web pessoal para planejar aportes na B3. Você define uma **carteira alvo** — quanto cada
+classe (Ações, FIIs, ETFs, BDRs) deve pesar e, dentro de cada classe, quais ativos a compõem e
+com que percentual. Ao aportar, você informa quanto tem disponível e o Pomar responde **quantas
+cotas comprar de quê** para chegar mais perto dessa carteira.
 
-O app **não escolhe ativos por você e não dá nota a ninguém**: a seleção é sua, e a
-recomendação é aritmética de rebalanceamento — quem está mais longe do peso-alvo recebe mais.
+O app não escolhe ativos por você e não dá nota a ninguém: a seleção é sua, e a recomendação é
+aritmética de rebalanceamento — quem está mais longe do peso-alvo recebe mais. Além disso ele
+calcula o **preço-teto de Bazin** (dividendo médio ÷ DY-alvo) e destaca quem está abaixo dele
+mesmo sem compra sugerida, sinaliza *red flags* factuais (prejuízo, endividamento, payout
+insustentável, liquidez baixa) e desvia parte do aporte para a reserva enquanto ela não atinge
+o alvo.
 
-O que o Pomar acrescenta a essa conta:
-
-| Recurso | Para quê |
-|---|---|
-| **Preço-teto de Bazin** | Dividendo médio (janela de 5 anos) ÷ DY-alvo. Um ativo pode estar no peso certo e ainda assim barato — ele vem destacado mesmo com compra sugerida zero, para você decidir se antecipa. |
-| **Red flags factuais** | Prejuízo, endividamento, payout insustentável, liquidez baixa, histórico irregular de proventos. Dado ausente é neutro, nunca inventado. |
-| **Reserva antes da RV** | Disciplina Barsi: parte do aporte vai para a reserva/renda fixa até o alvo ser atingido. |
-| **Lote e ticket mínimo** | A sugestão sai em número inteiro de cotas, com piso para abrir posição nova. |
-
-Todo número tem um tooltip explicando o que é e de onde vem.
+As abas são **Plantar** (o aporte), **Carteira** (atual × alvo e composição), **Reserva**
+(rastreador de renda fixa) e **Descobrir** (watchlist com radar de preço-teto).
 
 > ⚠️ Conteúdo educativo. **Não é recomendação de investimento.** Confira os dados antes de operar.
 
----
-
-## Como funciona
-
-```
-Login (senha) ─► Pomar lê sua carteira (Ghostfolio, somente leitura)
-                  │
-                  ├─►  dados da B3: Fundamentus (P/L, P/VP, setor, LPA/VPA…) +
-                  │     StatusInvest (proventos) + brapi (fallback de cotação)
-                  │
-                  ├─►  compara a carteira ATUAL com a sua carteira alvo (metas por
-                  │     classe + composição por ativo dentro de cada classe)
-                  │
-                  └─►  divide o aporte pelo DÉFICIT até o alvo (need-based entre as
-                        classes marcadas, por desvio dentro da cesta, respeitando
-                        lote e ticket mínimo)
-```
-
-- **Carteira:** [Ghostfolio](https://ghostfol.io) (`/api/v1/portfolio/holdings`), somente leitura.
-- **Mercado:** [Fundamentus](https://www.fundamentus.com.br) + [StatusInvest](https://statusinvest.com.br)
-  + [brapi.dev](https://brapi.dev) como fallback de cotação.
-- **Transparência:** cada número carrega sua fonte; dado faltante nunca é inventado — o campo
-  fica vazio em vez de receber uma estimativa.
-- **Risco em primeiro plano:** um selo (🟢/🟡/🔴) e *red flags* sinalizam prejuízo, payout
-  insustentável, endividamento e baixa liquidez — para o "barato que paga muito" não enganar.
-
-### Abas
-- **Plantar** — o aporte: valor disponível, quais classes entram (por padrão todas) e as compras
-  sugeridas. A configuração da **Carteira alvo** fica em `/alvo`, linkada daqui.
-- **Carteira** — donut com detalhamento por fatia (classe/setor/tag) e os ativos dentro.
-- **Reserva** — rastreador de renda fixa (saldos, rendimento, % do CDI) que alimenta a
-  reserva-alvo do plano.
-- **Descobrir** — watchlist com radar de preço-teto: o viveiro de onde saem candidatos à
-  carteira alvo.
+**Fontes:** carteira via [Ghostfolio](https://ghostfol.io) (somente leitura); dados de mercado
+via [Fundamentus](https://www.fundamentus.com.br), [StatusInvest](https://statusinvest.com.br) e
+[brapi.dev](https://brapi.dev).
 
 ---
 
-## Configuração
+## Instalação
 
-1. **Crie o `.env`** a partir do exemplo:
-   ```bash
-   cp .env.example .env
-   ```
-2. **Preencha o `.env`** (mínimo): `APP_PASSWORD`, `GHOSTFOLIO_ACCESS_TOKEN`, `BRAPI_TOKEN`.
-
-| Variável | Para quê |
-|---|---|
-| `APP_PASSWORD` | **Obrigatória.** Senha única que protege a API. Sem ela, as rotas respondem 503. |
-| `COOKIE_SECURE` | `false` em HTTP/LAN (padrão); **`true` somente sob HTTPS** (senão o login não funciona). |
-| `DEBUG` | `true` expõe `/docs` e `/api/debug/*` (só em desenvolvimento). Produção: `false`. |
-| `GHOSTFOLIO_URL` | Endereço do Ghostfolio alcançável pelo container (ex.: `http://192.168.0.10:3333`; ou `http://host.docker.internal:3333`). |
-| `GHOSTFOLIO_ACCESS_TOKEN` | *Security Token* do Ghostfolio (**Settings → Security Token**). O Pomar troca por um JWT sozinho. |
-| `BRAPI_TOKEN` / `BRAPI_PLAN` | Token grátis da brapi (https://brapi.dev/dashboard); `BRAPI_PLAN` = `free` (padrão) ou `pro`. |
-| `CORS_ORIGINS` | Vazio = só mesma origem (recomendado). Liste origens só se precisar de acesso cross-origin. |
-| `REDIS_URL` / `REDIS_PASSWORD` | Cache (o `docker-compose` já sobe um Redis). Vazio = cache em memória. |
-| `DB_PATH` | Banco SQLite de preferências/watchlist (padrão `data/pomar.db`). |
-| `WEB_PORT` | Porta web pública (padrão **3334**). |
-
----
-
-## Subir no servidor (Docker)
+Requisitos: **Docker** com Compose, uma instância do **Ghostfolio** acessível e um token grátis
+da **brapi**.
 
 ```bash
+git clone git@github.com:iacanaweber/pomar.git
+cd pomar
+cp .env.example .env      # preencha (veja abaixo)
 docker compose up -d --build
 ```
 
-Acesse em **`http://<ip-do-servidor>:3334`** e entre com a sua `APP_PASSWORD`.
+Acesse **`http://<ip-do-servidor>:3334`** e entre com a sua `APP_PASSWORD`. O celular na mesma
+rede abre o mesmo endereço — a interface é mobile-first.
 
-> 💾 **Persistência.** O banco (preferências, watchlist, renda fixa, histórico) fica no volume
-> Docker `pomar-data` (montado em `/app/data`), então sobrevive a `up --build`. **Backup atômico:**
-> `docker compose exec backend sqlite3 /app/data/pomar.db ".backup '/app/data/backup.db'"`.
+### O mínimo do `.env`
 
-### Acesso pelo celular (LAN)
-O celular na **mesma rede** abre o mesmo endereço. A interface é responsiva (mobile-first) e os
-tooltips funcionam por toque. Em HTTP, mantenha `COOKIE_SECURE=false`.
+| Variável | Para quê |
+|---|---|
+| `APP_PASSWORD` | **Obrigatória.** Senha única que protege a API (ela expõe sua carteira). Sem ela, as rotas respondem 503. |
+| `GHOSTFOLIO_URL` | Endereço do Ghostfolio alcançável **pelo container** (ex.: `http://192.168.0.10:3333`). |
+| `GHOSTFOLIO_ACCESS_TOKEN` | *Security Token* da sua conta Ghostfolio (Settings → Security Token). |
+| `BRAPI_TOKEN` | Token grátis em [brapi.dev/dashboard](https://brapi.dev/dashboard). |
+| `WEB_PORT` | Porta web pública (padrão **3334**). |
+| `COOKIE_SECURE` | `false` em HTTP/LAN (padrão); **`true` só sob HTTPS** — em HTTP, `true` impede o login. |
 
-### HTTPS (recomendado para exposição externa)
-Para servir por `https://` (ex.: via um reverse proxy como **Caddy** ou **Nginx Proxy Manager**
-com certificado Let's Encrypt), aponte o proxy para o frontend (porta `WEB_PORT`) e então defina
-`COOKIE_SECURE=true` no `.env`. Em HTTP a senha trafega em texto claro — evite expor sem TLS.
+O `.env.example` documenta as demais (cache, CORS, backup, sessão).
+
+### Primeiro uso
+
+1. Abra a aba **Plantar** → **Montar carteira alvo**.
+2. Defina as metas por classe (somando 100%) e, em cada classe, os ativos e seus pesos
+   (também somando 100%). O botão *"Usar pesos atuais da carteira"* semeia a partir do que você
+   já tem no Ghostfolio.
+3. Volte ao Plantar, informe o aporte e gere as recomendações.
+
+### Persistência
+
+Preferências, watchlist, renda fixa e histórico de planos ficam em SQLite no volume Docker
+`pomar-data` — sobrevivem a `up --build`. Backup atômico:
+
+```bash
+docker compose exec backend python -c \
+  "import sqlite3;s=sqlite3.connect('/app/data/pomar.db');d=sqlite3.connect('/app/data/backup.db');s.backup(d)"
+```
 
 ---
 
-## Desenvolvimento local
+## Desenvolvimento
 
-**Backend** (FastAPI):
 ```bash
+# backend (FastAPI, Python >= 3.10)
 cd backend
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 APP_PASSWORD=dev DEBUG=true uvicorn app.main:app --reload   # http://localhost:8000/docs
-pytest                                                       # testes
-```
+pytest
 
-**Frontend** (React + Vite):
-```bash
+# frontend (React + Vite)
 cd frontend
 npm install
-npm run dev          # http://localhost:5173 (proxy /api -> :8000)
-npm run build        # checagem de tipos + build de produção
-npm run gen:api      # regenera src/api/schema.d.ts a partir do /openapi.json (backend em DEBUG)
+npm run dev      # http://localhost:5173 (proxy /api -> :8000)
+npm test
+npm run build
+npm run gen:api  # regenera src/api/schema.d.ts a partir do backend em DEBUG
 ```
 
----
-
-## Estrutura
-
 ```
-backend/   FastAPI:
-  api/         rotas + segurança (auth por senha) + injeção de dependências
-  providers/   Fundamentus / StatusInvest / brapi / Ghostfolio
-  services/    universe, market_data, classify (classe+setor), analysis (fatos do ativo),
-               allocation (rebalanceamento), reserve, fixed_income
-  repositories/ SQLite (preferências, watchlist, planos, renda fixa…) com migrações
-  models/      contrato da API ; data/  watchlist curada + glossário
-frontend/  React + Vite: login, Plantar (aporte + compras sugeridas), Carteira alvo (/alvo),
-           Carteira, Reserva e Descobrir. Tipos gerados do OpenAPI.
-docker-compose.yml   backend + frontend (nginx) + redis (cache).
+backend/   FastAPI
+  api/          rotas + autenticação por senha
+  services/     allocation (rebalanceamento), analysis (fatos do ativo), universe, reserve…
+  providers/    Fundamentus · StatusInvest · brapi · Ghostfolio
+  repositories/ SQLite com migrações aditivas
+frontend/  React + Vite; tipos gerados do OpenAPI
 ```
 
-### Personalização
-- **Watchlist (universo):** editável via API (`/api/watchlist`) e persistida no SQLite; a lista
-  curada inicial fica em `backend/app/data/watchlist.py` (semente).
-- **Setores curados:** `SECTOR_BY_TICKER` em `backend/app/data/watchlist.py`.
-- **Alvos default por classe:** `backend/app/config.py` (ponto de partida; a UI sobrescreve).
-- **Carteira alvo (metas por classe + composição por ativo):** editável em `/alvo` e persistida
-  no SQLite. É o que define TODAS as recomendações.
-- **Ticket mínimo e reserva-alvo:** "Ajustes avançados" no Plantar.
-- **Textos do glossário (tooltips):** `backend/app/data/glossary.py`.
-
----
+**Onde ajustar o comportamento:** a carteira alvo é editável em `/alvo` e é o que define todas
+as recomendações; ticket mínimo e reserva-alvo ficam em "Ajustes avançados" no Plantar; a
+watchlist inicial está em `backend/app/data/watchlist.py` e os textos dos tooltips em
+`backend/app/data/glossary.py`.
 
 ## Licença
 
