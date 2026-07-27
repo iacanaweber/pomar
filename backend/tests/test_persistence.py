@@ -38,20 +38,20 @@ async def test_migrations_create_tables(db):
 
 async def test_preferences_defaults_when_empty(db, settings):
     p = await preferences_repo.get(db, settings)
-    assert p["strategy"] == "equilibrado"
-    assert p["max_assets"] == 5
+    assert p["min_ticket"] == 100.0
+    assert p["class_targets"] == {}
     assert abs(sum(p["targets"].values()) - 1.0) < 0.01
 
 
 async def test_preferences_put_then_get(db, settings):
-    await preferences_repo.put(db, {"strategy": "bazin", "max_assets": 8}, settings)
+    await preferences_repo.put(db, {"lot_mode": "integral", "aporte_default": 1500.0}, settings)
     p = await preferences_repo.get(db, settings)
-    assert p["strategy"] == "bazin"
-    assert p["max_assets"] == 8
+    assert p["lot_mode"] == "integral"
+    assert p["aporte_default"] == 1500.0
     # patch parcial preserva o resto
     await preferences_repo.put(db, {"min_ticket": 250.0}, settings)
     p = await preferences_repo.get(db, settings)
-    assert p["strategy"] == "bazin" and p["min_ticket"] == 250.0
+    assert p["lot_mode"] == "integral" and p["min_ticket"] == 250.0
 
 
 async def test_watchlist_seed_is_idempotent(db):
@@ -66,13 +66,13 @@ async def test_db_survives_reopen(tmp_path, settings):
     path = str(tmp_path / "persist.db")
     first = Database(path)
     await first.ensure_ready()
-    await preferences_repo.put(first, {"max_assets": 9}, settings)
+    await preferences_repo.put(first, {"min_ticket": 900.0}, settings)
     await first.close()
 
     second = Database(path)
     await second.ensure_ready()
     p = await preferences_repo.get(second, settings)
-    assert p["max_assets"] == 9
+    assert p["min_ticket"] == 900.0
     await second.close()
 
 
@@ -117,7 +117,7 @@ async def test_backup_snapshot_e_retencao(tmp_path, settings):
     path = str(tmp_path / "orig.db")
     d = Database(path)
     await d.ensure_ready()
-    await preferences_repo.put(d, {"max_assets": 7}, settings)
+    await preferences_repo.put(d, {"min_ticket": 700.0}, settings)
 
     dest_dir = str(tmp_path / "backups")
     # snapshots antigos para exercitar a retenção
@@ -132,7 +132,7 @@ async def test_backup_snapshot_e_retencao(tmp_path, settings):
     restored = Database(dest)
     await restored.ensure_ready()
     p = await preferences_repo.get(restored, settings)
-    assert p["max_assets"] == 7
+    assert p["min_ticket"] == 700.0
     await restored.close()
 
     remaining = sorted(os.listdir(dest_dir))
@@ -148,33 +148,26 @@ async def test_watchlist_crud(db):
     assert "PETR4" not in await watchlist_repo.tickers(db)
 
 
-async def test_migration_v5_adds_focus_columns(db):
+async def test_class_targets_column_exists(db):
     cols = {r["name"] for r in await db.fetchall("PRAGMA table_info(preferences)")}
-    assert {"focus", "class_targets_json"} <= cols
+    assert "class_targets_json" in cols
 
 
-async def test_preferences_focus_e_class_targets_roundtrip(db, settings):
+async def test_class_targets_roundtrip(db, settings):
+    """A carteira alvo é o dado mais precioso das preferências: gravar, reler e sobreviver
+    a um patch parcial de outro campo."""
     p = await preferences_repo.get(db, settings)
-    assert p["focus"] == "BALANCE" and p["class_targets"] == {}
-    basket = {"FII": {"BTGL11": 0.4, "HGRE11": 0.3, "KNCR11": 0.3}}
-    await preferences_repo.put(db, {"focus": "FII", "class_targets": basket}, settings)
+    assert p["class_targets"] == {}
+    baskets = {
+        "FII": {"BTGL11": 0.4, "HGRE11": 0.3, "KNCR11": 0.3},
+        "STOCK": {"BBSE3": 0.2208, "BBDC4": 0.2159, "TAEE11": 0.5633},
+    }
+    await preferences_repo.put(db, {"class_targets": baskets}, settings)
     p = await preferences_repo.get(db, settings)
-    assert p["focus"] == "FII" and p["class_targets"] == basket
-    # patch parcial de outro campo preserva foco e cesta
-    await preferences_repo.put(db, {"max_assets": 7}, settings)
+    assert p["class_targets"] == baskets
+    await preferences_repo.put(db, {"min_ticket": 700.0}, settings)
     p = await preferences_repo.get(db, settings)
-    assert p["focus"] == "FII" and p["class_targets"] == basket
-
-
-async def test_watchlist_favoritos(db):
-    await watchlist_repo.add(db, "btgl11", "FII")
-    await watchlist_repo.add(db, "bbas3", "STOCK")
-    assert await watchlist_repo.set_favorite(db, "btgl11", True) is True
-    assert await watchlist_repo.set_favorite(db, "NAOEXISTE11", True) is False
-    assert await watchlist_repo.favorites(db) == {"FII": ["BTGL11"]}
-    # ticker invalidado sai dos favoritos efetivos
-    await watchlist_repo.add(db, "btgl11", "FII", valid=False)
-    assert await watchlist_repo.favorites(db) == {}
+    assert p["class_targets"] == baskets
 
 
 async def test_snapshot_mensal_grava_uma_vez_e_le_yoc(db):

@@ -28,7 +28,7 @@ def test_health_is_open(client_with_password):
 
 
 def test_protected_route_requires_auth(client_with_password):
-    assert client_with_password.get("/api/strategies").status_code == 401
+    assert client_with_password.get("/api/glossary").status_code == 401
 
 
 def test_login_flow(client_with_password):
@@ -37,10 +37,10 @@ def test_login_flow(client_with_password):
     r = c.post("/api/login", json={"password": "segredo123"})
     assert r.status_code == 200
     # cookie de sessão setado => rota protegida agora responde
-    assert c.get("/api/strategies").status_code == 200
+    assert c.get("/api/glossary").status_code == 200
     # logout invalida o acesso
     c.post("/api/logout")
-    assert c.get("/api/strategies").status_code == 401
+    assert c.get("/api/glossary").status_code == 401
 
 
 def test_auth_status(client_with_password):
@@ -60,7 +60,7 @@ def test_without_password_protected_routes_return_503(monkeypatch):
     get_settings.cache_clear()
     app = create_app()
     c = TestClient(app)
-    assert c.get("/api/strategies").status_code == 503
+    assert c.get("/api/glossary").status_code == 503
     assert c.get("/api/health").status_code != 503  # health continua aberto
     get_settings.cache_clear()
 
@@ -85,11 +85,6 @@ def test_targets_must_sum_to_one():
 def test_targets_reject_unknown_class():
     with pytest.raises(ValueError):
         Settings(default_targets={"STOCK": 0.5, "CRYPTO": 0.5})
-
-
-def test_weights_must_sum_to_one():
-    with pytest.raises(ValueError):
-        Settings(default_weights={"valuation": 0.5, "dividend": 0.2})
 
 
 def test_brapi_plan_validation():

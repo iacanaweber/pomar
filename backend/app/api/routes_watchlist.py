@@ -10,12 +10,12 @@ from app.config import get_settings
 from app.deps import get_brapi, get_cache, get_db, get_sgs
 from app.repositories import preferences_repo, watchlist_repo
 from app.services import market_data
-from app.services.classify import classify_ticker
-from app.services.scoring import (
+from app.services.analysis import (
     _bazin_ceiling_price,
     _bazin_margin,
     resolve_bazin_target_yield,
 )
+from app.services.classify import classify_ticker
 from app.util import normalize_ticker
 
 router = APIRouter()
@@ -24,10 +24,6 @@ router = APIRouter()
 class WatchlistAdd(BaseModel):
     ticker: str
     note: Optional[str] = None
-
-
-class WatchlistPatch(BaseModel):
-    favorite: bool
 
 
 class RadarItem(BaseModel):
@@ -73,16 +69,6 @@ async def add_to_watchlist(body: WatchlistAdd) -> dict:
 async def remove_from_watchlist(ticker: str) -> dict:
     await watchlist_repo.remove(get_db(), normalize_ticker(ticker))
     return {"ok": True}
-
-
-@router.patch("/watchlist/{ticker}")
-async def patch_watchlist(ticker: str, body: WatchlistPatch) -> dict:
-    """Marca/desmarca favorito (⭐). Tipos com favoritos têm o plano restrito a eles."""
-    t = normalize_ticker(ticker)
-    ok = await watchlist_repo.set_favorite(get_db(), t, body.favorite)
-    if not ok:
-        raise HTTPException(status_code=404, detail=f"{t} não está na watchlist.")
-    return {"ticker": t, "favorite": body.favorite}
 
 
 @router.get("/watchlist/radar", response_model=RadarResponse)

@@ -149,8 +149,10 @@ _MIGRATIONS: list[tuple[int, str]] = [
     ),
     (
         5,
-        # v5: foco do aporte (BALANCE ou uma classe específica) + carteira alvo por classe
-        # ({"FII": {"BTGL11": 0.4, ...}}). A coluna watchlist.favorite (v1) passa a ser usada.
+        # v5: carteira alvo por classe ({"FII": {"BTGL11": 0.4, ...}}) — na v6 ela virou o
+        # coração do plano. A coluna `focus` (e watchlist.favorite, preferences.strategy,
+        # weights_json, max_assets…) ficou órfã: migração SQLite aqui é ADITIVA, nunca
+        # dropamos coluna aplicada; elas apenas deixaram de ser lidas e escritas.
         """
         ALTER TABLE preferences ADD COLUMN focus              TEXT NOT NULL DEFAULT 'BALANCE';
         ALTER TABLE preferences ADD COLUMN class_targets_json TEXT;

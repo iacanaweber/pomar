@@ -8,7 +8,7 @@ from pydantic import BaseModel, field_validator
 
 from app.config import get_settings
 from app.deps import get_db
-from app.models.scoring import INVESTABLE_CLASSES, validate_focus
+from app.models.plan import INVESTABLE_CLASSES
 from app.repositories import preferences_repo
 
 router = APIRouter()
@@ -17,29 +17,14 @@ router = APIRouter()
 class PreferencesBody(BaseModel):
     """Campos opcionais — só os enviados são atualizados (patch)."""
 
-    strategy: Optional[str] = None
     aporte_default: Optional[float] = None
     targets: Optional[dict] = None
-    weights: Optional[dict] = None
-    max_assets: Optional[int] = None
-    max_weight_per_asset: Optional[float] = None
     min_ticket: Optional[float] = None
     lot_mode: Optional[str] = None
     reserve_target: Optional[float] = None
     bazin_target_mode: Optional[str] = None
     bazin_target_yield: Optional[float] = None
-    target_monthly_income: Optional[float] = None
-    target_horizon_years: Optional[int] = None
-    annual_growth: Optional[float] = None
-    expected_inflation: Optional[float] = None
-    include_reserve_income: Optional[bool] = None
-    focus: Optional[str] = None
     class_targets: Optional[Dict[str, Dict[str, float]]] = None
-
-    @field_validator("focus")
-    @classmethod
-    def _focus_valido(cls, v: Optional[str]) -> Optional[str]:
-        return validate_focus(v)
 
     @field_validator("class_targets")
     @classmethod

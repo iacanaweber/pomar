@@ -1,9 +1,9 @@
-"""Rotas de saúde, glossário e estratégias."""
+"""Rotas de saúde, glossário e diagnóstico."""
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.config import STRATEGY_PRESETS, get_settings
+from app.config import get_settings
 from app.data.glossary import get_glossary
 from app.deps import get_brapi, get_ghostfolio
 
@@ -32,11 +32,3 @@ async def debug_brapi(ticker: str = "BBAS3") -> dict:
     if not get_settings().debug:
         raise HTTPException(status_code=404, detail="Not found")
     return await get_brapi().diagnose(ticker)
-
-
-@router.get("/strategies")
-async def strategies() -> dict:
-    return {
-        "presets": STRATEGY_PRESETS,
-        "default_targets": get_settings().default_targets,
-    }

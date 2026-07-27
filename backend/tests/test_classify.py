@@ -28,10 +28,9 @@ def test_resolve_sector_normalizes_ticker():
     assert resolve_sector("wrld11.sa", "ETF", None) == "Diversificado"
 
 
-def test_curated_sectors_match_besst_keywords():
-    # os rótulos BESST curados devem casar com BESST_KEYWORDS (afinidade determinística)
-    from app.config import BESST_KEYWORDS
-
+def test_curated_sectors_are_specific():
+    """A curadoria precisa devolver o setor real de cada ativo — 'Outros' aqui
+    significa classificação perdida (o setor aparece no detalhe do ativo)."""
     for ticker in ("BBAS3", "TAEE11", "SBSP3", "BBSE3", "VIVT3"):
-        sector = resolve_sector(ticker, "STOCK", None).lower()
-        assert any(kw in sector for kw in BESST_KEYWORDS), f"{ticker}={sector} não casa BESST"
+        sector = resolve_sector(ticker, "STOCK", None)
+        assert sector and sector.lower() not in ("outros", "desconhecido")

@@ -19,13 +19,12 @@ _KEEP = 50  # planos mantidos
 async def save(db: Database, request: Dict[str, Any], response: Dict[str, Any]) -> int:
     plan_id = await db.insert(
         """
-        INSERT INTO plan_history (created_at, aporte, strategy, request_json, response_json)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO plan_history (created_at, aporte, request_json, response_json)
+        VALUES (?, ?, ?, ?)
         """,
         (
             datetime.now(timezone.utc).isoformat(),
             request.get("aporte"),
-            request.get("strategy"),
             json.dumps(request),
             json.dumps(response),
         ),
@@ -54,7 +53,7 @@ async def latest(db: Database) -> Optional[Dict[str, Any]]:
 
 async def list_recent(db: Database, limit: int = 20) -> List[Dict[str, Any]]:
     rows = await db.fetchall(
-        "SELECT id, created_at, aporte, strategy, response_json FROM plan_history ORDER BY id DESC LIMIT ?",
+        "SELECT id, created_at, aporte, response_json FROM plan_history ORDER BY id DESC LIMIT ?",
         (limit,),
     )
     out: List[Dict[str, Any]] = []
@@ -70,7 +69,6 @@ async def list_recent(db: Database, limit: int = 20) -> List[Dict[str, Any]]:
                 "id": r["id"],
                 "created_at": r["created_at"],
                 "aporte": r["aporte"],
-                "strategy": r["strategy"],
                 "suggested_count": n_suggested,
             }
         )

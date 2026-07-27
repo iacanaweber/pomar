@@ -1,242 +1,225 @@
-"""Testes da alocação do aporte (v2): need-based, slots por classe, 2ª passada, conservação."""
+"""Testes do rebalanceador: déficit ao peso-alvo, need-based entre classes, sobra global."""
 from __future__ import annotations
 
+from app.models.plan import PlanAsset
 from app.models.portfolio import Allocations, Portfolio, Position
-from app.models.scoring import ScoredAsset
 from app.services.allocation import allocate
 
 
-def _portfolio(by_class=None, total=10000.0) -> Portfolio:
-    return Portfolio(
-        total_value=total,
-        as_of="2026-06-15T00:00:00Z",
-        allocations=Allocations(by_class=by_class or {"STOCK": 0.9, "FII": 0.1}),
-    )
+def _ranking(*tickers_classes: tuple[str, str]) -> list[PlanAsset]:
+    return [PlanAsset(ticker=t, asset_class=c) for t, c in tickers_classes]
 
 
-def _ranking() -> list[ScoredAsset]:
-    return [
-        ScoredAsset(ticker="MXRF11", asset_class="FII", composite_score=0.8),
-        ScoredAsset(ticker="BBAS3", asset_class="STOCK", composite_score=0.6),
-    ]
+def _empty_pf() -> Portfolio:
+    return Portfolio(total_value=0.0, as_of="2026-07-10T00:00:00Z", allocations=Allocations())
 
 
-def test_allocate_conserves_money_and_rounds_to_shares():
-    ranking = _ranking()
-    prices = {"MXRF11": 10.0, "BBAS3": 28.0}
-    lots = {"MXRF11": 1, "BBAS3": 1}
-    targets = {"STOCK": 0.5, "FII": 0.5}
-    unallocated = allocate(1000.0, ranking, _portfolio(), prices, lots, targets, min_ticket=50.0)
-    spent = sum(r.suggested.invested_exact for r in ranking if r.suggested)
-    # conservação dura (não-tautológica): gasto + sobra == aporte
-    assert abs((spent + unallocated) - 1000.0) < 0.05
-    assert spent <= 1000.0 + 1e-6 and unallocated >= 0
-    # FII está mais sub-alocado (0.1 vs alvo 0.5) -> deve receber compra
-    fii = next(r for r in ranking if r.ticker == "MXRF11")
-    assert fii.suggested is not None and fii.suggested.shares > 0
-
-
-def test_min_ticket_skips_tiny_allocations():
-    ranking = [ScoredAsset(ticker="BBAS3", asset_class="STOCK", composite_score=0.6)]
-    prices = {"BBAS3": 28.0}
-    lots = {"BBAS3": 1}
-    targets = {"STOCK": 1.0}
-    unallocated = allocate(30.0, ranking, _portfolio(), prices, lots, targets, min_ticket=100.0)
-    # aporte abaixo do ticket mínimo: nada alocado (a 2ª passada não abre posição abaixo do piso)
-    assert unallocated == 30.0
-    assert ranking[0].suggested is None
-
-
-def test_need_based_avoids_overcorrection():
-    # Caso do ANALISE-V2: carteira 1000 (STOCK 90/FII 10), aporte 1000, alvos 50/50.
-    # need STOCK=100, FII=900 -> resultado fica ~50/50 (sem jogar o FII acima do alvo).
-    ranking = [
-        ScoredAsset(ticker="FXXX11", asset_class="FII", composite_score=0.7),
-        ScoredAsset(ticker="SXXX3", asset_class="STOCK", composite_score=0.7),
-    ]
-    prices = {"FXXX11": 10.0, "SXXX3": 10.0}
-    lots = {"FXXX11": 1, "SXXX3": 1}
-    targets = {"STOCK": 0.5, "FII": 0.5}
-    pf = _portfolio(by_class={"STOCK": 0.9, "FII": 0.1}, total=1000.0)
-    allocate(1000.0, ranking, pf, prices, lots, targets, max_weight_per_asset=1.0, min_ticket=10.0)
-    fii = next(r for r in ranking if r.ticker == "FXXX11").suggested
-    stock = next(r for r in ranking if r.ticker == "SXXX3").suggested
-    assert fii and stock
-    # FII (mais sub-alocado) recebe muito mais que STOCK
-    assert fii.invested_exact > stock.invested_exact
-    # STOCK recebe ~100 e FII ~900 (need-based), não 500/500
-    assert 80 <= stock.invested_exact <= 160
-    assert 840 <= fii.invested_exact <= 920
-
-
-def test_slots_distributed_so_suballocated_class_is_bought():
-    # 6 STOCK + 1 FII, max_assets=5; ambas as classes com need -> o FII NÃO pode ser
-    # esganado pela 1a classe (corrige o viés do contador global).
-    ranking = [ScoredAsset(ticker=f"ST{i}3", asset_class="STOCK", composite_score=0.9 - i * 0.05) for i in range(6)]
-    ranking.append(ScoredAsset(ticker="FII11", asset_class="FII", composite_score=0.5))
-    prices = {r.ticker: 10.0 for r in ranking}
-    lots = {r.ticker: 1 for r in ranking}
-    targets = {"STOCK": 0.5, "FII": 0.5}
-    pf = _portfolio(by_class={"STOCK": 0.5, "FII": 0.5}, total=1000.0)
-    allocate(1000.0, ranking, pf, prices, lots, targets, max_assets=5, max_weight_per_asset=1.0, min_ticket=10.0)
-    fii = next(r for r in ranking if r.ticker == "FII11")
-    assert fii.suggested is not None and fii.suggested.shares > 0
-    n_chosen = sum(1 for r in ranking if r.suggested)
-    assert n_chosen <= 5  # respeita max_assets
-
-
-def test_second_pass_reuses_rounding_leftover():
-    # 2 STOCK (preços 30 e 40), aporte 200, carteira vazia -> 1a passada deixa sobra de
-    # arredondamento; a 2a passada compra +1 lote onde couber, minimizando o unallocated.
-    ranking = [
-        ScoredAsset(ticker="AAA3", asset_class="STOCK", composite_score=0.5),
-        ScoredAsset(ticker="BBB3", asset_class="STOCK", composite_score=0.5),
-    ]
-    prices = {"AAA3": 30.0, "BBB3": 40.0}
-    lots = {"AAA3": 1, "BBB3": 1}
-    targets = {"STOCK": 1.0}
-    pf = Portfolio(total_value=0.0, as_of="2026-06-15T00:00:00Z", allocations=Allocations(by_class={}))
-    unallocated = allocate(200.0, ranking, pf, prices, lots, targets, max_weight_per_asset=1.0, min_ticket=10.0)
-    spent = sum(r.suggested.invested_exact for r in ranking if r.suggested)
-    assert abs((spent + unallocated) - 200.0) < 0.05
-    # sem 2a passada o gasto seria 170 (3×30 + 2×40); com ela chega a 200 (sobra ~0)
-    assert spent >= 195.0 and unallocated <= 5.0
-
-
-# --- carteira alvo (cesta por classe) ---
-
-
-def _fii_portfolio(values: dict[str, float]) -> Portfolio:
-    total = sum(values.values())
+def _pf(values: dict[str, str | float], by_class: dict[str, float]) -> Portfolio:
+    """Carteira a partir de {ticker: (classe, valor)}."""
+    total = sum(v for _, v in values.values())
     return Portfolio(
         total_value=total,
         as_of="2026-07-10T00:00:00Z",
         positions=[
-            Position(ticker=t, asset_class="FII", value=v, weight=v / total)
-            for t, v in values.items()
+            Position(ticker=t, asset_class=c, value=v, weight=v / total if total else 0.0)
+            for t, (c, v) in values.items()
         ],
-        allocations=Allocations(by_class={"FII": 1.0}),
+        allocations=Allocations(by_class=by_class),
     )
 
 
-def _fii_ranking(tickers: list[str], score: float = 0.5) -> list[ScoredAsset]:
-    return [ScoredAsset(ticker=t, asset_class="FII", composite_score=score) for t in tickers]
+def _spent(ranking: list[PlanAsset]) -> float:
+    return sum(r.suggested.invested_exact for r in ranking if r.suggested)
 
 
-def test_basket_buys_deficit_not_score():
-    """Quem está acima do peso-alvo recebe 0; o déficit inteiro vai para quem falta —
-    mesmo que o score diga o contrário (a cesta é matemática de rebalanceamento)."""
-    pf = _fii_portfolio({"BTGL11": 5000.0, "HGRE11": 3000.0})
-    ranking = [
-        ScoredAsset(ticker="BTGL11", asset_class="FII", composite_score=0.9),
-        ScoredAsset(ticker="HGRE11", asset_class="FII", composite_score=0.9),
-        ScoredAsset(ticker="KNCR11", asset_class="FII", composite_score=0.0),  # score não manda
-    ]
+def test_buys_the_deficit_not_the_biggest_position():
+    """Quem está acima do peso-alvo recebe 0; o déficit inteiro vai para quem falta."""
+    pf = _pf({"BTGL11": ("FII", 5000.0), "HGRE11": ("FII", 3000.0)}, {"FII": 1.0})
+    ranking = _ranking(("BTGL11", "FII"), ("HGRE11", "FII"), ("KNCR11", "FII"))
     prices = {"BTGL11": 100.0, "HGRE11": 50.0, "KNCR11": 10.0}
     lots = {t: 1 for t in prices}
     basket = {"BTGL11": 0.4, "HGRE11": 0.3, "KNCR11": 0.3}
-    # total resultante da cesta = 8000 + 2000 = 10000 -> alvos 4000/3000/3000;
-    # BTGL11 (5000) e HGRE11 (3000) já no alvo ou acima; déficit todo do KNCR11 (3000)
+    # cesta resultante = 8000 + 2000 = 10000 -> alvos 4000/3000/3000; BTGL11 e HGRE11 já
+    # no alvo ou acima, todo o déficit (3000) é do KNCR11
     unallocated = allocate(
-        2000.0, ranking, pf, prices, lots, {"FII": 1.0},
-        min_ticket=50.0, class_baskets={"FII": basket},
+        2000.0, ranking, pf, prices, lots, {"FII": 1.0}, {"FII": basket}, min_ticket=50.0
     )
     kncr = next(r for r in ranking if r.ticker == "KNCR11")
     assert kncr.suggested is not None and kncr.suggested.shares == 200
     assert next(r for r in ranking if r.ticker == "BTGL11").suggested is None
     assert next(r for r in ranking if r.ticker == "HGRE11").suggested is None
-    spent = sum(r.suggested.invested_exact for r in ranking if r.suggested)
-    assert abs((spent + unallocated) - 2000.0) < 0.05
+    assert abs((_spent(ranking) + unallocated) - 2000.0) < 0.05
 
 
-def test_basket_ignores_max_assets_and_asset_cap():
-    """Os pesos da cesta são a vontade explícita do usuário: max_assets e o teto por
-    ativo não podem esganar a cesta."""
-    pf = Portfolio(total_value=0.0, as_of="2026-07-10T00:00:00Z", allocations=Allocations())
-    tickers = ["AAA11", "BBB11", "CCC11"]
-    ranking = _fii_ranking(tickers)
-    prices = {t: 10.0 for t in tickers}
-    lots = {t: 1 for t in tickers}
-    basket = {t: 1 / 3 for t in tickers}
+def test_need_based_split_between_classes():
+    """Carteira 1000 (90% STOCK / 10% FII), aporte 1000, metas 50/50: o FII (need 900)
+    recebe muito mais que o STOCK (need 100) — sem jogar o FII acima do alvo."""
+    pf = _pf({"SXXX3": ("STOCK", 900.0), "FXXX11": ("FII", 100.0)}, {"STOCK": 0.9, "FII": 0.1})
+    ranking = _ranking(("SXXX3", "STOCK"), ("FXXX11", "FII"))
+    prices = {"SXXX3": 10.0, "FXXX11": 10.0}
+    lots = {t: 1 for t in prices}
     unallocated = allocate(
-        3000.0, ranking, pf, prices, lots, {"FII": 1.0},
-        max_assets=1, max_weight_per_asset=0.05, min_ticket=50.0,
-        class_baskets={"FII": basket},
+        1000.0, ranking, pf, prices, lots,
+        {"STOCK": 0.5, "FII": 0.5},
+        {"STOCK": {"SXXX3": 1.0}, "FII": {"FXXX11": 1.0}},
+        min_ticket=10.0,
     )
-    bought = [r for r in ranking if r.suggested]
-    assert len(bought) == 3  # todos, apesar de max_assets=1
-    for r in bought:
-        assert abs(r.suggested.invested_exact - 1000.0) < 15.0  # ~1/3 cada, apesar do teto 5%
-    assert unallocated < 30.0
+    stock = next(r for r in ranking if r.ticker == "SXXX3").suggested
+    fii = next(r for r in ranking if r.ticker == "FXXX11").suggested
+    assert stock and fii
+    assert fii.invested_exact > stock.invested_exact
+    assert 80 <= stock.invested_exact <= 160
+    assert 840 <= fii.invested_exact <= 920
+    assert abs((_spent(ranking) + unallocated) - 1000.0) < 0.05
 
 
-def test_basket_second_pass_fills_largest_remaining_deficit():
-    """Sobra de arredondamento volta para quem está mais longe do alvo, em lotes."""
-    pf = Portfolio(total_value=0.0, as_of="2026-07-10T00:00:00Z", allocations=Allocations())
-    ranking = _fii_ranking(["AAA11", "BBB11"])
-    prices = {"AAA11": 30.0, "BBB11": 40.0}
-    lots = {"AAA11": 1, "BBB11": 1}
-    basket = {"AAA11": 0.5, "BBB11": 0.5}
-    # 1ª passada: 100/100 -> 3×30=90 e 2×40=80 (sobra 30); 2ª: BBB (déficit 20) não cabe,
-    # AAA (déficit 10, custo 30 <= sobra) compra +1 e fecha em 200
+def test_leftover_of_one_class_completes_a_lot_in_another():
+    """O troco que não fecha um lote na própria classe atravessa para a outra cesta."""
+    ranking = _ranking(("AAA3", "STOCK"), ("BBB11", "FII"))
+    prices = {"AAA3": 60.0, "BBB11": 30.0}
+    lots = {t: 1 for t in prices}
+    # orçamentos 100/100: AAA3 compra 1 (60, sobra 40 que não paga outro lote de 60);
+    # BBB11 compra 3 (90). A sobra global de 50 fecha +1 lote de BBB11 (30).
     unallocated = allocate(
-        200.0, ranking, pf, prices, lots, {"FII": 1.0},
-        min_ticket=10.0, class_baskets={"FII": basket},
+        200.0, ranking, _empty_pf(), prices, lots,
+        {"STOCK": 0.5, "FII": 0.5},
+        {"STOCK": {"AAA3": 1.0}, "FII": {"BBB11": 1.0}},
+        min_ticket=10.0,
     )
-    aaa = next(r for r in ranking if r.ticker == "AAA11").suggested
+    aaa = next(r for r in ranking if r.ticker == "AAA3").suggested
     bbb = next(r for r in ranking if r.ticker == "BBB11").suggested
-    assert aaa and aaa.shares == 4 and bbb and bbb.shares == 2
+    assert aaa and aaa.shares == 1
+    assert bbb and bbb.shares == 4  # 3 do orçamento da classe + 1 da sobra global
+    assert abs((_spent(ranking) + unallocated) - 200.0) < 0.05
+    assert unallocated == 20.0
+
+
+def test_leftover_never_opens_a_position_below_min_ticket():
+    """A sobra completa posições existentes, mas não abre uma nova por trocados."""
+    pf = _pf({"AAA3": ("STOCK", 1000.0)}, {"STOCK": 1.0})
+    ranking = _ranking(("AAA3", "STOCK"), ("BBB3", "STOCK"))
+    prices = {"AAA3": 40.0, "BBB3": 30.0}
+    lots = {t: 1 for t in prices}
+    unallocated = allocate(
+        100.0, ranking, pf, prices, lots, {"STOCK": 1.0},
+        {"STOCK": {"AAA3": 0.5, "BBB3": 0.5}},
+        min_ticket=200.0,
+    )
+    # BBB3 está zerado e é quem tem o maior déficit, mas 1 lote (30) < min_ticket (200):
+    # a posição não é aberta e o dinheiro sobra em vez de virar ponta
+    assert next(r for r in ranking if r.ticker == "BBB3").suggested is None
+    assert unallocated == 100.0
+
+
+def test_leftover_tops_up_a_position_already_held():
+    """Ativo que já está na carteira pode receber a sobra mesmo abaixo do min_ticket —
+    o piso é para ABRIR posição, não para reforçá-la."""
+    pf = _pf({"AAA3": ("STOCK", 300.0), "BBB3": ("STOCK", 700.0)}, {"STOCK": 1.0})
+    ranking = _ranking(("AAA3", "STOCK"), ("BBB3", "STOCK"))
+    prices = {"AAA3": 30.0, "BBB3": 70.0}
+    lots = {t: 1 for t in prices}
+    unallocated = allocate(
+        100.0, ranking, pf, prices, lots, {"STOCK": 1.0},
+        {"STOCK": {"AAA3": 0.5, "BBB3": 0.5}},
+        min_ticket=500.0,
+    )
+    aaa = next(r for r in ranking if r.ticker == "AAA3").suggested
+    assert aaa and aaa.shares == 3  # AAA3 (300 de 1100) é o mais atrasado
+    assert unallocated == 10.0
+
+
+def test_unmarked_class_receives_nothing():
+    """Classe com cesta definida mas fora do plano (não veio em class_baskets) fica de fora."""
+    ranking = _ranking(("AAA3", "STOCK"), ("BBB11", "FII"))
+    prices = {"AAA3": 10.0, "BBB11": 10.0}
+    lots = {t: 1 for t in prices}
+    unallocated = allocate(
+        1000.0, ranking, _empty_pf(), prices, lots,
+        {"STOCK": 0.5, "FII": 0.5},
+        {"STOCK": {"AAA3": 1.0}},  # só STOCK marcada
+        min_ticket=10.0,
+    )
+    assert next(r for r in ranking if r.ticker == "BBB11").suggested is None
+    aaa = next(r for r in ranking if r.ticker == "AAA3").suggested
+    assert aaa and aaa.invested_exact == 1000.0
     assert unallocated == 0.0
 
 
-def test_basket_renormalizes_when_ticker_has_no_price():
-    pf = Portfolio(total_value=0.0, as_of="2026-07-10T00:00:00Z", allocations=Allocations())
-    ranking = _fii_ranking(["AAA11", "BBB11", "CCC11"])
+def test_no_basket_at_all_returns_the_whole_aporte():
+    ranking = _ranking(("AAA3", "STOCK"))
+    unallocated = allocate(
+        500.0, ranking, _empty_pf(), {"AAA3": 10.0}, {"AAA3": 1}, {"STOCK": 1.0}, {}
+    )
+    assert unallocated == 500.0
+    assert ranking[0].suggested is None
+
+
+def test_renormalizes_when_a_ticker_has_no_price():
+    ranking = _ranking(("AAA11", "FII"), ("BBB11", "FII"), ("CCC11", "FII"))
     prices = {"AAA11": 10.0, "BBB11": 10.0, "CCC11": 0.0}  # CCC11 sem cotação
     lots = {t: 1 for t in prices}
-    basket = {"AAA11": 0.5, "BBB11": 0.25, "CCC11": 0.25}
     allocate(
-        900.0, ranking, pf, prices, lots, {"FII": 1.0},
-        min_ticket=10.0, class_baskets={"FII": basket},
+        900.0, ranking, _empty_pf(), prices, lots, {"FII": 1.0},
+        {"FII": {"AAA11": 0.5, "BBB11": 0.25, "CCC11": 0.25}},
+        min_ticket=10.0,
     )
     aaa = next(r for r in ranking if r.ticker == "AAA11").suggested
     bbb = next(r for r in ranking if r.ticker == "BBB11").suggested
-    ccc = next(r for r in ranking if r.ticker == "CCC11").suggested
+    ccc = next(r for r in ranking if r.ticker == "CCC11")
     # pesos renormalizados sem CCC11: 2/3 e 1/3
     assert aaa and abs(aaa.invested_exact - 600.0) < 15.0
     assert bbb and abs(bbb.invested_exact - 300.0) < 15.0
-    assert ccc is None
+    assert ccc.suggested is None and ccc.basket_target_pct is None
 
 
-def test_basket_respects_min_ticket():
-    pf = Portfolio(total_value=0.0, as_of="2026-07-10T00:00:00Z", allocations=Allocations())
-    ranking = _fii_ranking(["AAA11", "BBB11"])
-    prices = {"AAA11": 10.0, "BBB11": 10.0}
-    lots = {"AAA11": 1, "BBB11": 1}
+def test_min_ticket_skips_tiny_allocations():
+    ranking = _ranking(("AAA11", "FII"), ("BBB11", "FII"))
     unallocated = allocate(
-        100.0, ranking, pf, prices, lots, {"FII": 1.0},
-        min_ticket=100.0, class_baskets={"FII": {"AAA11": 0.5, "BBB11": 0.5}},
+        100.0, ranking, _empty_pf(), {"AAA11": 10.0, "BBB11": 10.0}, {"AAA11": 1, "BBB11": 1},
+        {"FII": 1.0}, {"FII": {"AAA11": 0.5, "BBB11": 0.5}}, min_ticket=100.0,
     )
-    # 50 por ticker < ticket mínimo de 100 -> nada aberto (mesma regra do ramo por score)
+    # 50 por ticker < ticket mínimo de 100 -> nada aberto
     assert unallocated == 100.0
     assert all(r.suggested is None for r in ranking)
 
 
-def test_focus_targets_single_class_gets_all_budget():
-    """Com foco (targets = {classe: 1.0}), nenhuma outra classe recebe compra."""
-    ranking = [
-        ScoredAsset(ticker="MXRF11", asset_class="FII", composite_score=0.5),
-        ScoredAsset(ticker="BBAS3", asset_class="STOCK", composite_score=0.9),
-    ]
-    prices = {"MXRF11": 10.0, "BBAS3": 28.0}
-    lots = {"MXRF11": 1, "BBAS3": 1}
-    pf = _portfolio(by_class={"STOCK": 0.9, "FII": 0.1})
+def test_lot_size_is_respected():
+    ranking = _ranking(("AAA3", "STOCK"))
     unallocated = allocate(
-        1000.0, ranking, pf, prices, lots, {"FII": 1.0},
-        max_weight_per_asset=1.0, min_ticket=50.0,
+        1000.0, ranking, _empty_pf(), {"AAA3": 3.0}, {"AAA3": 100}, {"STOCK": 1.0},
+        {"STOCK": {"AAA3": 1.0}}, min_ticket=10.0,
     )
-    fii = next(r for r in ranking if r.ticker == "MXRF11")
-    stock = next(r for r in ranking if r.ticker == "BBAS3")
-    assert fii.suggested is not None and fii.suggested.shares == 100
-    assert stock.suggested is None
-    assert unallocated == 0.0
+    s = ranking[0].suggested
+    assert s and s.shares == 300 and s.lot_size == 100 and s.lot_note == "lote 100"
+    assert unallocated == 100.0  # 1000 = 3 lotes de 300 + 100 que não fecham outro lote
+
+
+def test_basket_view_is_filled_for_the_ui():
+    """A barra da cesta (alvo / hoje / depois) sai do alocador, não é recalculada na rota."""
+    pf = _pf({"AAA11": ("FII", 800.0), "BBB11": ("FII", 200.0)}, {"FII": 1.0})
+    ranking = _ranking(("AAA11", "FII"), ("BBB11", "FII"))
+    prices = {"AAA11": 10.0, "BBB11": 10.0}
+    lots = {t: 1 for t in prices}
+    allocate(
+        1000.0, ranking, pf, prices, lots, {"FII": 1.0},
+        {"FII": {"AAA11": 0.5, "BBB11": 0.5}}, min_ticket=10.0,
+    )
+    aaa = next(r for r in ranking if r.ticker == "AAA11")
+    bbb = next(r for r in ranking if r.ticker == "BBB11")
+    assert aaa.basket_target_pct == 0.5 and bbb.basket_target_pct == 0.5
+    assert aaa.basket_current_pct == 0.8 and bbb.basket_current_pct == 0.2
+    # 2000 na cesta ao fim: BBB11 sobe de 200 para 1000 (50%), AAA11 fica onde está
+    assert abs(bbb.basket_after_pct - 0.5) < 0.01
+    assert abs(aaa.basket_after_pct - 0.5) < 0.01
+    assert bbb.basket_gap_brl == 800.0  # 0.5 × 2000 − 200
+    assert aaa.basket_gap_brl == 200.0
+
+
+def test_zero_target_class_gets_no_money():
+    ranking = _ranking(("AAA3", "STOCK"))
+    unallocated = allocate(
+        500.0, ranking, _empty_pf(), {"AAA3": 10.0}, {"AAA3": 1}, {"STOCK": 0.0},
+        {"STOCK": {"AAA3": 1.0}}, min_ticket=10.0,
+    )
+    assert ranking[0].suggested is None
+    assert unallocated == 500.0
