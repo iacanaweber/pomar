@@ -18,7 +18,6 @@ import type {
   Preferences,
   PreferencesBody,
   RadarResponse,
-  RealizedIncomeResponse,
   WatchlistItem,
   YocPoint,
 } from "../types";
@@ -106,7 +105,6 @@ export const api = {
 
   // renda passiva
   income: () => request<IncomeResponse>("/api/income", {}, 60000),
-  incomeRealized: () => request<RealizedIncomeResponse>("/api/income/realized", {}, 30000),
   yocHistory: (ticker: string) => request<YocPoint[]>(`/api/income/yoc/${ticker}`),
 
   // renda fixa (rastreador / reserva) — lista TUDO; a UI separa ativas de arquivadas

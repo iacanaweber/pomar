@@ -1,10 +1,10 @@
-"""Rotas de renda passiva: renda estimada da carteira, renda realizada e Yield on Cost."""
+"""Rotas de renda passiva: renda estimada da carteira e Yield on Cost por ativo."""
 from __future__ import annotations
 
 from fastapi import APIRouter
 
 from app.deps import get_brapi, get_cache, get_db, get_ghostfolio
-from app.models.analytics import IncomeResponse, RealizedIncomeResponse, YocPoint
+from app.models.analytics import IncomeResponse, YocPoint
 from app.repositories import snapshots_repo
 from app.services import analytics, market_data
 from app.services.portfolio_service import get_enriched_portfolio
@@ -57,56 +57,3 @@ async def yoc_history(ticker: str) -> list[YocPoint]:
     """Histórico mensal do Yield on Cost de um ativo (dos snapshots)."""
     rows = await snapshots_repo.yoc_history(get_db(), ticker)
     return [YocPoint(**r) for r in rows]
-
-
-_REALIZED_TTL = 900  # 15 min — proventos recebidos mudam poucas vezes ao dia
-
-
-@router.get("/income/realized", response_model=RealizedIncomeResponse)
-async def income_realized() -> RealizedIncomeResponse:
-    """Renda REALIZADA mês a mês — os dividendos que de fato caíram na conta, lidos das
-    atividades do Ghostfolio (você já os registra lá; nada precisa ser redigitado)."""
-    cache = get_cache()
-    cached = cache.get("gf:realized")
-    if cached is not None:
-        return RealizedIncomeResponse(**cached)
-    try:
-        gf = get_ghostfolio()
-        months = await gf.get_dividends_by_month()
-        activities = await gf.get_dividend_activities()
-    except Exception as exc:  # noqa: BLE001
-        stale = cache.get_stale("gf:realized")
-        if stale is not None:
-            resp = RealizedIncomeResponse(**stale)
-            resp.warnings = [*resp.warnings, f"Ghostfolio indisponível ({exc}); dados em cache."]
-            return resp
-        return RealizedIncomeResponse(
-            warnings=[f"Não consegui ler os proventos recebidos do Ghostfolio: {exc}"]
-        )
-
-    from datetime import date, timedelta
-
-    today = date.today()
-    cutoff_12m = (today - timedelta(days=365)).isoformat()[:7]
-    cutoff_30d = (today - timedelta(days=30)).isoformat()
-    total_12m = round(sum(m["total"] for m in months if m["month"] > cutoff_12m), 2)
-    by_asset: dict[str, float] = {}
-    for a in activities:
-        if a["date"] > cutoff_12m + "-01":
-            by_asset[a["ticker"]] = by_asset.get(a["ticker"], 0.0) + a["value"]
-    data = {
-        "months": months[-24:],
-        "total_12m": total_12m,
-        "monthly_avg_12m": round(total_12m / 12, 2),
-        "by_asset_12m": [
-            {"ticker": t, "total": round(v, 2)}
-            for t, v in sorted(by_asset.items(), key=lambda kv: kv[1], reverse=True)
-        ],
-        "last_payments": list(reversed(activities[-10:])),
-        "total_30d": round(sum(a["value"] for a in activities if a["date"] >= cutoff_30d), 2),
-        "warnings": [],
-    }
-    cache.set("gf:realized", data, _REALIZED_TTL)
-    return RealizedIncomeResponse(**data)
-
-

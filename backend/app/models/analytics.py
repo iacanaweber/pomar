@@ -1,4 +1,4 @@
-"""Modelos de renda passiva (renda estimada da carteira, renda realizada e YoC)."""
+"""Modelos de renda passiva (renda estimada da carteira e Yield on Cost)."""
 from __future__ import annotations
 
 from typing import List, Optional
@@ -33,35 +33,3 @@ class IncomeResponse(BaseModel):
 class YocPoint(BaseModel):
     month: str
     yoc: Optional[float] = None
-
-
-class RealizedMonth(BaseModel):
-    month: str  # yyyy-mm
-    total: float = 0.0
-
-
-class RealizedAsset(BaseModel):
-    ticker: str
-    total: float = 0.0
-
-
-class RealizedPayment(BaseModel):
-    date: str  # yyyy-mm-dd
-    ticker: str
-    value: float
-
-
-class RealizedIncomeResponse(BaseModel):
-    """Renda REALIZADA: dividendos que efetivamente caíram na conta (fonte: Ghostfolio).
-
-    É o contraponto da renda estimada (valor × DY): a série real da bola de neve.
-    """
-
-    months: List[RealizedMonth] = Field(default_factory=list, description="Últimos 24 meses.")
-    total_12m: float = 0.0
-    monthly_avg_12m: float = 0.0
-    by_asset_12m: List[RealizedAsset] = Field(default_factory=list)
-    last_payments: List[RealizedPayment] = Field(default_factory=list, description="Pagamentos mais recentes.")
-    total_30d: float = Field(0.0, description="Recebido nos últimos 30 dias (base do reinvestimento).")
-    currency: str = "BRL"
-    warnings: List[str] = Field(default_factory=list)

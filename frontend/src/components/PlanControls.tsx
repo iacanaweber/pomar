@@ -1,9 +1,9 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { PlanRequest, Preferences } from "../types";
-import { useIncomeRealized, useSavePreferences } from "../api/queries";
+import { useSavePreferences } from "../api/queries";
 import { CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
-import { money, parseBRL } from "../lib/format";
+import { parseBRL } from "../lib/format";
 import { SavedToast } from "./SavedToast";
 import { Tooltip } from "./Tooltip";
 
@@ -26,18 +26,6 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
 
   const savePrefs = useSavePreferences();
   const [savedAt, setSavedAt] = useState<number | null>(null);
-
-  // Reinvestimento assistido: proventos recebidos nos últimos 30 dias (Ghostfolio)
-  // entram no aporte com um toque — o gesto central da bola de neve, sem conta de cabeça.
-  const realized = useIncomeRealized();
-  const [reinvested, setReinvested] = useState(false);
-  const received30d = realized.data?.total_30d ?? 0;
-  const addReinvest = () => {
-    const current = parseBRL(aporte);
-    const base = Number.isFinite(current) ? current : 0;
-    setAporte(String(Math.round((base + received30d) * 100) / 100));
-    setReinvested(true);
-  };
 
   // Sincroniza o formulário com as preferências salvas quando elas chegam (uma vez).
   useEffect(() => {
@@ -95,19 +83,6 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
   return (
     <form className="controls" onSubmit={submit}>
       <SavedToast show={savedAt} />
-      {received30d > 0 && !reinvested && (
-        <div className="banner reinvest-banner">
-          💰 Você recebeu <strong>{money(received30d)}</strong> em proventos nos últimos 30 dias.{" "}
-          <button type="button" className="link-button" onClick={addReinvest}>
-            somar ao aporte
-          </button>
-        </div>
-      )}
-      {reinvested && (
-        <p className="muted" style={{ fontSize: 12, margin: "0 0 4px" }}>
-          ✓ {money(received30d)} de proventos somados ao aporte — bola de neve girando.
-        </p>
-      )}
 
       <label className="field">
         <span>Quanto você tem para investir hoje?</span>

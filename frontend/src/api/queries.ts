@@ -16,7 +16,6 @@ export const keys = {
   preferences: ["preferences"] as const,
   watchlist: ["watchlist"] as const,
   income: ["income"] as const,
-  incomeRealized: ["income-realized"] as const,
   fixedIncome: ["fixed-income"] as const,
   orders: ["orders"] as const,
   planLatest: ["plan-latest"] as const,
@@ -95,9 +94,6 @@ export const usePlanLatest = () =>
   });
 
 export const useIncome = () => useQuery({ queryKey: keys.income, queryFn: api.income });
-
-export const useIncomeRealized = () =>
-  useQuery({ queryKey: keys.incomeRealized, queryFn: api.incomeRealized });
 
 export const useYocHistory = (ticker: string) =>
   useQuery({

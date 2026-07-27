@@ -23,9 +23,7 @@ export type Asset = Schemas["Asset"];
 export type Fundamentals = Schemas["Fundamentals"];
 export type ReserveSuggestion = Schemas["ReserveSuggestion"];
 
-// --- Renda realizada e Yield on Cost (dos snapshots mensais) ---
-export type RealizedIncomeResponse = Schemas["RealizedIncomeResponse"];
-export type RealizedMonth = Schemas["RealizedMonth"];
+// --- Yield on Cost (dos snapshots mensais) ---
 export type YocPoint = Schemas["YocPoint"];
 
 // --- Planos salvos e radar da watchlist (v4) ---

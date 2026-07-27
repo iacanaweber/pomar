@@ -339,27 +339,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/income/realized": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Income Realized
-         * @description Renda REALIZADA mês a mês — os dividendos que de fato caíram na conta, lidos das
-         *     atividades do Ghostfolio (você já os registra lá; nada precisa ser redigitado).
-         */
-        get: operations["income_realized_api_income_realized_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/fixed-income/summary": {
         parameters: {
             query?: never;
@@ -1353,78 +1332,6 @@ export interface components {
             /** Warnings */
             warnings?: string[];
         };
-        /** RealizedAsset */
-        RealizedAsset: {
-            /** Ticker */
-            ticker: string;
-            /**
-             * Total
-             * @default 0
-             */
-            total: number;
-        };
-        /**
-         * RealizedIncomeResponse
-         * @description Renda REALIZADA: dividendos que efetivamente caíram na conta (fonte: Ghostfolio).
-         *
-         *     É o contraponto da renda estimada (valor × DY): a série real da bola de neve.
-         */
-        RealizedIncomeResponse: {
-            /**
-             * Months
-             * @description Últimos 24 meses.
-             */
-            months?: components["schemas"]["RealizedMonth"][];
-            /**
-             * Total 12M
-             * @default 0
-             */
-            total_12m: number;
-            /**
-             * Monthly Avg 12M
-             * @default 0
-             */
-            monthly_avg_12m: number;
-            /** By Asset 12M */
-            by_asset_12m?: components["schemas"]["RealizedAsset"][];
-            /**
-             * Last Payments
-             * @description Pagamentos mais recentes.
-             */
-            last_payments?: components["schemas"]["RealizedPayment"][];
-            /**
-             * Total 30D
-             * @description Recebido nos últimos 30 dias (base do reinvestimento).
-             * @default 0
-             */
-            total_30d: number;
-            /**
-             * Currency
-             * @default BRL
-             */
-            currency: string;
-            /** Warnings */
-            warnings?: string[];
-        };
-        /** RealizedMonth */
-        RealizedMonth: {
-            /** Month */
-            month: string;
-            /**
-             * Total
-             * @default 0
-             */
-            total: number;
-        };
-        /** RealizedPayment */
-        RealizedPayment: {
-            /** Date */
-            date: string;
-            /** Ticker */
-            ticker: string;
-            /** Value */
-            value: number;
-        };
         /**
          * ReserveSuggestion
          * @description Quanto do aporte direcionar à reserva/renda fixa antes da renda variável (Barsi/Bazin).
@@ -2068,26 +1975,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    income_realized_api_income_realized_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RealizedIncomeResponse"];
                 };
             };
         };
