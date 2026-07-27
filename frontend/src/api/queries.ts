@@ -12,7 +12,6 @@ export const keys = {
   health: ["health"] as const,
   auth: ["auth"] as const,
   glossary: ["glossary"] as const,
-  strategies: ["strategies"] as const,
   portfolio: ["portfolio"] as const,
   preferences: ["preferences"] as const,
   watchlist: ["watchlist"] as const,
@@ -21,7 +20,6 @@ export const keys = {
   fixedIncome: ["fixed-income"] as const,
   orders: ["orders"] as const,
   planLatest: ["plan-latest"] as const,
-  planHistory: ["plan-history"] as const,
   watchlistRadar: ["watchlist-radar"] as const,
 };
 
@@ -30,8 +28,6 @@ export const useAuthStatus = () => useQuery({ queryKey: keys.auth, queryFn: api.
 // Nome distinto do hook de contexto `useGlossary` (hooks/useGlossary.ts).
 export const useGlossaryQuery = () =>
   useQuery({ queryKey: keys.glossary, queryFn: api.glossary, staleTime: Infinity });
-export const useStrategies = () =>
-  useQuery({ queryKey: keys.strategies, queryFn: api.strategies, staleTime: Infinity });
 export const usePortfolio = () => useQuery({ queryKey: keys.portfolio, queryFn: api.portfolio });
 export const usePreferences = () =>
   useQuery({ queryKey: keys.preferences, queryFn: api.preferences });
@@ -78,16 +74,6 @@ export function useRemoveWatchlist() {
   });
 }
 
-/** Favorito (⭐): tipos com favoritos têm o plano restrito a eles. */
-export function useToggleFavorite() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ ticker, favorite }: { ticker: string; favorite: boolean }) =>
-      api.setFavorite(ticker, favorite),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.watchlist }),
-  });
-}
-
 /** Gerar plano é uma ação (POST com efeito), por isso é uma mutation, não query.
  *  O resultado alimenta o cache de 'último plano': navegar para outra aba e voltar
  *  NÃO perde mais o plano (nem força um novo POST de até 60s). */
@@ -95,10 +81,7 @@ export function usePlan() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (req: PlanRequest) => api.plan(req),
-    onSuccess: (data) => {
-      qc.setQueryData(keys.planLatest, data);
-      qc.invalidateQueries({ queryKey: keys.planHistory });
-    },
+    onSuccess: (data) => qc.setQueryData(keys.planLatest, data),
   });
 }
 
@@ -110,9 +93,6 @@ export const usePlanLatest = () =>
     staleTime: Infinity, // só muda quando um novo plano é gerado (setQueryData acima)
     retry: false, // 404 = nunca gerou plano; não é erro a repetir
   });
-
-export const usePlanHistory = () =>
-  useQuery({ queryKey: keys.planHistory, queryFn: api.planHistory });
 
 export const useIncome = () => useQuery({ queryKey: keys.income, queryFn: api.income });
 

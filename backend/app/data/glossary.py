@@ -42,24 +42,6 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "interpretation": "Para bancos que pagam muito via JCP (ITUB4, BBAS4), o líquido fica "
         "abaixo do bruto. Use o líquido para planejar quanto vai realmente receber.",
     },
-    "graham": {
-        "label": "Margem Graham",
-        "definition": "Critério de valor de Benjamin Graham: uma ação 'barata' tende a ter "
-        "P/L e P/VP baixos. A regra clássica diz que o produto P/L × P/VP deve ficar até 22,5 "
-        "(equivale a P/L 15 e P/VP 1,5). Quanto menor o produto, maior a margem de segurança.",
-        "source": "calculado: distância de P/L × P/VP (Fundamentus) ao teto 22,5 de Graham",
-        "interpretation": "Produto bem abaixo de 22,5 sugere preço com desconto e margem de "
-        "segurança; acima do teto, a margem é zero. Aplica-se a ações, não a FIIs.",
-    },
-    "graham_intrinsic": {
-        "label": "Margem (Número de Graham)",
-        "definition": "Valor intrínseco aproximado de Graham = √(22,5 × LPA × VPA), onde LPA é o "
-        "lucro por ação e VPA o valor patrimonial por ação. A margem mostra o quanto o preço "
-        "está abaixo (positivo) desse valor justo.",
-        "source": "calculado: √(22,5 × LPA × VPA) vs preço (LPA/VPA do Fundamentus)",
-        "interpretation": "Margem positiva = preço abaixo do valor intrínseco de Graham. Exige "
-        "lucro e patrimônio positivos; indisponível para empresas com prejuízo.",
-    },
     "bazin_ceiling": {
         "label": "Margem Bazin (preço-teto)",
         "definition": "Método de Décio Bazin: o 'preço-teto' justo é o dividendo médio anual "
@@ -81,16 +63,6 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "interpretation": "Se o preço atual está ABAIXO do teto, é zona de compra pelo método "
         "Bazin. Acima do teto, o yield esperado fica abaixo da sua meta.",
     },
-    "dividend_growth": {
-        "label": "Crescimento dos proventos",
-        "definition": "Ritmo anual de crescimento dos proventos por cota na janela de 5 anos "
-        "(compara a média dos 2 últimos anos com a dos 2 primeiros). É o segundo motor da bola "
-        "de neve: além de reinvestir, os próprios dividendos aumentam.",
-        "source": "calculado: CAGR dos proventos por ano (StatusInvest)",
-        "interpretation": "Positivo = dividendos crescendo. Negativo = encolhendo (cuidado: "
-        "yield alto com proventos caindo costuma ser armadilha). O preset Dividend Growth "
-        "exige crescimento positivo.",
-    },
     "yield_on_cost": {
         "label": "Yield on Cost (YoC)",
         "definition": "Quanto a posição rende em proventos sobre o PREÇO QUE VOCÊ PAGOU (preço "
@@ -109,26 +81,6 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "interpretation": "Perto de 1 = paga quase todo ano sem cortes bruscos. Baixo = renda "
         "irregular ou em queda, menos confiável para viver de dividendos.",
     },
-    "sector_besst": {
-        "label": "Setor perene (Barsi/BESST)",
-        "definition": "Afinidade do setor do ativo com os setores essenciais que Luiz Barsi "
-        "prioriza: Bancos, Energia, Saneamento, Seguros e Telecomunicações (BESST). São setores "
-        "de demanda estável, que costumam sustentar dividendos no longo prazo.",
-        "source": "calculado: setor (Fundamentus) cruzado com a lista BESST",
-        "interpretation": "1 = setor perene clássico de dividendos. Não exclui outros setores, "
-        "só dá preferência aos mais defensivos.",
-    },
-    "strategy": {
-        "label": "Estratégia",
-        "definition": "Preset inspirado em grandes investidores, com DOIS efeitos: muda os pesos "
-        "das métricas E filtra o universo. 'Barsi' exige setor BESST + consistência alta + "
-        "liquidez; 'Bazin' exige preço abaixo do teto; 'Graham' exige lucro positivo e "
-        "P/L×P/VP ≤ 22,5; 'Dividend Growth' exige proventos crescendo. Quem não passa no filtro "
-        "recebe score 0 com o motivo explicado.",
-        "source": "configuração (presets + filtros de elegibilidade)",
-        "interpretation": "Escolha conforme seu objetivo. Os pesos ficam visíveis na tela, e os "
-        "excluídos mostram 'Não elegível' com a razão.",
-    },
     "rebalance_gap": {
         "label": "Rebalanceamento",
         "definition": "O quanto este ativo/classe está abaixo do alvo que você definiu para a "
@@ -136,65 +88,14 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "source": "calculado: peso-alvo − peso-atual (carteira do Ghostfolio vs seus alvos)",
         "interpretation": "Quanto mais abaixo do alvo, maior a prioridade de aporte.",
     },
-    "composite_score": {
-        "label": "Score",
-        "definition": "Nota final de 0 a 1 em três passos: (1) média ponderada das métricas das "
-        "4 famílias — desconto, dividendos, rebalanceamento e setor perene; (2) MULTIPLICADA "
-        "pelo fator de qualidade (selo 🟢/🟡/🔴 — prejuízo, dívida alta, payout insustentável e "
-        "baixa liquidez derrubam a nota); (3) zerada se o ativo não passa no filtro da "
-        "estratégia escolhida.",
-        "source": "calculado: (Σ peso × valor normalizado) × fator de qualidade, com filtro de elegibilidade",
-        "interpretation": "Use como ranking, não como verdade absoluta. A soma das contribuições "
-        "do detalhamento dá a nota-base; o fator de qualidade explica a diferença até o score final.",
-    },
-    "quality_factor": {
-        "label": "Fator de qualidade",
-        "definition": "Multiplicador de 0 a 1 aplicado sobre a nota-base para afundar 'value "
-        "traps' (barato que paga muito porque está afundando): prejuízo ×0,5, dívida alta, "
-        "payout acima do sustentável e liquidez baixa reduzem o fator. Dado ausente é neutro.",
-        "source": "calculado: penalidades sobre P/L, dívida/EBIT, payout e liquidez (Fundamentus)",
-        "interpretation": "1,0 = nenhum alerta. Abaixo de ~0,6 o selo fica vermelho — leia as "
-        "red flags antes de comprar.",
-    },
-    "weight": {
-        "label": "Peso",
-        "definition": "O quanto cada métrica influencia o score final. Você pode ajustar os "
-        "pesos para priorizar desconto, dividendos ou rebalanceamento.",
-        "source": "configuração (pesos default ou ajustados por você)",
-        "interpretation": "A soma dos pesos é 1. Ex: 0,35 em valuation = 35% do score.",
-    },
-    "normalized": {
-        "label": "Valor normalizado",
-        "definition": "O valor cru convertido para a escala 0–1, por UMA de três regras: "
-        "percentil entre pares do mesmo macro-setor/classe (P/VP, P/L, DY); âncora absoluta — "
-        "distância a um valor justo conhecido (margens de Graham e de Bazin, crescimento); ou "
-        "direto, quando o valor já é 0–1 (consistência, rebalanceamento, setor).",
-        "source": "calculado: percentil entre pares, âncora absoluta ou valor direto, conforme a métrica",
-        "interpretation": "Permite somar coisas de unidades diferentes de forma justa. Nas "
-        "métricas com âncora, estar acima do teto vale 0 mesmo que todos os pares estejam piores.",
-    },
-    "weight_position": {
-        "label": "Peso na carteira",
-        "definition": "Quanto este ativo representa do valor total da sua carteira hoje.",
-        "source": "Ghostfolio, valor da posição ÷ valor total",
-        "interpretation": "Ajuda a ver concentração: pesos muito altos em um ativo aumentam o risco.",
-    },
     "suggested_amount": {
         "label": "Valor sugerido",
         "definition": "Quanto do seu aporte de hoje o plano sugere colocar neste ativo, já "
         "arredondado para um número inteiro de cotas pelo preço atual.",
-        "source": "calculado: divisão do aporte por classe e por score, ajustada por lote",
-        "interpretation": "A sobra de arredondamento aparece em 'não alocado'.",
-    },
-    "data_completeness": {
-        "label": "Completude dos dados",
-        "definition": "Quantas das métricas previstas tinham dado disponível para este ativo. "
-        "Quando falta dado, a métrica sai e o peso é redividido só DENTRO da mesma família — "
-        "família inteira sem dado contribui zero, então pouca cobertura limita a nota máxima. "
-        "Nunca inventamos número.",
-        "source": "calculado: métricas disponíveis ÷ métricas previstas",
-        "interpretation": "Ranking com completude baixa (ex: 2/9) tem nota naturalmente limitada "
-        "e merece mais cautela.",
+        "source": "calculado: aporte dividido entre as classes pelo que falta para a meta e, "
+        "dentro da classe, pelo déficit de cada ativo até o peso-alvo — ajustado por lote",
+        "interpretation": "Zero significa que o ativo já está no peso-alvo (ou acima) — não que "
+        "ele seja ruim. A sobra de arredondamento aparece em 'não alocado'.",
     },
     "reserve_target": {
         "label": "Reserva-alvo",
@@ -204,15 +105,6 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "source": "configuração (preferências) + saldo do rastreador de renda fixa",
         "interpretation": "Ex.: 10% = a cada aporte, a reserva é completada primeiro; o restante "
         "vai para as compras sugeridas.",
-    },
-    "income_target": {
-        "label": "Meta de renda mensal",
-        "definition": "A renda passiva mensal (em reais DE HOJE) com que você quer viver de "
-        "dividendos. O Aportador compara essa meta com a renda atual estimada da carteira e "
-        "calcula quanto aportar por mês e em quantos anos você chega lá.",
-        "source": "configuração (preferências: meta, horizonte, crescimento e inflação esperada)",
-        "interpretation": "A comparação usa a renda LÍQUIDA (após IR do JCP) e desconta a "
-        "inflação esperada — R$ 5.000 daqui a 20 anos valem menos que R$ 5.000 hoje.",
     },
     "fixed_income_yield": {
         "label": "Rendimento da reserva",

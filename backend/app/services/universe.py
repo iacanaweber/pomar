@@ -71,12 +71,17 @@ async def build_universe(
         held = [p.ticker.upper() for p in portfolio.positions]
         tickers = list(dict.fromkeys(held + candidates))
 
-    # dicas de classe a partir do Ghostfolio (mais confiável p/ o que você já tem)
+    # dicas de classe a partir do Ghostfolio para o que já está na carteira — mas a cesta
+    # tem a última palavra: a classe que o usuário atribuiu ao ativo é a escolha dele.
+    wanted = set(tickers)
     class_hints.update(
         {
             p.ticker.upper(): p.asset_class
             for p in portfolio.positions
-            if p.asset_class and p.asset_class != "UNKNOWN" and p.ticker.upper() not in class_hints
+            if p.asset_class
+            and p.asset_class != "UNKNOWN"
+            and p.ticker.upper() in wanted
+            and p.ticker.upper() not in class_hints
         }
     )
 

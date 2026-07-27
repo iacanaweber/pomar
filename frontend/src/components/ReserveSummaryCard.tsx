@@ -41,7 +41,7 @@ export function ReserveSummaryCard({ reserve, currency = "BRL" }: { reserve: Res
         </p>
       )}
 
-      <p className="strategy-desc" style={{ margin: "4px 0 0" }}>
+      <p className="note-desc" style={{ margin: "4px 0 0" }}>
         {reserve.note}
         {reserve.benchmark_cdi_annual != null && ` · CDI ${pct(reserve.benchmark_cdi_annual)} a.a.`}
       </p>

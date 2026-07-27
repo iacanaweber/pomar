@@ -2,7 +2,6 @@ import { Suspense, lazy } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import { useAuthStatus, useLogout } from "./api/queries";
 import { GlossaryProvider } from "./app/GlossaryProvider";
-import { Onboarding } from "./components/Onboarding";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AssetPage } from "./pages/AssetPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -15,6 +14,10 @@ const WatchlistPage = lazy(() =>
 );
 const ReservePage = lazy(() =>
   import("./pages/ReservePage").then((m) => ({ default: m.ReservePage })),
+);
+// Carteira alvo é configuração estrutural: entra por link do Plantar, não vira aba.
+const TargetPortfolioPage = lazy(() =>
+  import("./pages/TargetPortfolioPage").then((m) => ({ default: m.TargetPortfolioPage })),
 );
 
 const TABS: { to: string; label: string }[] = [
@@ -66,19 +69,10 @@ function AppShell() {
 
       <Suspense fallback={<PageFallback />}>
         <Routes>
-          <Route
-            path="/plano"
-            element={
-              <>
-                <div className="page" style={{ paddingBottom: 0 }}>
-                  <Onboarding />
-                </div>
-                <PlanPage />
-              </>
-            }
-          />
+          <Route path="/plano" element={<PlanPage />} />
           <Route path="/carteira" element={<PortfolioPage />} />
           <Route path="/watchlist" element={<WatchlistPage />} />
+          <Route path="/alvo" element={<TargetPortfolioPage />} />
           <Route path="/ativo/:ticker" element={<AssetPage />} />
           <Route path="/reserva" element={<ReservePage />} />
           <Route path="*" element={<Navigate to="/plano" replace />} />

@@ -199,7 +199,7 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
           {dateInvalid && <span className="field-error">Use o formato dd/mm/aaaa.</span>}
         </label>
       </div>
-      <p className="strategy-desc" style={{ marginTop: 0 }}>
+      <p className="note-desc" style={{ marginTop: 0 }}>
         {kind === "balance"
           ? "Informe o saldo atual — havendo um saldo anterior em OUTRA data, calculamos o rendimento entre as duas."
           : kind === "deposit"
@@ -298,7 +298,7 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
       {showEntries && <EntriesList accountId={account.id} />}
 
       {account.last_yield_annual == null && (
-        <p className="strategy-desc" style={{ padding: "0 14px 12px" }}>
+        <p className="note-desc" style={{ padding: "0 14px 12px" }}>
           O rendimento aparece quando há um <strong>ponto de partida (aporte ou saldo) e um saldo
           atual em data posterior</strong>.{cdiAnnual != null ? ` CDI hoje: ${pct(cdiAnnual)} a.a.` : ""}
         </p>
@@ -380,7 +380,7 @@ function NewAccountForm() {
           {dateInvalid && <span className="field-error">Use o formato dd/mm/aaaa.</span>}
         </label>
       </div>
-      <p className="strategy-desc" style={{ marginTop: 0 }}>
+      <p className="note-desc" style={{ marginTop: 0 }}>
         Dica: informe o saldo de partida com a <strong>data em que você aplicou</strong> (no passado).
         Depois, ao <strong>atualizar o saldo</strong> num outro dia, calculamos o rendimento entre as duas datas.
       </p>

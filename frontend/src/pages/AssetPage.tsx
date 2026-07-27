@@ -2,7 +2,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import { useAsset, useYocHistory } from "../api/queries";
 import { CeilingBadge } from "../components/CeilingBadge";
-import { ScoreBreakdown } from "../components/ScoreBreakdown";
 import { Tooltip } from "../components/Tooltip";
 import type { Fundamentals } from "../types";
 import { money, pct } from "../lib/format";
@@ -38,6 +37,13 @@ const RISK_CLASS: Record<string, string> = {
   vermelho: "risk-vermelho",
 };
 
+/** O selo diz o que os dados mostram, não uma nota: sem alerta / atenção / risco alto. */
+const RISK_LABEL: Record<string, string> = {
+  verde: "sem alertas",
+  amarelo: "atenção",
+  vermelho: "risco alto",
+};
+
 function Fund({ label, value }: { label: string; value: string | null }) {
   if (value == null) return null;
   return (
@@ -71,10 +77,9 @@ export function AssetPage() {
       </main>
     );
 
-  const { asset, scored } = data;
+  const { asset, analysis } = data;
   const f = (asset.fundamentals ?? {}) as Fundamentals;
-  const score = Math.round((scored.composite_score ?? 0) * 100);
-  const riskClass = RISK_CLASS[scored.risk_level ?? "verde"] ?? "";
+  const riskClass = RISK_CLASS[analysis.risk_level ?? "verde"] ?? "";
   const years = Object.entries(asset.dividends_by_year ?? {}).sort(([a], [b]) => a.localeCompare(b));
   const maxDiv = Math.max(1, ...years.map(([, v]) => v));
 
@@ -94,30 +99,30 @@ export function AssetPage() {
         </div>
         <div className="asset-head-right">
           {asset.price != null && <strong className="asset-price">{money(asset.price)}</strong>}
-          <span className={`score-badge ${riskClass}`}>{score}</span>
+          <span className={`risk-seal ${riskClass}`}>{RISK_LABEL[analysis.risk_level ?? "verde"]}</span>
         </div>
       </div>
 
       {asset.stale && <div className="banner banner-warn">⏳ Dados de cache (possivelmente defasados).</div>}
 
       <CeilingBadge
-        ceiling={scored.bazin_ceiling_price}
+        ceiling={analysis.bazin_ceiling_price}
         price={asset.price}
-        margin={scored.bazin_margin}
-        belowCeiling={scored.bazin_below_ceiling}
+        margin={analysis.bazin_margin}
+        belowCeiling={analysis.bazin_below_ceiling}
         variant="block"
       />
 
-      {(scored.reasons ?? []).length > 0 && (
+      {(analysis.highlights ?? []).length > 0 && (
         <ul className="card-reasons">
-          {(scored.reasons ?? []).map((r, i) => (
+          {(analysis.highlights ?? []).map((r, i) => (
             <li key={i}>🌱 {r}</li>
           ))}
         </ul>
       )}
-      {(scored.red_flags ?? []).length > 0 && (
+      {(analysis.red_flags ?? []).length > 0 && (
         <ul className="card-flags">
-          {(scored.red_flags ?? []).map((r, i) => (
+          {(analysis.red_flags ?? []).map((r, i) => (
             <li key={i}>▲ {r}</li>
           ))}
         </ul>
@@ -173,8 +178,36 @@ export function AssetPage() {
       )}
 
       <div className="alloc">
-        <h3>Como o score foi calculado</h3>
-        <ScoreBreakdown asset={scored} />
+        <h3>Leitura dos proventos</h3>
+        <div className="fund-grid">
+          <Fund
+            label="Preço-teto de Bazin"
+            value={
+              analysis.bazin_ceiling_price != null
+                ? `${money(analysis.bazin_ceiling_price)} (DY-alvo ${pct(analysis.bazin_target_yield)})`
+                : null
+            }
+          />
+          <Fund
+            label="Consistência dos proventos"
+            value={analysis.dividend_consistency != null ? pct(analysis.dividend_consistency, 0) : null}
+          />
+          <Fund
+            label="Crescimento dos proventos"
+            value={
+              analysis.dividend_cagr != null
+                ? `${analysis.dividend_cagr > 0 ? "+" : ""}${pct(analysis.dividend_cagr)} a.a.`
+                : null
+            }
+          />
+          <Fund
+            label="Payout (provento médio ÷ LPA)"
+            value={analysis.payout_ratio != null ? pct(analysis.payout_ratio, 0) : null}
+          />
+        </div>
+        <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
+          Campo vazio = a fonte não trouxe o dado. Nada é estimado por aqui.
+        </p>
       </div>
 
       <p className="disclaimer">Conteúdo educativo. Não é recomendação de investimento.</p>

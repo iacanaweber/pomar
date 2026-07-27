@@ -115,10 +115,6 @@ h3 { font-size: 15px; margin: 18px 0 8px; }
 /* 16px mínimo em campos de formulário: abaixo disso o Safari iOS força zoom ao focar. */
 select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   font-size: 16px; background: var(--card); color: var(--ink); min-height: 44px; }
-.strategy-desc { margin: 0; font-size: 13px; color: var(--muted); }
-.weights { display: flex; flex-wrap: wrap; gap: 6px; }
-.weight-chip { background: var(--chip-bg); color: var(--green); border-radius: 999px;
-  padding: 3px 10px; font-size: 12px; font-weight: 600; }
 
 .primary {
   background: var(--green); color: var(--on-accent); border: 0; border-radius: 10px;
@@ -150,17 +146,13 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .cards { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
 .card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
   overflow: hidden; }
-.card-head { width: 100%; display: grid; grid-template-columns: 28px 1fr auto auto 20px;
-  align-items: center; gap: 10px; background: none; border: 0; padding: 14px;
-  cursor: pointer; text-align: left; }
-.card-rank { width: 28px; height: 28px; border-radius: 50%; background: var(--chip-bg);
-  color: var(--green); font-weight: 700; display: grid; place-items: center; font-size: 13px; }
+.card-head { width: 100%; display: grid; grid-template-columns: 1fr auto; align-items: center;
+  gap: 10px; background: none; border: 0; padding: 14px; cursor: pointer; text-align: left; }
+.card-head-static { cursor: default; }
 .card-id { display: flex; flex-direction: column; min-width: 0; }
 .card-ticker { font-weight: 700; font-size: 16px; }
 .card-name { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden;
   text-overflow: ellipsis; }
-.score-badge { background: var(--green); color: var(--on-accent); border-radius: 8px; padding: 3px 9px;
-  font-weight: 700; font-size: 14px; }
 .card-buy { display: flex; flex-direction: column; align-items: flex-end; }
 .card-buy strong { color: var(--green-light); font-size: 15px; }
 .card-shares { font-size: 11px; color: var(--muted); }
@@ -169,24 +161,9 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   flex-direction: column; gap: 3px; font-size: 12px; color: var(--green-light); }
 .card-flags { list-style: none; margin: 0; padding: 0 14px 12px; display: flex;
   flex-direction: column; gap: 3px; font-size: 12px; color: var(--flag); }
-/* Selo de risco no badge de score (verde = padrão) */
-.score-badge.risk-amarelo { background: var(--amber); color: #3a2c00; }
-.score-badge.risk-vermelho { background: var(--danger); color: #fff; }
 
-/* Breakdown */
-.breakdown { border-top: 1px solid var(--line); padding: 14px; background: var(--surface-soft); }
-.breakdown-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
-.breakdown-note { font-size: 12px; color: var(--muted); margin: 12px 0 0; }
+
 .metric-na { opacity: 0.55; }
-.metric-head { display: flex; justify-content: space-between; font-size: 13px; }
-.metric-label { font-weight: 600; }
-.metric-raw { font-weight: 700; }
-.metric-bar { position: relative; height: 16px; background: var(--track); border-radius: 6px;
-  margin-top: 5px; }
-.metric-bar-fill { height: 100%; background: var(--leaf); border-radius: 6px; }
-.metric-bar-meta { position: absolute; right: 6px; top: 0; font-size: 10px; color: var(--ink);
-  line-height: 16px; }
-.metric-fallback { font-size: 11px; color: var(--amber); margin-top: 3px; }
 
 /* Tooltip */
 .tip { position: relative; display: inline-block; }
@@ -304,8 +281,7 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .adv-row .field { flex: 1; min-width: 110px; }
 .advanced input { padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; font-size: 16px;
   background: var(--card); color: var(--ink); }
-.targets-editor { display: flex; flex-direction: column; gap: 6px; }
-.targets-title { font-weight: 600; font-size: 13px; }
+.note-desc { margin: 0; font-size: 13px; color: var(--muted); }
 .targets-sum { font-size: 12px; color: var(--muted); }
 .targets-sum.warn { color: var(--amber); font-weight: 600; }
 .money { background: var(--card); }
@@ -315,7 +291,6 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 
 /* Desktop */
 @media (min-width: 640px) {
-  .breakdown-grid { grid-template-columns: 1fr 1fr; }
   .controls { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
   .controls .field { flex: 1; min-width: 200px; }
   .controls .primary { flex-basis: 100%; }
@@ -407,14 +382,6 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .watchlist-actions { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
 .watchlist-remove { font-size: 18px; min-width: 44px; text-align: center; }
 
-/* Onboarding */
-.onboarding { margin-top: 16px; }
-.onboarding-head { display: flex; justify-content: space-between; align-items: center; }
-.onboarding-steps { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 14px; }
-.onboarding-steps li { font-size: 14px; }
-.onboarding-meta { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; align-items: flex-start; }
-.onboarding-meta .money { flex: 1; min-width: 140px; }
-.onboarding-meta .primary { width: auto; }
 
 @media (min-width: 640px) {
   .pf-chart-pie { flex-shrink: 0; }
@@ -453,14 +420,7 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .reserve-rename { padding: 0 4px; min-height: 0; font-size: 12px; }
 .reserve-archived-row { opacity: 0.75; }
 
-/* Proventos anunciados (Calendário) */
-.announced .pf-drill-item { align-items: center; }
 
-/* Foco do aporte + carteira alvo (v5) */
-.focus-seg { margin-bottom: 2px; }
-.focus-context { display: flex; flex-direction: column; gap: 6px; font-size: 13px; }
-.basket-editor { display: flex; flex-direction: column; gap: 6px; }
-.basket-editor .link-button { align-self: flex-start; }
 .basket-rows { display: flex; flex-direction: column; gap: 6px; }
 .basket-row { display: flex; align-items: center; gap: 8px; }
 .basket-row .card-ticker { min-width: 84px; }
@@ -469,4 +429,63 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .basket-add { display: flex; gap: 8px; align-items: center; }
 .basket-add input { flex: 1; max-width: 220px; padding: 8px; border: 2px solid var(--line);
   border-radius: 10px; background: var(--card); color: var(--ink); font-size: 16px; }
-.watchlist-fav { font-size: 18px; min-width: 34px; text-align: center; padding: 0 2px; }
+
+/* ===== v6: rebalanceador por carteira alvo ===== */
+
+/* Seleção das classes do aporte — chips 2×2, alvo de toque generoso no celular. */
+.class-picker { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.class-picker legend { font-weight: 600; font-size: 14px; padding: 0; margin-bottom: 2px; }
+.class-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.class-chip { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 10px 12px;
+  border: 2px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; }
+.class-chip-on { border-color: var(--leaf); background: var(--chip-bg); }
+.class-chip input { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
+.class-chip-name { font-weight: 700; font-size: 14px; }
+.class-chip-meta { font-size: 11px; color: var(--muted); display: block; }
+.class-chip-meta.warn { color: var(--warn-ink); }
+.class-chip > span:not(.class-chip-meta) { display: flex; flex-direction: column; }
+.class-chip-name + .class-chip-meta { margin-top: 1px; }
+.class-picker-meta { font-size: 12px; margin: 0; }
+
+/* Empty state: sem carteira alvo não há plano possível. */
+.empty-target { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.empty-target h3 { margin: 0; }
+.empty-target p { margin: 0; font-size: 13px; }
+.empty-target .primary { width: auto; align-self: flex-start; text-decoration: none;
+  display: inline-block; padding: 12px 18px; }
+
+/* Barra da cesta: onde o ativo está, onde fica após a compra e onde é o alvo. */
+.basket-bar-wrap { padding: 0 14px 10px; display: flex; flex-direction: column; gap: 4px; }
+.basket-bar { position: relative; height: 10px; background: var(--track); border-radius: 999px; }
+.basket-bar-now, .basket-bar-after { position: absolute; left: 0; top: 0; height: 100%;
+  border-radius: 999px; }
+.basket-bar-now { background: var(--green-light); z-index: 1; }
+.basket-bar-after { background: var(--leaf); opacity: 0.45; }
+.basket-bar-target { position: absolute; top: -3px; width: 2px; height: 16px; background: var(--ink);
+  z-index: 2; border-radius: 1px; }
+.basket-bar-legend { font-size: 11px; }
+
+/* Desconto sobre o preço-teto: destaque mesmo sem compra sugerida. */
+.card-discount { border: 2px solid var(--leaf); }
+.discount-seal { margin-left: 8px; font-size: 11px; font-weight: 700; color: var(--green);
+  background: var(--chip-bg); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.card-discount-note { margin: 0; padding: 0 14px 12px; font-size: 12px; color: var(--muted); }
+.card-risk { width: 10px; height: 10px; border-radius: 50%; background: currentColor; }
+
+/* Selo de risco factual no detalhe do ativo (texto, nunca só cor). */
+.risk-seal { font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px;
+  background: var(--chip-bg); white-space: nowrap; }
+
+/* Página Carteira alvo */
+.page-title { font-size: 20px; margin: 4px 0 6px; }
+.section-title { margin-top: 24px; }
+.target-classes { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.target-classes h2 { margin: 0; }
+.target-classes p { margin: 0; font-size: 13px; }
+.basket-head { width: 100%; display: grid; grid-template-columns: 1fr auto; align-items: center;
+  gap: 10px; background: none; border: 0; padding: 14px; cursor: pointer; text-align: left;
+  min-height: 56px; color: var(--ink); }
+.basket-editor-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.basket-editor-body p { margin: 0; font-size: 13px; }
+.basket-editor-body .primary { width: auto; align-self: flex-start; }
+.basket-tools { display: flex; flex-wrap: wrap; gap: 12px; }

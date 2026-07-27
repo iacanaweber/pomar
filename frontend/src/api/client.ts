@@ -14,13 +14,11 @@ import type {
   OrdersListResponse,
   PlanRequest,
   PlanResponse,
-  PlanSummary,
   Portfolio,
   Preferences,
   PreferencesBody,
   RadarResponse,
   RealizedIncomeResponse,
-  StrategiesResponse,
   WatchlistItem,
   YocPoint,
 } from "../types";
@@ -91,7 +89,6 @@ export const api = {
   login: (password: string) => request<{ ok: boolean }>("/api/login", json({ password })),
   logout: () => request<{ ok: boolean }>("/api/logout", { method: "POST" }),
   glossary: () => request<Glossary>("/api/glossary"),
-  strategies: () => request<StrategiesResponse>("/api/strategies"),
 
   // carteira / mercado
   portfolio: () => request<Portfolio>("/api/portfolio"),
@@ -106,11 +103,6 @@ export const api = {
     request<{ ticker: string; asset_class: string }>("/api/watchlist", json({ ticker, note })),
   removeWatchlist: (ticker: string) =>
     request<{ ok: boolean }>(`/api/watchlist/${ticker}`, { method: "DELETE" }),
-  setFavorite: (ticker: string, favorite: boolean) =>
-    request<{ ticker: string; favorite: boolean }>(
-      `/api/watchlist/${ticker}`,
-      { ...json({ favorite }), method: "PATCH" },
-    ),
 
   // renda passiva
   income: () => request<IncomeResponse>("/api/income", {}, 60000),
@@ -144,7 +136,6 @@ export const api = {
   // plano (mais lento -> timeout maior)
   plan: (req: PlanRequest) => request<PlanResponse>("/api/plan", json(req), 60000),
   planLatest: () => request<PlanResponse>("/api/plan/latest"),
-  planHistory: () => request<PlanSummary[]>("/api/plan/history"),
 
   // radar da watchlist (preço-teto de todos os observados)
   watchlistRadar: () => request<RadarResponse>("/api/watchlist/radar", {}, 60000),

@@ -112,23 +112,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/strategies": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Strategies */
-        get: operations["strategies_api_strategies_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/portfolio": {
         parameters: {
             query?: never;
@@ -173,7 +156,7 @@ export interface paths {
         /**
          * Asset
          * @description Detalhe completo do ativo: classe+setor canônicos, fundamentos (incl. LPA/VPA),
-         *     histórico de proventos e a pontuação explicada (métricas, reasons, red flags, selo de risco).
+         *     histórico de proventos e a leitura factual (preço-teto, consistência, red flags).
          */
         get: operations["asset_api_asset__ticker__get"];
         put?: never;
@@ -230,7 +213,7 @@ export interface paths {
         };
         /**
          * Plan History
-         * @description Planos anteriores (resumo): quando, quanto, qual estratégia, nº de sugestões.
+         * @description Planos anteriores (resumo): quando, quanto e quantas compras foram sugeridas.
          */
         get: operations["plan_history_api_plan_history_get"];
         put?: never;
@@ -291,11 +274,7 @@ export interface paths {
         delete: operations["remove_from_watchlist_api_watchlist__ticker__delete"];
         options?: never;
         head?: never;
-        /**
-         * Patch Watchlist
-         * @description Marca/desmarca favorito (⭐). Tipos com favoritos têm o plano restrito a eles.
-         */
-        patch: operations["patch_watchlist_api_watchlist__ticker__patch"];
+        patch?: never;
         trace?: never;
     };
     "/api/watchlist/radar": {
@@ -679,12 +658,80 @@ export interface components {
             source: string;
         };
         /**
+         * AssetAnalysis
+         * @description Leitura FACTUAL de um ativo — sem nota, sem ranking, sem estratégia.
+         *
+         *     Números calculados a partir das fontes (preço-teto de Bazin, consistência e
+         *     crescimento dos proventos, payout) e os alertas que decorrem deles.
+         */
+        AssetAnalysis: {
+            /** Ticker */
+            ticker: string;
+            /** Name */
+            name?: string | null;
+            /**
+             * Asset Class
+             * @default UNKNOWN
+             */
+            asset_class: string;
+            /** Sector */
+            sector?: string | null;
+            /** Price */
+            price?: number | null;
+            /** Dividend Yield */
+            dividend_yield?: number | null;
+            /**
+             * Dividend Yield Net
+             * @description DY líquido (JCP ×0,85).
+             */
+            dividend_yield_net?: number | null;
+            /** Bazin Ceiling Price */
+            bazin_ceiling_price?: number | null;
+            /** Bazin Below Ceiling */
+            bazin_below_ceiling?: boolean | null;
+            /** Bazin Margin */
+            bazin_margin?: number | null;
+            /**
+             * Bazin Target Yield
+             * @description DY-alvo usado no preço-teto.
+             * @default 0.06
+             */
+            bazin_target_yield: number;
+            /**
+             * Dividend Consistency
+             * @description Anos pagos ÷ anos analisados, penalizando cortes fortes (0..1).
+             */
+            dividend_consistency?: number | null;
+            /**
+             * Dividend Cagr
+             * @description Crescimento anual dos proventos (fração).
+             */
+            dividend_cagr?: number | null;
+            /**
+             * Payout Ratio
+             * @description Provento médio ÷ LPA (fração).
+             */
+            payout_ratio?: number | null;
+            /**
+             * Risk Level
+             * @default verde
+             */
+            risk_level: string;
+            /** Red Flags */
+            red_flags?: string[];
+            /**
+             * Highlights
+             * @description Pontos factuais favoráveis.
+             */
+            highlights?: string[];
+        };
+        /**
          * AssetDetailResponse
-         * @description Detalhe de um ativo: dados crus (fundamentos, proventos) + a pontuação explicada.
+         * @description Detalhe de um ativo: dados crus (fundamentos, proventos) + a leitura factual.
          */
         AssetDetailResponse: {
             asset: components["schemas"]["Asset"];
-            scored: components["schemas"]["ScoredAsset"];
+            analysis: components["schemas"]["AssetAnalysis"];
         };
         /** EntryIn */
         EntryIn: {
@@ -870,72 +917,6 @@ export interface components {
             /** Password */
             password: string;
         };
-        /**
-         * Metric
-         * @description Uma sub-métrica do score, com valor cru, normalizado e proveniência.
-         *
-         *     `available=False` significa que a fonte não tinha o dado; nesse caso o peso é
-         *     redistribuído entre as métricas disponíveis (ver services/scoring.py) e
-         *     `fallback_used` explica qualquer aproximação aplicada.
-         */
-        Metric: {
-            /**
-             * Key
-             * @description Identificador da métrica e chave no glossário.
-             */
-            key: string;
-            /**
-             * Label
-             * @description Rótulo curto para a UI (ex: 'P/VP').
-             */
-            label: string;
-            /**
-             * Raw Value
-             * @description Valor cru, na unidade original.
-             */
-            raw_value?: number | null;
-            /**
-             * Display
-             * @description Valor já formatado para exibição.
-             */
-            display?: string | null;
-            /**
-             * Normalized
-             * @description Valor normalizado em [0,1] (maior = melhor).
-             */
-            normalized?: number | null;
-            /**
-             * Weight
-             * @description Peso desta métrica no score composto (após renormalizar).
-             */
-            weight: number;
-            /**
-             * Contribution
-             * @description weight * normalized — quanto somou ao score final.
-             */
-            contribution?: number | null;
-            /**
-             * Source
-             * @description Origem legível do dado.
-             */
-            source: string;
-            /**
-             * Available
-             * @description False quando a fonte não tinha o dado.
-             * @default true
-             */
-            available: boolean;
-            /**
-             * Fallback Used
-             * @description Aproximação aplicada quando o dado ideal faltava.
-             */
-            fallback_used?: string | null;
-            /**
-             * Peer Group
-             * @description Grupo de pares usado na normalização (ex: 'FII/Logística').
-             */
-            peer_group?: string | null;
-        };
         /** OrderIn */
         OrderIn: {
             /** Ticker */
@@ -1007,6 +988,85 @@ export interface components {
              */
             currency: string;
         };
+        /**
+         * PlanAsset
+         * @description Um ativo da carteira alvo dentro do plano.
+         *
+         *     Só `ticker` é obrigatório: planos antigos, persistidos com outro formato, precisam
+         *     continuar sendo lidos por GET /plan/latest (campo que falta vira default).
+         */
+        PlanAsset: {
+            /** Ticker */
+            ticker: string;
+            /** Name */
+            name?: string | null;
+            /**
+             * Asset Class
+             * @default UNKNOWN
+             */
+            asset_class: string;
+            /** Sector */
+            sector?: string | null;
+            /** Price */
+            price?: number | null;
+            /**
+             * Dividend Yield
+             * @description DY anual em fração (0..1).
+             */
+            dividend_yield?: number | null;
+            /**
+             * Basket Target Pct
+             * @description Peso-alvo do ativo na cesta da classe, definido pelo usuário.
+             */
+            basket_target_pct?: number | null;
+            /**
+             * Basket Current Pct
+             * @description Peso atual do ativo na cesta (valor dele ÷ valor da cesta hoje).
+             */
+            basket_current_pct?: number | null;
+            /**
+             * Basket After Pct
+             * @description Peso do ativo na cesta DEPOIS das compras sugeridas.
+             */
+            basket_after_pct?: number | null;
+            /**
+             * Basket Gap Brl
+             * @description Quanto falta em R$ para o peso-alvo, medido sobre a cesta já com o aporte (positivo = abaixo do alvo; é isto que determina a compra).
+             */
+            basket_gap_brl?: number | null;
+            /**
+             * Bazin Ceiling Price
+             * @description Preço-teto de Bazin em BRL (dividendo médio ÷ DY-alvo). None se indisponível.
+             */
+            bazin_ceiling_price?: number | null;
+            /**
+             * Bazin Below Ceiling
+             * @description True se o preço atual está abaixo do teto (zona de compra).
+             */
+            bazin_below_ceiling?: boolean | null;
+            /**
+             * Bazin Margin
+             * @description Margem sobre o teto em [-1,1] (positivo = comprando com desconto).
+             */
+            bazin_margin?: number | null;
+            /**
+             * Risk Level
+             * @description Selo de risco factual: verde | amarelo | vermelho.
+             * @default verde
+             */
+            risk_level: string;
+            /**
+             * Red Flags
+             * @description Pontos de atenção (por que olhar duas vezes).
+             */
+            red_flags?: string[];
+            /**
+             * Reasons
+             * @description Frases curtas explicando a sugestão (ou a ausência dela).
+             */
+            reasons?: string[];
+            suggested?: components["schemas"]["SuggestedBuy"] | null;
+        };
         /** PlanRequest */
         PlanRequest: {
             /**
@@ -1015,11 +1075,10 @@ export interface components {
              */
             aporte: number;
             /**
-             * Strategy
-             * @description Preset de estratégia: 'equilibrado' | 'barsi' | 'bazin' | 'graham'.
-             * @default equilibrado
+             * Classes
+             * @description Classes que devem receber este aporte (STOCK/FII/ETF/BDR). Omitido = todas. Lista vazia é erro (não há o que planejar).
              */
-            strategy: string;
+            classes?: string[] | null;
             /**
              * Targets
              * @description Alvos de alocação por classe (0..1). Se omitido, usa o default.
@@ -1028,35 +1087,11 @@ export interface components {
                 [key: string]: number;
             } | null;
             /**
-             * Weights
-             * @description Pesos das famílias de métricas (valuation/dividend/rebalance/sector). Se informado, sobrepõe o preset.
-             */
-            weights?: {
-                [key: string]: number;
-            } | null;
-            /**
-             * Max Assets
-             * @description Máximo de ativos diferentes no plano.
-             * @default 5
-             */
-            max_assets: number;
-            /**
-             * Max Weight Per Asset
-             * @description Teto do peso de um ativo na carteira resultante.
-             * @default 0.2
-             */
-            max_weight_per_asset: number;
-            /**
              * Min Ticket
-             * @description Valor mínimo para alocar em um único ativo (BRL).
+             * @description Valor mínimo para ABRIR posição em um ativo (BRL).
              * @default 100
              */
             min_ticket: number;
-            /**
-             * Max Weight Per Class
-             * @description Teto de peso por classe na carteira resultante.
-             */
-            max_weight_per_class?: number | null;
             /**
              * Reserve Target
              * @description Fração-alvo em reserva/renda fixa. Se omitido, usa as preferências.
@@ -1073,11 +1108,6 @@ export interface components {
              * @default false
              */
             allow_empty_portfolio: boolean;
-            /**
-             * Focus
-             * @description Foco do aporte: 'BALANCE' distribui entre as classes conforme as metas; uma classe (STOCK/FII/ETF/BDR) concentra todo o aporte de RV nela. Se omitido, usa a preferência salva.
-             */
-            focus?: string | null;
         };
         /** PlanResponse */
         PlanResponse: {
@@ -1090,13 +1120,6 @@ export interface components {
             currency: string;
             /** As Of */
             as_of: string;
-            /**
-             * Weights
-             * @description Pesos usados no score (visíveis para a UI).
-             */
-            weights?: {
-                [key: string]: number;
-            };
             /** Targets By Class */
             targets_by_class?: {
                 [key: string]: number;
@@ -1106,7 +1129,7 @@ export interface components {
                 [key: string]: number;
             };
             /** Ranking */
-            ranking?: components["schemas"]["ScoredAsset"][];
+            ranking?: components["schemas"]["PlanAsset"][];
             /**
              * Unallocated
              * @description Sobra do aporte não alocada (BRL).
@@ -1115,13 +1138,18 @@ export interface components {
             unallocated: number;
             /** @description Sugestão de reserva/renda fixa (quando há reserve_target). */
             reserve?: components["schemas"]["ReserveSuggestion"] | null;
+            /**
+             * Classes Applied
+             * @description Classes marcadas que tinham composição e entraram no plano.
+             */
+            classes_applied?: string[];
+            /**
+             * Classes Skipped
+             * @description Classes marcadas SEM composição definida — puladas.
+             */
+            classes_skipped?: string[];
             /** Warnings */
             warnings?: string[];
-            /**
-             * Focus
-             * @description Foco usado no plano: 'BALANCE' ou uma classe (STOCK/FII/ETF/BDR).
-             */
-            focus?: string | null;
             /**
              * Plan Id
              * @description Id do plano persistido (plan_history).
@@ -1149,8 +1177,6 @@ export interface components {
             created_at?: string | null;
             /** Aporte */
             aporte?: number | null;
-            /** Strategy */
-            strategy?: string | null;
             /** Suggested Count */
             suggested_count?: number | null;
         };
@@ -1254,22 +1280,12 @@ export interface components {
          * @description Campos opcionais — só os enviados são atualizados (patch).
          */
         PreferencesBody: {
-            /** Strategy */
-            strategy?: string | null;
             /** Aporte Default */
             aporte_default?: number | null;
             /** Targets */
             targets?: {
                 [key: string]: unknown;
             } | null;
-            /** Weights */
-            weights?: {
-                [key: string]: unknown;
-            } | null;
-            /** Max Assets */
-            max_assets?: number | null;
-            /** Max Weight Per Asset */
-            max_weight_per_asset?: number | null;
             /** Min Ticket */
             min_ticket?: number | null;
             /** Lot Mode */
@@ -1280,18 +1296,6 @@ export interface components {
             bazin_target_mode?: string | null;
             /** Bazin Target Yield */
             bazin_target_yield?: number | null;
-            /** Target Monthly Income */
-            target_monthly_income?: number | null;
-            /** Target Horizon Years */
-            target_horizon_years?: number | null;
-            /** Annual Growth */
-            annual_growth?: number | null;
-            /** Expected Inflation */
-            expected_inflation?: number | null;
-            /** Include Reserve Income */
-            include_reserve_income?: boolean | null;
-            /** Focus */
-            focus?: string | null;
             /** Class Targets */
             class_targets?: {
                 [key: string]: {
@@ -1462,82 +1466,6 @@ export interface components {
              */
             note: string;
         };
-        /** ScoredAsset */
-        ScoredAsset: {
-            /** Ticker */
-            ticker: string;
-            /** Name */
-            name?: string | null;
-            /**
-             * Asset Class
-             * @default UNKNOWN
-             */
-            asset_class: string;
-            /** Sector */
-            sector?: string | null;
-            /**
-             * Rank
-             * @default 0
-             */
-            rank: number;
-            /**
-             * Composite Score
-             * @description Score final (0..1), média ponderada das métricas.
-             */
-            composite_score: number;
-            /** Metrics */
-            metrics?: components["schemas"]["Metric"][];
-            /**
-             * Data Completeness
-             * @description Métricas disponíveis vs totais, ex: '3/4'.
-             * @default 0/0
-             */
-            data_completeness: string;
-            suggested?: components["schemas"]["SuggestedBuy"] | null;
-            /**
-             * Reasons
-             * @description Frases curtas explicando por que o ativo subiu no ranking.
-             */
-            reasons?: string[];
-            /**
-             * Composite Base
-             * @description Score antes do fator de qualidade/risco (auditoria).
-             * @default 0
-             */
-            composite_base: number;
-            /**
-             * Quality Factor
-             * @description Fator de qualidade/risco em [0,1] que multiplica o score (1 = sem penalidade).
-             * @default 1
-             */
-            quality_factor: number;
-            /**
-             * Risk Level
-             * @description Selo de risco: verde | amarelo | vermelho.
-             * @default verde
-             */
-            risk_level: string;
-            /**
-             * Red Flags
-             * @description Pontos de atenção (por que NÃO comprar).
-             */
-            red_flags?: string[];
-            /**
-             * Bazin Ceiling Price
-             * @description Preço-teto de Bazin em BRL (dividendo médio ÷ DY-alvo). None se indisponível.
-             */
-            bazin_ceiling_price?: number | null;
-            /**
-             * Bazin Below Ceiling
-             * @description True se o preço atual está abaixo do teto (zona de compra).
-             */
-            bazin_below_ceiling?: boolean | null;
-            /**
-             * Bazin Margin
-             * @description Margem sobre o teto em [-1,1] (positivo = comprando com desconto).
-             */
-            bazin_margin?: number | null;
-        };
         /**
          * SuggestedBuy
          * @description Quanto comprar de um ativo — com a aritmética completa, auditável.
@@ -1596,11 +1524,6 @@ export interface components {
             ticker: string;
             /** Note */
             note?: string | null;
-        };
-        /** WatchlistPatch */
-        WatchlistPatch: {
-            /** Favorite */
-            favorite: boolean;
         };
         /** YocPoint */
         YocPoint: {
@@ -1770,28 +1693,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    strategies_api_strategies_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
                 };
             };
         };
@@ -2077,43 +1978,6 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_watchlist_api_watchlist__ticker__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticker: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WatchlistPatch"];
-            };
-        };
         responses: {
             /** @description Successful Response */
             200: {

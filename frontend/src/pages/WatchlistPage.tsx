@@ -1,13 +1,7 @@
 import { useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { ApiError } from "../api/client";
-import {
-  useAddWatchlist,
-  useRemoveWatchlist,
-  useToggleFavorite,
-  useWatchlist,
-  useWatchlistRadar,
-} from "../api/queries";
-import { CLASS_LABEL } from "../components/PlanControls";
+import { useAddWatchlist, useRemoveWatchlist, useWatchlist, useWatchlistRadar } from "../api/queries";
 import { AssetLink } from "../components/AssetLink";
 import { CeilingBadge } from "../components/CeilingBadge";
 import type { RadarItem, WatchlistItem } from "../types";
@@ -38,28 +32,11 @@ function StatusChip({ item }: { item: WatchlistItem }) {
 
 function WatchlistRow({ item, radar }: { item: WatchlistItem; radar?: RadarItem }) {
   const remove = useRemoveWatchlist();
-  const fav = useToggleFavorite();
-  const isFav = item.favorite === 1;
   return (
     <li className="card watchlist-row">
       <div className="watchlist-main">
         <div className="card-id">
           <span className="card-ticker">
-            <button
-              type="button"
-              className="link-button watchlist-fav"
-              onClick={() => fav.mutate({ ticker: item.ticker, favorite: !isFav })}
-              disabled={fav.isPending}
-              aria-pressed={isFav}
-              aria-label={
-                isFav
-                  ? `Tirar ${item.ticker} dos favoritos`
-                  : `Marcar ${item.ticker} como favorito`
-              }
-              title="Tipos com favoritos têm o plano restrito a eles"
-            >
-              {isFav ? "⭐" : "☆"}
-            </button>
             <AssetLink ticker={item.ticker} />
             {radar?.in_portfolio && <span className="muted watchlist-own"> · já tenho</span>}
           </span>
@@ -117,12 +94,6 @@ export function WatchlistPage() {
     return mb - ma;
   });
   const belowNow = (radar.data?.items ?? []).filter((r) => r.below_ceiling && !r.in_portfolio);
-  const favByClass = items
-    .filter((i) => i.favorite === 1 && i.valid === 1)
-    .reduce<Record<string, number>>((acc, i) => {
-      acc[i.asset_class] = (acc[i.asset_class] ?? 0) + 1;
-      return acc;
-    }, {});
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -143,15 +114,10 @@ export function WatchlistPage() {
         que você acompanha.
       </p>
 
-      {Object.keys(favByClass).length > 0 && (
-        <p className="muted" style={{ marginTop: 0 }}>
-          ⭐ Favoritos:{" "}
-          {Object.entries(favByClass)
-            .map(([cls, n]) => `${CLASS_LABEL[cls] ?? cls} ${n}`)
-            .join(" · ")}{" "}
-          — a aba Plantar considera só os favoritos do tipo.
-        </p>
-      )}
+      <p className="muted" style={{ marginTop: 0 }}>
+        Esta lista é o viveiro: serve para descobrir e acompanhar. Quem entra no aporte é
+        quem você põe na <Link to="/alvo">carteira alvo</Link>.
+      </p>
 
       {belowNow.length > 0 && (
         <div className="banner radar-banner">

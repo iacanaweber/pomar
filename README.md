@@ -2,26 +2,25 @@
 
 **Plante seus aportes, colha dividendos.**
 
-Pomar é um app web **pessoal e educativo** para planejar aportes na B3. Sempre que você recebe
-dinheiro, informa quanto tem para investir e o Pomar recomenda **quais ativos comprar** para
-compor melhor sua carteira — priorizando **desconto (valuation)**, **dividendos consistentes**,
-**rebalanceamento** rumo às suas metas e **qualidade/risco** (para evitar armadilhas de valor).
+Pomar é um app web **pessoal e educativo** para planejar aportes na B3. Você define a
+**carteira alvo** — quanto cada classe (Ações/FIIs/ETFs/BDRs) deve pesar e, dentro de cada
+classe, quais ativos a compõem e com que percentual. Na hora de investir, informa quanto tem
+disponível e o Pomar responde **quantas cotas comprar de quê** para chegar mais perto dessa
+carteira.
 
-As recomendações são **transparentes**: todo número tem um tooltip explicando o que é e de onde
-vem, e o app mostra tanto **por que comprar** (reasons) quanto **por que NÃO comprar** (red flags).
-As estratégias embutidas são inspiradas em grandes investidores:
+O app **não escolhe ativos por você e não dá nota a ninguém**: a seleção é sua, e a
+recomendação é aritmética de rebalanceamento — quem está mais longe do peso-alvo recebe mais.
 
-| Estratégia | Inspiração | Ideia central |
-|---|---|---|
-| **Equilibrado** | — | Combina desconto, dividendos, rebalanceamento e setores perenes. |
-| **Barsi** | Luiz Barsi | Dividendos perenes em setores essenciais — **BESST** (Bancos, Energia, Saneamento, Seguros, Telecom), buy & hold. |
-| **Bazin** | Décio Bazin | **Preço-teto** = dividendo médio ÷ 6%. Comprar abaixo do teto garante yield mínimo. |
-| **Graham** | Benjamin Graham | Margem de segurança: P/L e P/VP baixos, **P/L × P/VP ≤ 22,5**, lucro positivo. |
-| **Dividend Growth** | — | Crescimento e consistência de proventos em pagadoras recorrentes. |
-| **Valor + Qualidade** | — | Desconto com empresas de qualidade (penaliza dívida alta e payout insustentável). |
+O que o Pomar acrescenta a essa conta:
 
-Cada estratégia ajusta os **pesos** das métricas (sempre visíveis na tela) e aplica **filtros de
-elegibilidade** próprios — ex.: Graham exclui empresas com prejuízo ou caras demais.
+| Recurso | Para quê |
+|---|---|
+| **Preço-teto de Bazin** | Dividendo médio (janela de 5 anos) ÷ DY-alvo. Um ativo pode estar no peso certo e ainda assim barato — ele vem destacado mesmo com compra sugerida zero, para você decidir se antecipa. |
+| **Red flags factuais** | Prejuízo, endividamento, payout insustentável, liquidez baixa, histórico irregular de proventos. Dado ausente é neutro, nunca inventado. |
+| **Reserva antes da RV** | Disciplina Barsi: parte do aporte vai para a reserva/renda fixa até o alvo ser atingido. |
+| **Lote e ticket mínimo** | A sugestão sai em número inteiro de cotas, com piso para abrir posição nova. |
+
+Todo número tem um tooltip explicando o que é e de onde vem.
 
 > ⚠️ Conteúdo educativo. **Não é recomendação de investimento.** Confira os dados antes de operar.
 
@@ -35,33 +34,30 @@ Login (senha) ─► Pomar lê sua carteira (Ghostfolio, somente leitura)
                   ├─►  dados da B3: Fundamentus (P/L, P/VP, setor, LPA/VPA…) +
                   │     StatusInvest (proventos) + brapi (fallback de cotação)
                   │
-                  ├─►  pontua cada ativo em 4 famílias (valuation / dividendos /
-                  │     rebalanceamento / setor) e aplica um eixo de RISCO/QUALIDADE
+                  ├─►  compara a carteira ATUAL com a sua carteira alvo (metas por
+                  │     classe + composição por ativo dentro de cada classe)
                   │
-                  └─►  divide seu aporte entre os melhores (need-based por classe,
-                        respeitando lotes, tetos de concentração e ticket mínimo)
+                  └─►  divide o aporte pelo DÉFICIT até o alvo (need-based entre as
+                        classes marcadas, por desvio dentro da cesta, respeitando
+                        lote e ticket mínimo)
 ```
 
 - **Carteira:** [Ghostfolio](https://ghostfol.io) (`/api/v1/portfolio/holdings`), somente leitura.
 - **Mercado:** [Fundamentus](https://www.fundamentus.com.br) + [StatusInvest](https://statusinvest.com.br)
   + [brapi.dev](https://brapi.dev) como fallback de cotação.
-- **Transparência:** cada métrica carrega sua fonte; dado faltante nunca é inventado — a métrica
-  vira indisponível e seu peso é redistribuído (a "completude" aparece em cada ativo).
+- **Transparência:** cada número carrega sua fonte; dado faltante nunca é inventado — o campo
+  fica vazio em vez de receber uma estimativa.
 - **Risco em primeiro plano:** um selo (🟢/🟡/🔴) e *red flags* sinalizam prejuízo, payout
   insustentável, endividamento e baixa liquidez — para o "barato que paga muito" não enganar.
 
-### Destaques da v2
-- 🔐 **Autenticação por senha única** — a API (que expõe sua carteira) fica protegida.
-- 🧮 **Score corrigido**: Graham pela distância ao teto 22,5, Número de Graham (LPA/VPA),
-  Bazin só sobre anos pagos, percentil sem viés.
-- 🛡️ **Eixo de risco/qualidade** anti *value-trap* + red flags por ativo.
-- 💰 **Alocador need-based**: distribui o aporte pela carteira *resultante* (sem sobre-corrigir),
-  com slots por classe e reaproveitamento da sobra de arredondamento.
-- 🏷️ **Classificação de setor própria** (mapa curado + default por classe): ETFs/BDRs deixam de
-  cair em "Sem setor".
-- 🎛️ **Painel de ajustes avançados** na UI: metas por classe, pesos, nº de ativos, teto e ticket.
-- 💾 **Persistência** (SQLite) de preferências e watchlist.
-- 🥧 **Carteira com detalhamento**: clique numa fatia (classe/setor/tag) e veja os ativos dentro.
+### Abas
+- **Plantar** — o aporte: valor disponível, quais classes entram (por padrão todas) e as compras
+  sugeridas. A configuração da **Carteira alvo** fica em `/alvo`, linkada daqui.
+- **Carteira** — donut com detalhamento por fatia (classe/setor/tag) e os ativos dentro.
+- **Reserva** — rastreador de renda fixa (saldos, rendimento, % do CDI) que alimenta a
+  reserva-alvo do plano.
+- **Descobrir** — watchlist com radar de preço-teto: o viveiro de onde saem candidatos à
+  carteira alvo.
 
 ---
 
@@ -139,11 +135,12 @@ npm run gen:api      # regenera src/api/schema.d.ts a partir do /openapi.json (b
 backend/   FastAPI:
   api/         rotas + segurança (auth por senha) + injeção de dependências
   providers/   Fundamentus / StatusInvest / brapi / Ghostfolio
-  services/    universe, market_data, classify (classe+setor), scoring, allocation, strategies
-  repositories/ SQLite (preferências, watchlist, …) com migrações
-  models/      contrato de transparência (métricas com fonte) ; data/  watchlist + glossário
-frontend/  React + Vite: login, aba de aporte (ranking + decomposição do score + selo de risco)
-           e aba "Minha carteira" (donut com detalhamento por fatia). Tipos gerados do OpenAPI.
+  services/    universe, market_data, classify (classe+setor), analysis (fatos do ativo),
+               allocation (rebalanceamento), reserve, fixed_income
+  repositories/ SQLite (preferências, watchlist, planos, renda fixa…) com migrações
+  models/      contrato da API ; data/  watchlist curada + glossário
+frontend/  React + Vite: login, Plantar (aporte + compras sugeridas), Carteira alvo (/alvo),
+           Carteira, Reserva e Descobrir. Tipos gerados do OpenAPI.
 docker-compose.yml   backend + frontend (nginx) + redis (cache).
 ```
 
@@ -151,9 +148,10 @@ docker-compose.yml   backend + frontend (nginx) + redis (cache).
 - **Watchlist (universo):** editável via API (`/api/watchlist`) e persistida no SQLite; a lista
   curada inicial fica em `backend/app/data/watchlist.py` (semente).
 - **Setores curados:** `SECTOR_BY_TICKER` em `backend/app/data/watchlist.py`.
-- **Pesos/alvos default e presets de estratégia:** `backend/app/config.py`.
-- **Parâmetros do plano (metas, pesos, nº de ativos, teto, ticket):** ajustáveis na própria UI
-  ("Ajustes avançados") e persistidos por usuário.
+- **Alvos default por classe:** `backend/app/config.py` (ponto de partida; a UI sobrescreve).
+- **Carteira alvo (metas por classe + composição por ativo):** editável em `/alvo` e persistida
+  no SQLite. É o que define TODAS as recomendações.
+- **Ticket mínimo e reserva-alvo:** "Ajustes avançados" no Plantar.
 - **Textos do glossário (tooltips):** `backend/app/data/glossary.py`.
 
 ---

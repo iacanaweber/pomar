@@ -37,10 +37,16 @@ CLASS_LABEL = {"STOCK": "Ações", "FII": "FIIs", "ETF": "ETFs", "BDR": "BDRs"}
 GAP_PP_MIN = 0.5
 
 
-def _plan_reasons(item: PlanAsset) -> list[str]:
-    """Frases factuais: por que este ativo recebeu (ou não) compra neste plano."""
+def _plan_reasons(item: PlanAsset, classes_at_target: set[str]) -> list[str]:
+    """Frases factuais: por que este ativo recebeu (ou não) compra neste plano.
+
+    `classes_at_target` são as classes que já estão no/acima do peso-alvo — nelas nenhum
+    ativo recebe aporte, por mais atrasado que esteja DENTRO da cesta. Dizer isso é o que
+    evita a contradição de anunciar "50 p.p. abaixo do alvo" logo acima de "sem compra".
+    """
     out: list[str] = []
     label = CLASS_LABEL.get(item.asset_class, item.asset_class)
+    gap_pp = None
     if item.basket_target_pct is not None and item.basket_current_pct is not None:
         gap_pp = (item.basket_target_pct - item.basket_current_pct) * 100
         if gap_pp >= GAP_PP_MIN:
@@ -48,7 +54,18 @@ def _plan_reasons(item: PlanAsset) -> list[str]:
     if item.bazin_below_ceiling and item.bazin_margin:
         out.append(f"Desconto de {item.bazin_margin * 100:.0f}% sobre o preço-teto de Bazin")
     if item.suggested is None:
-        out.append("No alvo ou acima do peso-alvo — sem compra sugerida")
+        if item.asset_class in classes_at_target:
+            out.append(
+                f"{label} já está no peso-alvo da carteira — o aporte foi para as classes "
+                "mais atrasadas"
+            )
+        elif gap_pp is not None and gap_pp >= GAP_PP_MIN:
+            out.append(
+                "Não coube neste aporte (ticket mínimo ou lote) — quem estava mais atrasado "
+                "levou primeiro"
+            )
+        else:
+            out.append("No alvo ou acima do peso-alvo — sem compra sugerida")
     return out
 
 
@@ -207,8 +224,15 @@ async def plan(req: PlanRequest) -> PlanResponse:
         min_ticket=req.min_ticket,
     )
 
+    # mesma conta de necessidade do alocador — a explicação não pode divergir do motor
+    total_after = portfolio.total_value + aporte_rv
+    by_class = portfolio.allocations.by_class
+    at_target = {
+        c for c in baskets
+        if targets.get(c, 0.0) * total_after - by_class.get(c, 0.0) * portfolio.total_value <= 0
+    }
     for item in ranking:
-        item.reasons = _plan_reasons(item)
+        item.reasons = _plan_reasons(item, at_target)
 
     # 8) sugestão de reserva (só quando há alvo de reserva definido)
     reserve = None

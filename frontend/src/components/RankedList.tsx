@@ -1,10 +1,9 @@
-import { useState } from "react";
 import { useCreateOrder } from "../api/queries";
-import type { PlanResponse, ScoredAsset } from "../types";
+import type { PlanAsset, PlanResponse } from "../types";
+import { classLabel } from "../lib/classes";
 import { money } from "../lib/format";
 import { AssetLink } from "./AssetLink";
 import { CeilingBadge } from "./CeilingBadge";
-import { ScoreBreakdown } from "./ScoreBreakdown";
 import { Tooltip } from "./Tooltip";
 
 const RISK_CLASS: Record<string, string> = {
@@ -13,9 +12,11 @@ const RISK_CLASS: Record<string, string> = {
   vermelho: "risk-vermelho",
 };
 
+const pp = (v: number) => `${(v * 100).toFixed(1).replace(".", ",")}%`;
+
 /** Fecha o ciclo do aporte: comprou na corretora → um toque registra a execução
  *  (pré-preenchida com a sugestão do plano) e alimenta histórico + disciplina. */
-function RegisterBuyButton({ asset, planId }: { asset: ScoredAsset; planId?: number | null }) {
+function RegisterBuyButton({ asset, planId }: { asset: PlanAsset; planId?: number | null }) {
   const create = useCreateOrder();
   const s = asset.suggested;
   if (!s) return null;
@@ -28,7 +29,7 @@ function RegisterBuyButton({ asset, planId }: { asset: ScoredAsset; planId?: num
         e.stopPropagation();
         create.mutate({
           ticker: asset.ticker,
-          asset_class: asset.asset_class,
+          asset_class: asset.asset_class ?? "STOCK",
           shares: s.shares,
           price: s.price ?? 0,
           fees: 0,
@@ -42,26 +43,47 @@ function RegisterBuyButton({ asset, planId }: { asset: ScoredAsset; planId?: num
   );
 }
 
-function AssetCard({ asset, planId }: { asset: ScoredAsset; planId?: number | null }) {
-  const [open, setOpen] = useState(false);
-  const score = Math.round(asset.composite_score * 100);
+/** Barra da cesta: onde o ativo está hoje, onde fica depois da compra e onde é o alvo.
+ *  Uma linha só responde "por que este valor?" sem abrir nada. */
+function BasketBar({ asset }: { asset: PlanAsset }) {
+  const target = asset.basket_target_pct;
+  const current = asset.basket_current_pct;
+  const after = asset.basket_after_pct;
+  if (target == null || current == null) return null;
+  // escala: o maior dos três com folga, para o marcador de alvo nunca colar na borda
+  const max = Math.max(target, current, after ?? 0) * 1.15 || 1;
+  const w = (v: number) => `${Math.min(100, (v / max) * 100)}%`;
+  const grew = after != null && after > current + 0.0001;
+  return (
+    <div className="basket-bar-wrap">
+      <div className="basket-bar" role="img" aria-label={`peso na cesta: ${pp(current)}, alvo ${pp(target)}`}>
+        {grew && <span className="basket-bar-after" style={{ width: w(after) }} />}
+        <span className="basket-bar-now" style={{ width: w(current) }} />
+        <span className="basket-bar-target" style={{ left: w(target) }} />
+      </div>
+      <span className="basket-bar-legend muted">
+        na cesta de {classLabel(asset.asset_class ?? "")}: {pp(current)}
+        {grew ? ` → ${pp(after!)}` : ""} · alvo {pp(target)}
+      </span>
+    </div>
+  );
+}
+
+function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null }) {
   const reasons = asset.reasons ?? [];
   const redFlags = asset.red_flags ?? [];
   const riskClass = RISK_CLASS[asset.risk_level ?? "verde"] ?? "";
+  // Desconto é ortogonal ao rebalanceamento: destaca mesmo com compra sugerida zero —
+  // forçar um desbalanceamento temporário para aproveitar o preço é decisão do usuário.
+  const discounted = asset.bazin_below_ceiling === true;
   return (
-    <li className="card">
-      <button className="card-head" onClick={() => setOpen((v) => !v)}>
-        <span className="card-rank">{asset.rank}</span>
+    <li className={`card ${discounted ? "card-discount" : ""}`}>
+      <div className="card-head card-head-static">
         <span className="card-id">
           <span className="card-ticker">{asset.ticker}</span>
           <span className="card-name">{asset.name ?? asset.sector ?? asset.asset_class}</span>
         </span>
-        <span className="card-score">
-          <Tooltip metricKey="composite_score">
-            <span className={`score-badge ${riskClass}`}>{score}</span>
-          </Tooltip>
-        </span>
-        {asset.suggested && (
+        {asset.suggested ? (
           <span className="card-buy">
             <Tooltip metricKey="suggested_amount">
               <strong>{money(asset.suggested.invested_exact)}</strong>
@@ -70,19 +92,25 @@ function AssetCard({ asset, planId }: { asset: ScoredAsset; planId?: number | nu
               {asset.suggested.shares} × {asset.suggested.price ? money(asset.suggested.price) : "—"}
             </span>
           </span>
+        ) : (
+          <span className={`card-risk ${riskClass}`} aria-label={`risco ${asset.risk_level}`} />
         )}
-        <span className="card-toggle">{open ? "▲" : "▼"}</span>
-      </button>
+      </div>
+
+      <BasketBar asset={asset} />
 
       {asset.bazin_ceiling_price != null && (
         <div className="card-ceiling">
           <CeilingBadge
             ceiling={asset.bazin_ceiling_price}
-            price={asset.suggested?.price ?? null}
+            price={asset.price ?? asset.suggested?.price ?? null}
             margin={asset.bazin_margin}
             belowCeiling={asset.bazin_below_ceiling}
             variant="chip"
           />
+          {discounted && !asset.suggested && (
+            <span className="discount-seal">💰 Abaixo do preço-teto</span>
+          )}
         </div>
       )}
 
@@ -92,6 +120,13 @@ function AssetCard({ asset, planId }: { asset: ScoredAsset; planId?: number | nu
             <li key={i}>🌱 {r}</li>
           ))}
         </ul>
+      )}
+
+      {discounted && !asset.suggested && (
+        <p className="card-discount-note">
+          Sem compra sugerida pelo rebalanceamento — mas está abaixo do teto. Antecipar é
+          decisão sua.
+        </p>
       )}
 
       {redFlags.length > 0 && (
@@ -106,8 +141,6 @@ function AssetCard({ asset, planId }: { asset: ScoredAsset; planId?: number | nu
         <AssetLink ticker={asset.ticker}>ver detalhes de {asset.ticker} →</AssetLink>
         {asset.suggested && <RegisterBuyButton asset={asset} planId={planId} />}
       </div>
-
-      {open && <ScoreBreakdown asset={asset} />}
     </li>
   );
 }
@@ -117,6 +150,7 @@ export function RankedList({ plan }: { plan: PlanResponse }) {
   const unallocated = plan.unallocated ?? 0;
   const buys = ranking.filter((a) => a.suggested);
   const rest = ranking.filter((a) => !a.suggested);
+  const discountedRest = rest.filter((a) => a.bazin_below_ceiling === true).length;
   return (
     <div className="ranked">
       {buys.length > 0 && (
@@ -134,7 +168,12 @@ export function RankedList({ plan }: { plan: PlanResponse }) {
       )}
       {rest.length > 0 && (
         <>
-          <h3 className="muted">Outros candidatos no ranking</h3>
+          <h3 className="muted">
+            No alvo (sem compra sugerida)
+            {discountedRest > 0 && (
+              <span className="muted"> · {discountedRest} abaixo do preço-teto</span>
+            )}
+          </h3>
           <ul className="cards">
             {rest.map((a) => (
               <AssetCard key={a.ticker} asset={a} planId={plan.plan_id} />

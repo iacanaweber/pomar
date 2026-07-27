@@ -8,8 +8,8 @@ type Schemas = components["schemas"];
 // --- DTOs gerados do backend ---
 export type PlanRequest = Schemas["PlanRequest"];
 export type PlanResponse = Schemas["PlanResponse"];
-export type ScoredAsset = Schemas["ScoredAsset"];
-export type Metric = Schemas["Metric"];
+export type PlanAsset = Schemas["PlanAsset"];
+export type AssetAnalysis = Schemas["AssetAnalysis"];
 export type SuggestedBuy = Schemas["SuggestedBuy"];
 export type Portfolio = Schemas["Portfolio"];
 export type Position = Schemas["Position"];
@@ -64,34 +64,15 @@ export interface GlossaryEntry {
 }
 export type Glossary = Record<string, GlossaryEntry>;
 
-export interface StrategyPreset {
-  label: string;
-  description: string;
-  weights: Record<string, number>;
-}
-export interface StrategiesResponse {
-  presets: Record<string, StrategyPreset>;
-  default_targets: Record<string, number>;
-}
-
 export interface Preferences {
-  strategy: string;
   aporte_default: number | null;
   targets: Record<string, number>;
-  weights: Record<string, number>;
-  max_assets: number;
-  max_weight_per_asset: number;
   min_ticket: number;
   lot_mode: string;
   reserve_target: number;
   bazin_target_mode: string;
   bazin_target_yield?: number | null;
-  target_monthly_income?: number | null;
-  target_horizon_years?: number | null;
-  annual_growth?: number | null;
-  expected_inflation?: number | null;
-  include_reserve_income?: boolean | null;
-  focus: string;
+  /** Carteira alvo: peso (0..1) de cada ativo dentro da sua classe. */
   class_targets: Record<string, Record<string, number>>;
 }
 
@@ -99,7 +80,6 @@ export interface WatchlistItem {
   ticker: string;
   asset_class: string;
   note: string | null;
-  favorite: number;
   added_at: string | null;
   last_validated_at: string | null;
   valid: number;

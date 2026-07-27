@@ -1,6 +1,6 @@
 import { useHealth } from "../api/queries";
 
-/** Onboarding leve: avisa quando Ghostfolio/brapi não respondem, com orientação acionável. */
+/** Aviso de saúde das fontes: avisa quando Ghostfolio/brapi não respondem, com orientação acionável. */
 export function HealthBanner() {
   const { data } = useHealth();
   if (!data || (data.ghostfolio && data.brapi)) return null;

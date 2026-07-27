@@ -292,3 +292,35 @@ def test_asset_detail_returns_factual_analysis(authed_client, monkeypatch):
     assert an["dividend_consistency"] == 1.0
     assert an["risk_level"] in ("verde", "amarelo", "vermelho")
     assert "composite_score" not in an and "metrics" not in an
+
+
+def test_asset_starved_by_class_says_so(authed_client, monkeypatch):
+    """Ativo muito abaixo do peso na cesta, mas de uma classe já no alvo, não pode dizer
+    'no alvo' — a explicação tem que apontar a classe, senão contradiz a própria barra."""
+    from app.models.portfolio import Allocations, Portfolio, Position
+
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "FII": 0.5},
+        "class_targets": {"STOCK": {"AAA3": 0.5, "BBB3": 0.5}, "FII": {"CCC11": 1.0}},
+    })
+    # STOCK vale 1000 (só AAA3) e FII vale 0 => todo o aporte vai para FII, mesmo com
+    # BBB3 a 50 p.p. do alvo dentro da cesta de ações
+    pf = Portfolio(
+        total_value=1000.0, as_of="2026-01-01T00:00:00Z",
+        positions=[Position(ticker="AAA3", asset_class="STOCK", value=1000.0, weight=1.0)],
+        allocations=Allocations(by_class={"STOCK": 1.0}),
+    )
+    _stub_plan_market(
+        monkeypatch,
+        [_asset("AAA3", "STOCK", 10.0), _asset("BBB3", "STOCK", 10.0), _asset("CCC11", "FII", 10.0)],
+        portfolio=pf,
+    )
+    r = c.post("/api/plan", json={"aporte": 500.0, "min_ticket": 10.0}).json()
+    bbb = next(x for x in r["ranking"] if x["ticker"] == "BBB3")
+    assert bbb["suggested"] is None
+    assert any("abaixo do alvo na cesta" in x for x in bbb["reasons"])
+    assert any("já está no peso-alvo da carteira" in x for x in bbb["reasons"])
+    assert not any("No alvo ou acima" in x for x in bbb["reasons"])
+    ccc = next(x for x in r["ranking"] if x["ticker"] == "CCC11")
+    assert ccc["suggested"]["invested_exact"] == 500.0

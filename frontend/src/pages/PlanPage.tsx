@@ -1,17 +1,18 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { ApiError } from "../api/client";
-import { usePlan, usePlanLatest, usePreferences, useStrategies } from "../api/queries";
-import { CLASS_LABEL, PlanControls } from "../components/PlanControls";
+import { usePlan, usePlanLatest, usePreferences } from "../api/queries";
+import { PlanControls } from "../components/PlanControls";
 import { RankedList } from "../components/RankedList";
 import { AllocationSummary } from "../components/AllocationSummary";
 import { HealthBanner } from "../components/HealthBanner";
 import { OrdersHistory } from "../components/OrdersHistory";
 import { ReserveSummaryCard } from "../components/ReserveSummaryCard";
 import type { PlanRequest } from "../types";
+import { classLabel } from "../lib/classes";
 import { shortDateTime } from "../lib/format";
 
 export function PlanPage() {
-  const strategies = useStrategies();
   const preferences = usePreferences();
   const plan = usePlan();
   const latest = usePlanLatest();
@@ -35,7 +36,6 @@ export function PlanPage() {
       <HealthBanner />
 
       <PlanControls
-        strategies={strategies.data ?? null}
         preferences={preferences.data}
         loading={plan.isPending}
         onSubmit={submit}
@@ -65,11 +65,13 @@ export function PlanPage() {
               gere um novo se a carteira ou o aporte mudaram.
             </p>
           )}
-          {result.focus && result.focus !== "BALANCE" && (
-            <p className="muted plan-restored">
-              🎯 Plano focado em {CLASS_LABEL[result.focus] ?? result.focus} — todo o aporte
-              de renda variável foi para essa classe.
-            </p>
+          {(result.classes_skipped ?? []).length > 0 && (
+            <div className="banner banner-warn">
+              ⚠️ Sem composição definida:{" "}
+              {(result.classes_skipped ?? []).map((c) => classLabel(c)).join(", ")} — essas
+              classes ficaram de fora do plano.{" "}
+              <Link to={`/alvo#${(result.classes_skipped ?? [])[0]}`}>definir agora →</Link>
+            </div>
           )}
           {(result.warnings ?? []).length > 0 && (
             <div className="banner banner-warn">
