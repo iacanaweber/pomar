@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  applySnap,
   distributeEvenly,
   fromCurrentValues,
   scaleTo100,
   shareOfTotal,
+  snapPointFor,
+  SNAP_TOLERANCE,
   sumOk,
   sumPct,
   sumState,
@@ -98,5 +101,60 @@ describe("fromCurrentValues", () => {
   it("carteira vazia ou sem valor devolve lista vazia", () => {
     expect(fromCurrentValues([])).toEqual([]);
     expect(fromCurrentValues([{ ticker: "A", value: 0 }])).toEqual([]);
+  });
+});
+
+describe("snapPointFor", () => {
+  it("é 100 menos a soma dos OUTROS", () => {
+    // soma 110: para fechar, o índice 0 precisa cair de 60 para 50
+    expect(snapPointFor(rows(60, 30, 20), 0)).toBe(50);
+    expect(snapPointFor(rows(60, 30, 20), 1)).toBe(20);
+    // soma 80: o índice 0 precisa subir
+    expect(snapPointFor(rows(40, 20, 20), 0)).toBe(60);
+  });
+
+  it("não se move quando só o próprio peso muda — é o que segura a marca durante o arraste", () => {
+    const alvo = snapPointFor(rows(60, 30, 20), 0);
+    for (const v of [0, 12.5, 47, 99.99]) {
+      expect(snapPointFor(rows(v, 30, 20), 0)).toBe(alvo);
+    }
+  });
+
+  it("some quando a soma já fecha 100", () => {
+    expect(snapPointFor(rows(50, 30, 20), 0)).toBeNull();
+    expect(snapPointFor(rows(50, 30, 20), 2)).toBeNull();
+    // dentro da tolerância de 0,1 p.p. também conta como fechado
+    expect(snapPointFor(rows(50.05, 30, 20), 0)).toBeNull();
+  });
+
+  it("some quando o alvo é inalcançável", () => {
+    // soma 150: zerar o ativo de 10% ainda deixaria 140 — nem no 0 este slider fecha a conta
+    expect(snapPointFor(rows(140, 10), 1)).toBeNull();
+    // mas o companheiro dele consegue: 100 − 10 = 90
+    expect(snapPointFor(rows(140, 10), 0)).toBe(90);
+    // soma muito baixa ainda é alcançável enquanto o alvo couber em 100
+    expect(snapPointFor(rows(10, 5), 0)).toBe(95);
+  });
+
+  it("índice inexistente devolve null em vez de quebrar", () => {
+    expect(snapPointFor(rows(50, 50), 7)).toBeNull();
+    expect(snapPointFor([], 0)).toBeNull();
+  });
+});
+
+describe("applySnap", () => {
+  it("gruda dentro da tolerância", () => {
+    expect(applySnap(48, 50)).toBe(50);
+    expect(applySnap(52.4, 50)).toBe(50);
+    expect(applySnap(50 - SNAP_TOLERANCE, 50)).toBe(50);
+  });
+
+  it("não gruda fora da tolerância", () => {
+    expect(applySnap(46, 50)).toBe(46);
+    expect(applySnap(55, 50)).toBe(55);
+  });
+
+  it("sem ponto magnético só arredonda", () => {
+    expect(applySnap(33.333, null)).toBe(33.33);
   });
 });

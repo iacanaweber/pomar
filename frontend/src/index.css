@@ -26,6 +26,7 @@
   --err-border: #f5c6cb;
   --err-ink: #8a1c1c;
   --tip-bg: #1c2419;
+  --thumb: 22px;  /* polegar do slider — a marca magnética se alinha por ele */
   /* Azul semântico: estado "abaixo de 100%" (o âmbar já é "atenção" e o vermelho, erro). */
   --info: #2a78d6;
   --info-ink: #1a5fb4;
@@ -300,8 +301,6 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .advanced input { padding: 8px 10px; border: 2px solid var(--line); border-radius: 8px; font-size: 16px;
   background: var(--card); color: var(--ink); }
 .note-desc { margin: 0; font-size: 13px; color: var(--muted); }
-.targets-sum { font-size: 12px; color: var(--muted); }
-.targets-sum.warn { color: var(--amber); font-weight: 600; }
 .money { background: var(--card); }
 .money input { background: transparent; color: var(--ink); }
 /* O foco é indicado no BOX (o input interno tem outline:0): com autofocus, a tela
@@ -528,28 +527,37 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .tp-chart-head h2 { margin: 0; }
 .tp-chart-sum { font-size: 12px; }
 .tp-chart-sum.warn { color: var(--danger); font-weight: 600; }
-.tp-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
-.tp-row { display: flex; flex-direction: column; gap: 6px; }
-.tp-row-off { opacity: 0.55; }
-.tp-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-.tp-class { font-weight: 700; font-size: 14px; }
-.tp-class-pct { font-size: 13px; font-variant-numeric: tabular-nums; }
-/* Marca fina sobre trilho recessivo — sem bordas: a separação entre segmentos é um
-   vão de 2px na cor da superfície (gap do flex). */
+/* UMA barra para a carteira inteira. As classes não têm rótulo aqui: distinguem-se pela
+   matiz (os ativos de uma classe são steps da mesma cor) e pelo respiro maior na virada.
+   Marca fina sobre trilho recessivo — sem bordas: o que separa os segmentos é um vão de
+   2px na cor da superfície (gap do flex). */
 .tp-track { height: 22px; background: var(--track); border-radius: 4px; overflow: hidden; }
-.tp-fill { height: 100%; display: flex; gap: 2px; border-radius: 4px; }
+.tp-bar { height: 100%; display: flex; gap: 2px; }
 .tp-seg { flex-basis: 0; min-width: 2px; border-radius: 2px; }
-.tp-seg:first-child { border-radius: 4px 2px 2px 4px; }
-.tp-seg:last-child { border-radius: 2px 4px 4px 2px; }
+/* virada de classe: 2px do gap + 2px daqui = 4px, o suficiente para agrupar sem legenda */
+.tp-bar > .tp-seg-class:not(:first-child) { margin-left: 2px; }
+.tp-bar > .tp-seg:first-child { border-radius: 4px 2px 2px 4px; }
+.tp-bar > .tp-seg:last-child { border-radius: 2px 4px 4px 2px; }
+/* a sobra não é um segmento: é o trilho aparecendo, e isso É a informação */
+.tp-seg-empty { background: transparent; min-width: 0; }
+
+/* Legenda agrupada por classe — é aqui que os nomes vivem, e ela também é a table view */
+.tp-classes { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;
+  gap: 12px; }
+.tp-class-item { display: flex; flex-direction: column; gap: 4px; }
+.tp-class-off { opacity: 0.55; }
+.tp-class-head { display: flex; align-items: baseline; gap: 6px; }
+.tp-class-name { font-weight: 700; font-size: 14px; }
+.tp-class-pct { font-size: 13px; font-variant-numeric: tabular-nums; margin-left: auto; }
+.tp-class-warn { font-size: 11px; color: var(--danger); }
 /* A lista É a legenda e a tabela: todo valor é legível sem depender de hover, e ela
    dá o "relevo" exigido para as matizes de menor contraste sobre o card claro. */
-.tp-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap;
+.tp-legend { list-style: none; margin: 0; padding: 0 0 0 16px; display: flex; flex-wrap: wrap;
   gap: 4px 14px; font-size: 12px; }
 .tp-legend li { display: flex; align-items: center; gap: 5px; }
 .tp-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
 .tp-legend-ticker { font-weight: 600; }
 .tp-legend-pct { color: var(--muted); font-variant-numeric: tabular-nums; }
-.tp-row-warn { font-size: 11px; color: var(--danger); }
 .tp-note { font-size: 12px; margin: 0; }
 
 /* Editor de pesos: ticker · slider · campo */
@@ -563,15 +571,16 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 
 /* O polegar nativo ignora accent-color em parte dos navegadores: estilizado à mão nos
    dois motores, com área de toque de 44px via padding vertical no próprio input. */
+.weight-slider-wrap { position: relative; display: flex; align-items: center; }
 .weight-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 44px;
   background: transparent; cursor: pointer; }
 .weight-slider::-webkit-slider-runnable-track { height: 6px; border-radius: 999px;
   background: var(--track); }
 .weight-slider::-moz-range-track { height: 6px; border-radius: 999px; background: var(--track); }
 .weight-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
-  width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: var(--green);
+  width: var(--thumb); height: var(--thumb); margin-top: -8px; border-radius: 50%; background: var(--green);
   border: 2px solid var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
-.weight-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%;
+.weight-slider::-moz-range-thumb { width: var(--thumb); height: var(--thumb); border-radius: 50%;
   background: var(--green); border: 2px solid var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
 .weight-slider.sum-over::-webkit-slider-thumb { background: var(--danger); }
 .weight-slider.sum-over::-moz-range-thumb { background: var(--danger); }
@@ -595,3 +604,11 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 @media (min-width: 640px) {
   .weight-row { grid-template-columns: 96px 1fr 88px auto auto; }
 }
+
+/* Ponto magnético: onde o slider precisa parar para a soma fechar 100%. O desconto da
+   largura do polegar é o que faz a marca coincidir com o CENTRO dele também nas pontas. */
+.weight-snap { position: absolute; top: 50%; width: 3px; height: 16px; margin-top: -8px;
+  margin-left: -1.5px; border-radius: 2px; background: var(--muted);
+  box-shadow: 0 0 0 1px var(--card); pointer-events: none; }
+.weight-snap.sum-over { background: var(--danger); }
+.weight-snap.sum-under { background: var(--info); }

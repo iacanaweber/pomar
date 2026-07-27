@@ -77,6 +77,40 @@ export function fromCurrentValues(positions: { ticker: string; value: number }[]
   return absorbDrift(rows);
 }
 
+/** Distância (em p.p.) dentro da qual o slider é atraído para o ponto que fecha 100%. */
+export const SNAP_TOLERANCE = 2.5;
+
+/** Valor que o slider `index` precisa ter para a soma fechar 100% — ou `null` quando não
+ *  há ponto a mostrar.
+ *
+ *  É `100 − Σ(todos os outros)`, e não `pct_i + (100 − soma)`: as duas contas dão o mesmo
+ *  número, mas só a primeira deixa evidente que o alvo **não depende de `pct_i`**. É por
+ *  isso que a marca fica parada enquanto o usuário arrasta justamente aquele slider — em
+ *  vez de fugir do dedo — e pode servir de destino magnético.
+ *
+ *  `null` em dois casos: a soma já está fechada (nada a corrigir) ou o alvo cai fora de
+ *  0..100 — ex.: soma 150 com um ativo de 10%, em que nem zerando ele a conta fecha.
+ *  Marca inalcançável seria uma promessa falsa.
+ */
+export function snapPointFor(rows: Row[], index: number): number | null {
+  const row = rows[index];
+  if (!row) return null;
+  if (sumState(rows) === "ok") return null;
+  const others = rows.reduce((s, r, i) => (i === index ? s : s + (r.pct || 0)), 0);
+  const target = round2(100 - others);
+  return target < 0 || target > 100 ? null : target;
+}
+
+/** Gruda o valor no ponto magnético quando ele está dentro da tolerância. */
+export function applySnap(
+  value: number,
+  snap: number | null,
+  tolerance: number = SNAP_TOLERANCE,
+): number {
+  if (snap != null && Math.abs(value - snap) <= tolerance) return snap;
+  return round2(value);
+}
+
 /** Fatia do ativo sobre a carteira INTEIRA: meta da classe × peso dele na cesta.
  *
  *  É a conta que responde "20% das minhas ações, e ações são 50% do total, então esta

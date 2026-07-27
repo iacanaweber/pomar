@@ -4,10 +4,12 @@ import { usePortfolio, usePreferences, useSavePreferences, useWatchlist } from "
 import { SavedToast } from "../components/SavedToast";
 import { TargetPortfolioChart } from "../components/TargetPortfolioChart";
 import {
+  applySnap,
   distributeEvenly,
   fromCurrentValues,
   round2,
   scaleTo100,
+  snapPointFor,
   sumPct,
   sumState,
   type Row,
@@ -24,12 +26,15 @@ function WeightRow({
   row,
   label,
   state,
+  snap,
   onChange,
   onRemove,
 }: {
   row: Row;
   label: string;
   state: SumState;
+  /** Valor que fecha os 100% neste slider — vira marca visual e destino magnético. */
+  snap: number | null;
   onChange: (pct: number) => void;
   onRemove: () => void;
 }) {
@@ -47,19 +52,36 @@ function WeightRow({
   return (
     <div className="weight-row">
       <span className="weight-ticker">{row.ticker}</span>
-      <input
-        className={`weight-slider ${SUM_CLASS[state]}`}
-        type="range"
-        min={0}
-        max={100}
-        step={0.01}
-        value={row.pct}
-        aria-label={`Peso de ${row.ticker} em ${label}`}
-        onChange={(e) => {
-          setDraft(null);
-          onChange(round2(Number(e.target.value)));
-        }}
-      />
+      <div className="weight-slider-wrap">
+        <input
+          className={`weight-slider ${SUM_CLASS[state]}`}
+          type="range"
+          min={0}
+          max={100}
+          step={0.01}
+          value={row.pct}
+          // a marca é aria-hidden (é decoração visual), então o valor que fecha os 100%
+          // entra aqui — é o rótulo que o leitor de tela realmente anuncia
+          aria-label={
+            snap == null
+              ? `Peso de ${row.ticker} em ${label}`
+              : `Peso de ${row.ticker} em ${label} — fecha 100% em ${fmtPct(snap)}%`
+          }
+          onChange={(e) => {
+            setDraft(null);
+            // gruda no ponto que fecha 100% quando o arraste passa perto dele
+            onChange(applySnap(Number(e.target.value), snap));
+          }}
+        />
+        {snap != null && (
+          <span
+            className={`weight-snap ${SUM_CLASS[state]}`}
+            style={{ left: `calc(${snap} * (100% - var(--thumb)) / 100 + var(--thumb) / 2)` }}
+            title={`Fecha 100% em ${fmtPct(snap)}%`}
+            aria-hidden="true"
+          />
+        )}
+      </div>
       <input
         className="weight-input"
         inputMode="decimal"
@@ -162,6 +184,7 @@ function BasketEditor({
             row={r}
             label={label}
             state={state}
+            snap={snapPointFor(rows, idx)}
             onChange={(pct) => onChange(rows.map((x, i) => (i === idx ? { ...x, pct } : x)))}
             onRemove={() => onChange(rows.filter((_, i) => i !== idx))}
           />

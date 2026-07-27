@@ -30,14 +30,63 @@ interface ClassRow {
   rows: Row[];
 }
 
-/** Distribuição da carteira ALVO: quanto cada classe pesa no total e, dentro dela, quanto
- *  cada ativo representa DO TOTAL (meta da classe × peso na cesta).
+interface Segment {
+  cls: string;
+  ticker: string;
+  sharePct: number;
+  color: string;
+  firstOfClass: boolean;
+}
+
+interface ClassView {
+  cls: string;
+  classPct: number;
+  rows: Row[];
+  basketSum: number;
+  colors: string[];
+  motivo: string | null;
+}
+
+/** Distribuição da carteira ALVO numa barra só: os 100% da carteira em uma linha, cada
+ *  ativo ocupando a fatia que ele representa DO TOTAL (meta da classe × peso na cesta).
  *
- *  Todas as barras dividem o mesmo trilho de 100% = a carteira inteira, então dá para
- *  comparar classes a olho: metade do trilho é metade da carteira. */
+ *  As classes não têm rótulo na barra — elas se distinguem pela matiz (todos os ativos de
+ *  uma classe são steps da mesma cor) e por um respiro maior na virada. Os nomes vivem na
+ *  legenda, que também é a "table view": todo valor é legível sem depender de hover.
+ */
 export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
   const totalMeta = classes.reduce((s, c) => s + c.classPct, 0);
-  const configured = classes.filter((c) => c.classPct > 0 && c.rows.length > 0);
+
+  const views: ClassView[] = INVESTABLE_CLASSES.map((cls) => {
+    const item = classes.find((c) => c.cls === cls);
+    const classPct = item?.classPct ?? 0;
+    // maior peso primeiro: a rampa de cor fica monotônica com a magnitude
+    const rows = [...(item?.rows ?? [])].sort((a, b) => b.pct - a.pct);
+    return {
+      cls,
+      classPct,
+      rows,
+      basketSum: sumPct(rows),
+      colors: rows.map((_, i) => step(CLASS_HUE[cls], i, rows.length)),
+      motivo: classPct <= 0 ? "meta 0%" : rows.length === 0 ? "sem composição" : null,
+    };
+  });
+
+  const segments: Segment[] = views.flatMap((v) =>
+    v.motivo
+      ? []
+      : v.rows.map((r, i) => ({
+          cls: v.cls,
+          ticker: r.ticker,
+          sharePct: shareOfTotal(v.classPct, r.pct),
+          color: v.colors[i],
+          firstOfClass: i === 0,
+        })),
+  );
+
+  const allocated = segments.reduce((s, x) => s + x.sharePct, 0);
+  // o que sobra do trilho é informação: essa fatia da carteira não está alocada
+  const unallocated = Math.max(0, 100 - allocated);
 
   return (
     <section className="card tp-chart">
@@ -48,77 +97,66 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
         </span>
       </div>
 
-      {configured.length === 0 ? (
+      {segments.length === 0 ? (
         <p className="muted">
           Defina as metas por classe e a composição de cada uma para ver a distribuição.
         </p>
       ) : (
-        <ul className="tp-rows">
-          {INVESTABLE_CLASSES.map((cls) => {
-            const item = classes.find((c) => c.cls === cls);
-            const classPct = item?.classPct ?? 0;
-            // maior peso primeiro: a rampa de cor fica monotônica com a magnitude
-            const rows = [...(item?.rows ?? [])].sort((a, b) => b.pct - a.pct);
-            const basketSum = sumPct(rows);
-            const hue = CLASS_HUE[cls];
-            const motivo =
-              classPct <= 0 ? "meta 0%" : rows.length === 0 ? "sem composição" : null;
+        <>
+          <div
+            className="tp-track"
+            role="img"
+            aria-label={`Carteira alvo: ${views
+              .filter((v) => !v.motivo)
+              .map((v) => `${CLASS_LABEL[v.cls]} ${fmt(v.classPct)}`)
+              .join(", ")}${unallocated > 0.05 ? `, ${fmt(unallocated)} sem alocação` : ""}`}
+          >
+            <div className="tp-bar">
+              {segments.map((s) => (
+                <span
+                  key={`${s.cls}-${s.ticker}`}
+                  className={`tp-seg ${s.firstOfClass ? "tp-seg-class" : ""}`}
+                  style={{ flexGrow: Math.max(s.sharePct, 0.01), background: s.color }}
+                  title={`${s.ticker} · ${CLASS_LABEL[s.cls]}: ${fmt(s.sharePct)} do total`}
+                />
+              ))}
+              {unallocated > 0.05 && (
+                <span className="tp-seg tp-seg-empty" style={{ flexGrow: unallocated }} />
+              )}
+            </div>
+          </div>
 
-            return (
-              <li className={`tp-row ${motivo ? "tp-row-off" : ""}`} key={cls}>
-                <div className="tp-row-head">
-                  <span className="tp-class">{CLASS_LABEL[cls]}</span>
+          <ul className="tp-classes">
+            {views.map((v) => (
+              <li className={`tp-class-item ${v.motivo ? "tp-class-off" : ""}`} key={v.cls}>
+                <div className="tp-class-head">
+                  <span className="tp-dot" style={{ background: CLASS_HUE[v.cls] }} aria-hidden="true" />
+                  <span className="tp-class-name">{CLASS_LABEL[v.cls]}</span>
                   <span className="tp-class-pct">
-                    {motivo ? <span className="muted">{motivo}</span> : `${fmt(classPct)} do total`}
+                    {v.motivo ? <span className="muted">{v.motivo}</span> : `${fmt(v.classPct)} do total`}
                   </span>
                 </div>
-
-                <div
-                  className="tp-track"
-                  role="img"
-                  aria-label={
-                    motivo
-                      ? `${CLASS_LABEL[cls]}: ${motivo}`
-                      : `${CLASS_LABEL[cls]}: ${fmt(classPct)} da carteira, em ${rows.length} ativos`
-                  }
-                >
-                  <div className="tp-fill" style={{ width: `${Math.min(100, classPct)}%` }}>
-                    {rows.map((r, i) => (
-                      <span
-                        key={r.ticker}
-                        className="tp-seg"
-                        style={{ flexGrow: Math.max(r.pct, 0.01), background: step(hue, i, rows.length) }}
-                        title={`${r.ticker}: ${fmt(shareOfTotal(classPct, r.pct))} do total (${fmt(r.pct)} de ${CLASS_LABEL[cls]})`}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                {rows.length > 0 && (
+                {v.rows.length > 0 && (
                   <ul className="tp-legend">
-                    {rows.map((r, i) => (
+                    {v.rows.map((r, i) => (
                       <li key={r.ticker}>
-                        <span
-                          className="tp-dot"
-                          style={{ background: step(hue, i, rows.length) }}
-                          aria-hidden="true"
-                        />
+                        <span className="tp-dot" style={{ background: v.colors[i] }} aria-hidden="true" />
                         <span className="tp-legend-ticker">{r.ticker}</span>
-                        <span className="tp-legend-pct">{fmt(shareOfTotal(classPct, r.pct))}</span>
+                        <span className="tp-legend-pct">{fmt(shareOfTotal(v.classPct, r.pct))}</span>
                       </li>
                     ))}
                   </ul>
                 )}
-                {rows.length > 0 && Math.abs(basketSum - 100) > 0.1 && (
-                  <span className="tp-row-warn">
-                    composição soma {fmt(basketSum)} — as fatias acima estão proporcionais, mas
-                    o valor real só fecha em 100%
+                {v.rows.length > 0 && Math.abs(v.basketSum - 100) > 0.1 && (
+                  <span className="tp-class-warn">
+                    composição soma {fmt(v.basketSum)} — as fatias estão proporcionais, mas o
+                    valor real só fecha em 100%
                   </span>
                 )}
               </li>
-            );
-          })}
-        </ul>
+            ))}
+          </ul>
+        </>
       )}
       <p className="muted tp-note">
         A % de cada ativo é sobre a carteira INTEIRA: meta da classe × peso dele na classe.
