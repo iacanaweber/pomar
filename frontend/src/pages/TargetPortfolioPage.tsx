@@ -1,42 +1,112 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { usePortfolio, usePreferences, useSavePreferences, useWatchlist } from "../api/queries";
 import { SavedToast } from "../components/SavedToast";
+import { TargetPortfolioChart } from "../components/TargetPortfolioChart";
+import {
+  distributeEvenly,
+  fromCurrentValues,
+  round2,
+  scaleTo100,
+  sumPct,
+  sumState,
+  type Row,
+  type SumState,
+} from "../lib/basket";
 import { CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
-import type { Preferences } from "../types";
+import { parseBRL } from "../lib/format";
 
-/** Percentuais com 2 casas: a composição é fina (22,08% e não "22%"). */
-const toPct = (weight: number) => Math.round(weight * 10000) / 100;
-const sumPct = (rows: Row[]) => rows.reduce((s, r) => s + (r.pct || 0), 0);
-// Mesma tolerância do backend (0,1 p.p.): fora disso o PUT volta 422.
-const sumOk = (rows: Row[]) => Math.abs(sumPct(rows) - 100) <= 0.1;
+const fmtPct = (n: number) => n.toFixed(2).replace(".", ",");
+const SUM_CLASS: Record<SumState, string> = { over: "sum-over", under: "sum-under", ok: "sum-ok" };
 
-interface Row {
-  ticker: string;
-  pct: number;
+/** Uma linha do editor: ticker, slider e campo — os três amarrados ao mesmo peso. */
+function WeightRow({
+  row,
+  label,
+  state,
+  onChange,
+  onRemove,
+}: {
+  row: Row;
+  label: string;
+  state: SumState;
+  onChange: (pct: number) => void;
+  onRemove: () => void;
+}) {
+  // O campo tem estado próprio enquanto está sendo digitado: normalizar a cada tecla
+  // impediria de apagar para redigitar ("2" → "" → "21,23").
+  const [draft, setDraft] = useState<string | null>(null);
+  const shown = draft ?? fmtPct(row.pct);
+
+  const commit = (text: string) => {
+    const n = parseBRL(text);
+    onChange(Number.isFinite(n) ? Math.min(100, Math.max(0, round2(n))) : 0);
+    setDraft(null);
+  };
+
+  return (
+    <div className="weight-row">
+      <span className="weight-ticker">{row.ticker}</span>
+      <input
+        className={`weight-slider ${SUM_CLASS[state]}`}
+        type="range"
+        min={0}
+        max={100}
+        step={0.01}
+        value={row.pct}
+        aria-label={`Peso de ${row.ticker} em ${label}`}
+        onChange={(e) => {
+          setDraft(null);
+          onChange(round2(Number(e.target.value)));
+        }}
+      />
+      <input
+        className="weight-input"
+        inputMode="decimal"
+        value={shown}
+        aria-label={`Peso de ${row.ticker} em ${label}, em porcento`}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={(e) => commit(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commit((e.target as HTMLInputElement).value);
+          }
+        }}
+      />
+      <span className="muted">%</span>
+      <button
+        type="button"
+        className="link-button weight-remove"
+        aria-label={`Remover ${row.ticker} da carteira alvo de ${label}`}
+        onClick={onRemove}
+      >
+        ✕
+      </button>
+    </div>
+  );
 }
 
-/** Editor da composição de UMA classe: quais ativos e com que peso, somando 100%. */
+/** Editor da composição de UMA classe. Controlado: o rascunho vive na página, porque o
+ *  gráfico do topo precisa refletir a edição ANTES de salvar. */
 function BasketEditor({
   cls,
-  preferences,
+  rows,
+  saved,
+  onChange,
   onSaved,
 }: {
   cls: string;
-  preferences?: Preferences;
+  rows: Row[];
+  saved: Record<string, number>;
+  onChange: (rows: Row[]) => void;
   onSaved: () => void;
 }) {
   const watchlist = useWatchlist();
   const portfolio = usePortfolio();
   const savePrefs = useSavePreferences();
-  const [rows, setRows] = useState<Row[]>([]);
+  const preferences = usePreferences();
   const [newTicker, setNewTicker] = useState("");
-
-  const saved = useMemo(() => preferences?.class_targets?.[cls] ?? {}, [preferences, cls]);
-
-  useEffect(() => {
-    setRows(Object.entries(saved).map(([t, w]) => ({ ticker: t, pct: toPct(w) })));
-  }, [saved]);
 
   const label = CLASS_LABEL[cls] ?? cls;
   const suggestions = (watchlist.data?.items ?? [])
@@ -44,88 +114,57 @@ function BasketEditor({
     .map((i) => i.ticker)
     .filter((t) => !rows.some((r) => r.ticker === t));
 
-  const addRow = () => {
-    const t = newTicker.trim().toUpperCase();
-    if (!t || rows.some((r) => r.ticker === t)) return;
-    setRows((rs) => [...rs, { ticker: t, pct: 0 }]);
-    setNewTicker("");
-  };
-
-  /** Semeia a composição com os pesos ATUAIS da carteira — ponto de partida honesto
-   *  para quem já investe: começa de onde está e ajusta, em vez de digitar do zero. */
-  const seedFromPortfolio = () => {
-    const positions = (portfolio.data?.positions ?? []).filter((p) => p.asset_class === cls);
-    const total = positions.reduce((s, p) => s + p.value, 0);
-    if (!positions.length || total <= 0) return;
-    const seeded = positions
-      .map((p) => ({ ticker: p.ticker, pct: toPct(p.value / total) }))
-      .sort((a, b) => b.pct - a.pct);
-    // o arredondamento a 2 casas quase nunca fecha 100: a diferença vai para o maior peso
-    const drift = Math.round((100 - sumPct(seeded)) * 100) / 100;
-    if (seeded.length) seeded[0].pct = Math.round((seeded[0].pct + drift) * 100) / 100;
-    setRows(seeded);
-  };
-
-  const distributeEvenly = () => {
-    if (!rows.length) return;
-    const even = Math.floor((100 / rows.length) * 100) / 100;
-    const next = rows.map((r) => ({ ...r, pct: even }));
-    next[0].pct = Math.round((next[0].pct + (100 - even * rows.length)) * 100) / 100;
-    setRows(next);
-  };
-
-  const save = () => {
-    const basket = Object.fromEntries(
-      rows
-        .filter((r) => r.ticker.trim())
-        .map((r) => [r.ticker.trim().toUpperCase(), (r.pct || 0) / 100]),
-    );
-    savePrefs.mutate(
-      { class_targets: { ...(preferences?.class_targets ?? {}), [cls]: basket } },
-      { onSuccess: onSaved },
-    );
-  };
-
-  const total = Math.round(sumPct(rows) * 100) / 100;
-  const ok = sumOk(rows);
+  const total = sumPct(rows);
+  const state = sumState(rows);
+  const ok = state === "ok";
   const dirty =
     rows.length !== Object.keys(saved).length ||
     rows.some((r) => Math.abs((saved[r.ticker] ?? -1) * 100 - r.pct) > 0.001);
 
+  const addRow = () => {
+    const t = newTicker.trim().toUpperCase();
+    if (!t || rows.some((r) => r.ticker === t)) return;
+    onChange([...rows, { ticker: t, pct: 0 }]); // entra com 0%: o peso é decisão consciente
+    setNewTicker("");
+  };
+
+  /** Semeia a composição com os pesos ATUAIS da carteira — ponto de partida honesto para
+   *  quem já investe: começa de onde está e ajusta, em vez de digitar do zero. */
+  const seedFromPortfolio = () => {
+    const positions = (portfolio.data?.positions ?? [])
+      .filter((p) => p.asset_class === cls)
+      .map((p) => ({ ticker: p.ticker, value: p.value }));
+    const seeded = fromCurrentValues(positions);
+    if (seeded.length) onChange(seeded);
+  };
+
+  const save = () => {
+    const basket = Object.fromEntries(
+      rows.filter((r) => r.ticker.trim()).map((r) => [r.ticker, (r.pct || 0) / 100]),
+    );
+    savePrefs.mutate(
+      { class_targets: { ...(preferences.data?.class_targets ?? {}), [cls]: basket } },
+      { onSuccess: onSaved },
+    );
+  };
+
   return (
     <div className="basket-editor-body">
       <p className="muted">
-        O peso é dentro de {label}, não da carteira inteira: some 100% aqui e a fatia de{" "}
-        {label} continua sendo a meta da classe.
+        O peso é dentro de {label}: some 100% aqui e a fatia de {label} continua sendo a meta
+        da classe. O gráfico no topo mostra quanto isso vale sobre a carteira inteira.
       </p>
 
       <div className="basket-rows">
         {rows.map((r, idx) => (
-          <div className="basket-row" key={r.ticker}>
-            <span className="card-ticker">{r.ticker}</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              step={0.01}
-              value={r.pct}
-              aria-label={`Peso de ${r.ticker} em ${label} (%)`}
-              onChange={(e) =>
-                setRows((rs) =>
-                  rs.map((x, i) => (i === idx ? { ...x, pct: Number(e.target.value) } : x)),
-                )
-              }
-            />
-            <span className="muted">%</span>
-            <button
-              type="button"
-              className="link-button"
-              aria-label={`Remover ${r.ticker} da carteira alvo de ${label}`}
-              onClick={() => setRows((rs) => rs.filter((_, i) => i !== idx))}
-            >
-              ✕
-            </button>
-          </div>
+          <WeightRow
+            key={r.ticker}
+            row={r}
+            label={label}
+            state={state}
+            onChange={(pct) => onChange(rows.map((x, i) => (i === idx ? { ...x, pct } : x)))}
+            onRemove={() => onChange(rows.filter((_, i) => i !== idx))}
+          />
         ))}
         {rows.length === 0 && (
           <p className="muted">Nenhum ativo ainda — adicione o primeiro abaixo.</p>
@@ -156,6 +195,24 @@ function BasketEditor({
         </button>
       </div>
 
+      {rows.length > 0 && (
+        <div className={`basket-sum ${SUM_CLASS[state]}`}>
+          <span className="basket-sum-value">soma: {fmtPct(total)}%</span>
+          <span className="basket-sum-note">
+            {state === "ok"
+              ? "✓ fechado"
+              : state === "over"
+                ? `passou ${fmtPct(round2(total - 100))} p.p. — precisa fechar em 100%`
+                : `faltam ${fmtPct(round2(100 - total))} p.p. — precisa fechar em 100%`}
+          </span>
+          {!ok && (
+            <button type="button" className="link-button" onClick={() => onChange(scaleTo100(rows))}>
+              ⚖️ Ajustar para 100%
+            </button>
+          )}
+        </div>
+      )}
+
       <div className="basket-tools">
         <button type="button" className="link-button" onClick={seedFromPortfolio}>
           📥 Usar pesos atuais da carteira
@@ -163,18 +220,12 @@ function BasketEditor({
         <button
           type="button"
           className="link-button"
-          onClick={distributeEvenly}
+          onClick={() => onChange(distributeEvenly(rows))}
           disabled={rows.length === 0}
         >
           ⚖️ Dividir igualmente
         </button>
       </div>
-
-      {rows.length > 0 && (
-        <span className={`targets-sum ${ok ? "" : "warn"}`}>
-          soma: {total}% {ok ? "✓" : "(deveria ser 100%)"}
-        </span>
-      )}
 
       <button
         type="button"
@@ -194,26 +245,18 @@ function BasketEditor({
 
 /** Metas de alocação POR CLASSE (a fatia de cada tipo na carteira inteira). */
 function ClassTargetsEditor({
-  preferences,
+  pct,
+  onChange,
   onSaved,
 }: {
-  preferences?: Preferences;
+  pct: Record<string, number>;
+  onChange: (pct: Record<string, number>) => void;
   onSaved: () => void;
 }) {
   const savePrefs = useSavePreferences();
-  const [pct, setPct] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    if (!preferences) return;
-    setPct(
-      Object.fromEntries(
-        INVESTABLE_CLASSES.map((c) => [c, Math.round((preferences.targets?.[c] ?? 0) * 100)]),
-      ),
-    );
-  }, [preferences]);
-
-  const total = Object.values(pct).reduce((s, v) => s + (v || 0), 0);
-  const ok = Math.abs(total - 100) <= 0.5;
+  const rows: Row[] = INVESTABLE_CLASSES.map((c) => ({ ticker: c, pct: pct[c] ?? 0 }));
+  const total = sumPct(rows);
+  const state = sumState(rows);
 
   return (
     <section className="card target-classes">
@@ -230,26 +273,37 @@ function ClassTargetsEditor({
               type="number"
               min={0}
               max={100}
+              step={1}
               value={pct[cls] ?? 0}
-              onChange={(e) => setPct((t) => ({ ...t, [cls]: Number(e.target.value) }))}
+              onChange={(e) => onChange({ ...pct, [cls]: round2(Number(e.target.value)) })}
             />
           </label>
         ))}
       </div>
-      <span className={`targets-sum ${ok ? "" : "warn"}`}>
-        soma: {total}% {ok ? "✓" : "(deveria ser 100%)"}
-      </span>
+      <div className={`basket-sum ${SUM_CLASS[state]}`}>
+        <span className="basket-sum-value">soma: {fmtPct(total)}%</span>
+        <span className="basket-sum-note">
+          {state === "ok" ? "✓ fechado" : "precisa fechar em 100%"}
+        </span>
+        {state !== "ok" && (
+          <button
+            type="button"
+            className="link-button"
+            onClick={() =>
+              onChange(Object.fromEntries(scaleTo100(rows).map((r) => [r.ticker, r.pct])))
+            }
+          >
+            ⚖️ Ajustar para 100%
+          </button>
+        )}
+      </div>
       <button
         type="button"
         className="link-button"
-        disabled={!ok || savePrefs.isPending}
+        disabled={state !== "ok" || savePrefs.isPending}
         onClick={() =>
           savePrefs.mutate(
-            {
-              targets: Object.fromEntries(
-                Object.entries(pct).map(([k, v]) => [k, (v || 0) / 100]),
-              ),
-            },
+            { targets: Object.fromEntries(rows.map((r) => [r.ticker, r.pct / 100])) },
             { onSuccess: onSaved },
           )
         }
@@ -266,14 +320,58 @@ export function TargetPortfolioPage() {
   const [open, setOpen] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
+  // Rascunhos vivem AQUI (e não em cada editor) porque o gráfico do topo precisa mostrar
+  // a edição antes de salvar. `null` = ainda não editado nesta sessão: segue o servidor.
+  const [classPct, setClassPct] = useState<Record<string, number> | null>(null);
+  const [drafts, setDrafts] = useState<Record<string, Row[]>>({});
+
+  const prefs = preferences.data;
+  const savedBaskets = useMemo(() => prefs?.class_targets ?? {}, [prefs]);
+
+  const savedClassPct = useMemo(
+    () =>
+      Object.fromEntries(
+        INVESTABLE_CLASSES.map((c) => [c, round2((prefs?.targets?.[c] ?? 0) * 100)]),
+      ),
+    [prefs],
+  );
+
+  const savedRows = useCallback(
+    (cls: string): Row[] =>
+      Object.entries(savedBaskets[cls] ?? {}).map(([ticker, w]) => ({
+        ticker,
+        pct: round2(w * 100),
+      })),
+    [savedBaskets],
+  );
+
   // Deep-link /alvo#FII abre a classe já expandida (vem dos avisos do plano).
   useEffect(() => {
     const cls = hash.replace("#", "").toUpperCase();
     if (INVESTABLE_CLASSES.includes(cls as never)) setOpen(cls);
   }, [hash]);
 
-  const prefs = preferences.data;
-  const onSaved = () => setSavedAt(Date.now());
+  const effectivePct = classPct ?? savedClassPct;
+  const rowsOf = (cls: string): Row[] => drafts[cls] ?? savedRows(cls);
+
+  /** Depois de salvar, o rascunho daquela classe é descartado: o servidor volta a mandar. */
+  const onSavedClass = (cls?: string) => {
+    setSavedAt(Date.now());
+    if (cls) {
+      setDrafts((d) => {
+        const { [cls]: _discarded, ...rest } = d;
+        return rest;
+      });
+    } else {
+      setClassPct(null);
+    }
+  };
+
+  const chartData = INVESTABLE_CLASSES.map((cls) => ({
+    cls,
+    classPct: effectivePct[cls] ?? 0,
+    rows: rowsOf(cls),
+  }));
 
   return (
     <main className="page">
@@ -288,15 +386,22 @@ export function TargetPortfolioPage() {
 
       {prefs && (
         <>
-          <ClassTargetsEditor preferences={prefs} onSaved={onSaved} />
+          <TargetPortfolioChart classes={chartData} />
+
+          <ClassTargetsEditor
+            pct={effectivePct}
+            onChange={setClassPct}
+            onSaved={() => onSavedClass()}
+          />
 
           <h2 className="section-title">Composição de cada classe</h2>
           <ul className="cards">
             {INVESTABLE_CLASSES.map((cls) => {
-              const basket = prefs.class_targets?.[cls] ?? {};
-              const n = Object.keys(basket).length;
-              const sum = Object.values(basket).reduce((s, w) => s + w, 0);
+              const rows = rowsOf(cls);
+              const n = rows.length;
+              const sum = sumPct(rows);
               const isOpen = open === cls;
+              const closed = Math.abs(sum - 100) <= 0.1;
               return (
                 <li className="card" key={cls} id={cls}>
                   <button
@@ -308,14 +413,21 @@ export function TargetPortfolioPage() {
                       <span className="card-ticker">{CLASS_LABEL[cls]}</span>
                       <span className="card-name">
                         {n > 0
-                          ? `${n} ativo${n > 1 ? "s" : ""} · soma ${Math.round(sum * 10000) / 100}%` +
-                            (Math.abs(sum - 1) <= 0.001 ? " ✓" : " ⚠")
+                          ? `${n} ativo${n > 1 ? "s" : ""} · soma ${fmtPct(sum)}%${closed ? " ✓" : " ⚠"}`
                           : "sem composição"}
                       </span>
                     </span>
                     <span className="card-toggle">{isOpen ? "▲" : "▼"}</span>
                   </button>
-                  {isOpen && <BasketEditor cls={cls} preferences={prefs} onSaved={onSaved} />}
+                  {isOpen && (
+                    <BasketEditor
+                      cls={cls}
+                      rows={rows}
+                      saved={savedBaskets[cls] ?? {}}
+                      onChange={(next) => setDrafts((d) => ({ ...d, [cls]: next }))}
+                      onSaved={() => onSavedClass(cls)}
+                    />
+                  )}
                 </li>
               );
             })}

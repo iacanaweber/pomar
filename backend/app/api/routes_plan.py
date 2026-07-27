@@ -99,15 +99,20 @@ async def plan(req: PlanRequest) -> PlanResponse:
             allocations=Allocations(),
         )
 
-    targets = req.targets or settings.default_targets
     prefs = await preferences_repo.get(get_db(), settings)
+    # As metas por classe vêm das preferências (a UI as edita na Carteira alvo); o request
+    # só as sobrepõe quando manda explicitamente. Cair direto no default do Settings fazia
+    # o plano dividir o dinheiro por uma meta que o usuário nunca escolheu.
+    targets = req.targets or prefs.get("targets") or settings.default_targets
 
     # 2) classes marcadas × classes que têm composição definida. Sem composição não há o
     # que rebalancear: a classe é pulada com aviso (e o aporte vai para as demais).
+    # Classe com meta 0% não conta como "faltando composição" — ela simplesmente não faz
+    # parte da carteira alvo, e cobrar uma cesta dela seria ruído.
     selected = list(req.classes or INVESTABLE_CLASSES)
     all_baskets = prefs.get("class_targets") or {}
     baskets = {c: b for c, b in all_baskets.items() if b and c in selected}
-    skipped = [c for c in selected if c not in baskets]
+    skipped = [c for c in selected if c not in baskets and targets.get(c, 0.0) > 0]
     if not baskets:
         raise HTTPException(
             status_code=422,

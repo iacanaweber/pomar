@@ -26,6 +26,16 @@
   --err-border: #f5c6cb;
   --err-ink: #8a1c1c;
   --tip-bg: #1c2419;
+  /* Azul semântico: estado "abaixo de 100%" (o âmbar já é "atenção" e o vermelho, erro). */
+  --info: #2a78d6;
+  --info-ink: #1a5fb4;
+  /* Paleta dos gráficos da carteira alvo — uma matiz por CLASSE, ordem fixa.
+     Steps validados (skill dataviz, lista de pares adjacentes) para as duas superfícies
+     de card do app. Alterar aqui exige rodar o validador de paleta de novo. */
+  --viz-stock: #2a78d6;
+  --viz-fii: #eb6834;
+  --viz-etf: #1baf7a;
+  --viz-bdr: #4a3aa7;
 }
 
 /* Dark mode: escolha manual ([data-theme="dark"]) ou preferência do sistema. */
@@ -56,6 +66,12 @@
   --err-border: #5a2421;
   --err-ink: #f5b7b1;
   --tip-bg: #0c120a;
+  --info: #3987e5;
+  --info-ink: #8ab8f2;
+  --viz-stock: #3987e5;
+  --viz-fii: #d95926;
+  --viz-etf: #199e70;
+  --viz-bdr: #9085e9;
 }
 
 * { box-sizing: border-box; }
@@ -499,3 +515,83 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .basket-editor-body p { margin: 0; font-size: 13px; }
 .basket-editor-body .primary { width: auto; align-self: flex-start; }
 .basket-tools { display: flex; flex-wrap: wrap; gap: 12px; }
+
+/* ===== Carteira alvo: gráfico de distribuição + editor de pesos ===== */
+
+.field-hint { font-size: 12px; }
+
+/* Gráfico: todas as barras dividem o MESMO trilho de 100% (a carteira inteira), então
+   metade do trilho é metade da carteira — classes comparáveis a olho. */
+.tp-chart { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.tp-chart-head { display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; flex-wrap: wrap; }
+.tp-chart-head h2 { margin: 0; }
+.tp-chart-sum { font-size: 12px; }
+.tp-chart-sum.warn { color: var(--danger); font-weight: 600; }
+.tp-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.tp-row { display: flex; flex-direction: column; gap: 6px; }
+.tp-row-off { opacity: 0.55; }
+.tp-row-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.tp-class { font-weight: 700; font-size: 14px; }
+.tp-class-pct { font-size: 13px; font-variant-numeric: tabular-nums; }
+/* Marca fina sobre trilho recessivo — sem bordas: a separação entre segmentos é um
+   vão de 2px na cor da superfície (gap do flex). */
+.tp-track { height: 22px; background: var(--track); border-radius: 4px; overflow: hidden; }
+.tp-fill { height: 100%; display: flex; gap: 2px; border-radius: 4px; }
+.tp-seg { flex-basis: 0; min-width: 2px; border-radius: 2px; }
+.tp-seg:first-child { border-radius: 4px 2px 2px 4px; }
+.tp-seg:last-child { border-radius: 2px 4px 4px 2px; }
+/* A lista É a legenda e a tabela: todo valor é legível sem depender de hover, e ela
+   dá o "relevo" exigido para as matizes de menor contraste sobre o card claro. */
+.tp-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap;
+  gap: 4px 14px; font-size: 12px; }
+.tp-legend li { display: flex; align-items: center; gap: 5px; }
+.tp-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+.tp-legend-ticker { font-weight: 600; }
+.tp-legend-pct { color: var(--muted); font-variant-numeric: tabular-nums; }
+.tp-row-warn { font-size: 11px; color: var(--danger); }
+.tp-note { font-size: 12px; margin: 0; }
+
+/* Editor de pesos: ticker · slider · campo */
+.weight-row { display: grid; grid-template-columns: 76px 1fr 72px auto auto;
+  align-items: center; gap: 8px; }
+.weight-ticker { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+.weight-input { width: 100%; padding: 8px; border: 2px solid var(--line); border-radius: 10px;
+  background: var(--card); color: var(--ink); font-size: 16px; text-align: right;
+  font-variant-numeric: tabular-nums; }
+.weight-remove { min-width: 32px; text-align: center; padding: 0 4px; }
+
+/* O polegar nativo ignora accent-color em parte dos navegadores: estilizado à mão nos
+   dois motores, com área de toque de 44px via padding vertical no próprio input. */
+.weight-slider { -webkit-appearance: none; appearance: none; width: 100%; height: 44px;
+  background: transparent; cursor: pointer; }
+.weight-slider::-webkit-slider-runnable-track { height: 6px; border-radius: 999px;
+  background: var(--track); }
+.weight-slider::-moz-range-track { height: 6px; border-radius: 999px; background: var(--track); }
+.weight-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none;
+  width: 22px; height: 22px; margin-top: -8px; border-radius: 50%; background: var(--green);
+  border: 2px solid var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.weight-slider::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%;
+  background: var(--green); border: 2px solid var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.3); }
+.weight-slider.sum-over::-webkit-slider-thumb { background: var(--danger); }
+.weight-slider.sum-over::-moz-range-thumb { background: var(--danger); }
+.weight-slider.sum-under::-webkit-slider-thumb { background: var(--info); }
+.weight-slider.sum-under::-moz-range-thumb { background: var(--info); }
+
+/* Estado da soma: a cor acompanha, mas quem informa é o texto ("passou 3,40 p.p."). */
+.basket-sum { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+  padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line);
+  background: var(--surface-soft); font-size: 13px; }
+.basket-sum-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.basket-sum-note { color: var(--muted); }
+.basket-sum .link-button { margin-left: auto; padding: 0; min-height: 0; }
+.basket-sum.sum-ok { border-color: var(--leaf); }
+.basket-sum.sum-ok .basket-sum-value { color: var(--green); }
+.basket-sum.sum-over { border-color: var(--danger); background: var(--err-bg); }
+.basket-sum.sum-over .basket-sum-value, .basket-sum.sum-over .basket-sum-note { color: var(--err-ink); }
+.basket-sum.sum-under { border-color: var(--info); }
+.basket-sum.sum-under .basket-sum-value, .basket-sum.sum-under .basket-sum-note { color: var(--info-ink); }
+
+@media (min-width: 640px) {
+  .weight-row { grid-template-columns: 96px 1fr 88px auto auto; }
+}

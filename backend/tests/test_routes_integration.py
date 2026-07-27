@@ -324,3 +324,53 @@ def test_asset_starved_by_class_says_so(authed_client, monkeypatch):
     assert not any("No alvo ou acima" in x for x in bbb["reasons"])
     ccc = next(x for x in r["ranking"] if x["ticker"] == "CCC11")
     assert ccc["suggested"]["invested_exact"] == 500.0
+
+
+def test_plan_uses_saved_class_targets(authed_client, monkeypatch):
+    """As metas por classe salvas nas preferências mandam no orçamento do plano.
+
+    Regressão: o plano lia `req.targets or settings.default_targets` e ignorava as
+    preferências — como a UI parou de enviar `targets`, todo aporte era dividido pelo
+    default hardcoded assim que a meta salva divergia dele.
+    """
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "FII": 0.3, "ETF": 0.2, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "FII": {"CCC11": 1.0}},
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0), _asset("CCC11", "FII", 10.0)])
+
+    r = c.post("/api/plan", json={"aporte": 1000.0, "min_ticket": 10.0}).json()
+    assert r["targets_by_class"] == {"STOCK": 0.5, "FII": 0.3, "ETF": 0.2, "BDR": 0.0}
+    # e o dinheiro segue a meta salva: carteira vazia, needs 500 (STOCK) e 300 (FII) -> 5:3
+    aaa = next(x for x in r["ranking"] if x["ticker"] == "AAA3")["suggested"]
+    ccc = next(x for x in r["ranking"] if x["ticker"] == "CCC11")["suggested"]
+    assert abs(aaa["invested_exact"] - 625.0) < 15.0   # 1000 × 5/8
+    assert abs(ccc["invested_exact"] - 375.0) < 15.0   # 1000 × 3/8
+
+
+def test_request_targets_still_override_preferences(authed_client, monkeypatch):
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "FII": 0.5},
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+    r = c.post("/api/plan", json={
+        "aporte": 100.0, "min_ticket": 10.0, "targets": {"STOCK": 1.0},
+    }).json()
+    assert r["targets_by_class"] == {"STOCK": 1.0}
+
+
+def test_zero_target_class_gets_no_missing_composition_warning(authed_client, monkeypatch):
+    """BDR com meta 0% não está 'faltando composição' — não faz parte da carteira alvo."""
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.6, "FII": 0.4, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+    r = c.post("/api/plan", json={"aporte": 100.0, "min_ticket": 10.0}).json()
+    assert r["classes_skipped"] == ["FII"]  # FII tem meta 40% e nenhuma cesta: avisa
+    assert not any("BDR" in w for w in r["warnings"])
+    assert not any("ETF" in w for w in r["warnings"])

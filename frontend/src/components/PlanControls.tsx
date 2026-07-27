@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import type { PlanRequest, Preferences } from "../types";
 import { useSavePreferences } from "../api/queries";
 import { CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
-import { parseBRL } from "../lib/format";
+import { money, parseBRL } from "../lib/format";
 import { SavedToast } from "./SavedToast";
 import { Tooltip } from "./Tooltip";
 
@@ -12,6 +12,9 @@ interface Props {
   loading: boolean;
   onSubmit: (req: PlanRequest) => void;
 }
+
+/** Aporte assumido quando o campo fica vazio — só para VER as recomendações. */
+const APORTE_PADRAO = 2000;
 
 export function PlanControls({ preferences, loading, onSubmit }: Props) {
   const [aporte, setAporte] = useState("");
@@ -36,6 +39,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferences]);
 
+  const blank = aporte.trim() === "";
   const baskets = preferences?.class_targets ?? {};
   const targets = preferences?.targets ?? {};
   const sizeOf = (cls: string) => Object.keys(baskets[cls] ?? {}).length;
@@ -46,7 +50,10 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
     setSelected((s) => (s.includes(cls) ? s.filter((c) => c !== cls) : [...s, cls]));
 
   const buildRequest = (): PlanRequest | null => {
-    const value = parseBRL(aporte);
+    // Campo vazio simula com o valor padrão — ver o plano não deve custar uma digitação
+    // toda vez. Texto NÃO vazio e inválido continua sendo erro: um "2.00o" digitado errado
+    // virando um plano silencioso de R$ 2.000 seria pior do que não gerar plano nenhum.
+    const value = blank ? APORTE_PADRAO : parseBRL(aporte);
     if (!(value > 0)) return null;
     return {
       aporte: value,
@@ -75,7 +82,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
     );
   };
 
-  const valueInvalid = touched && !(parseBRL(aporte) > 0);
+  const valueInvalid = touched && !blank && !(parseBRL(aporte) > 0);
   const metaLine = INVESTABLE_CLASSES.filter((c) => (targets[c] ?? 0) > 0)
     .map((c) => `${Math.round((targets[c] ?? 0) * 100)}% ${CLASS_LABEL[c]}`)
     .join(" · ");
@@ -97,6 +104,11 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
           />
         </div>
         {valueInvalid && <span className="field-error">Informe um valor maior que zero.</span>}
+        {blank && (
+          <span className="muted field-hint">
+            Em branco? Simulamos com {money(APORTE_PADRAO)}.
+          </span>
+        )}
       </label>
 
       {hasAnyBasket ? (

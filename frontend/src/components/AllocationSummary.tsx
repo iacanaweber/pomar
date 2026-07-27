@@ -5,9 +5,11 @@ import { Tooltip } from "./Tooltip";
 export function AllocationSummary({ plan }: { plan: PlanResponse }) {
   const targetsByClass = plan.targets_by_class ?? {};
   const currentByClass = plan.current_by_class ?? {};
+  // Classe com meta 0% E sem posição é ruído ("0% / alvo 0%"). Com meta 0% mas com
+  // posição ela FICA: é justamente o que precisa ser desinvestido.
   const classes = Array.from(
     new Set([...Object.keys(targetsByClass), ...Object.keys(currentByClass)]),
-  );
+  ).filter((c) => (targetsByClass[c] ?? 0) > 0 || (currentByClass[c] ?? 0) > 0);
   return (
     <div className="alloc">
       <h3>
