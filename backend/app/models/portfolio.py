@@ -19,7 +19,6 @@ class Position(BaseModel):
     net_performance_pct: Optional[float] = Field(
         None, description="Rentabilidade líquida da posição (fração) — do Ghostfolio, se disponível."
     )
-    tags: List[str] = Field(default_factory=list, description="Tags do Ghostfolio nesta posição.")
     source: str = Field("ghostfolio:holdings", description="Origem do dado.")
 
 

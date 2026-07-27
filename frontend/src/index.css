@@ -387,7 +387,6 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .pf-yields { font-size: 13px; color: var(--muted); margin-top: 4px; }
 .pf-yields strong { color: var(--ink); }
 .pf-chart-pie { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.besst-center-note { font-size: 12px; color: var(--green); font-weight: 600; margin: 0; text-align: center; }
 .pf-asset-row { grid-template-columns: auto 1fr auto; }
 .pf-asset-val { white-space: nowrap; font-size: 13px; }
 .yoc-cell { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; white-space: nowrap; }
@@ -612,3 +611,53 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   box-shadow: 0 0 0 1px var(--card); pointer-events: none; }
 .weight-snap.sum-over { background: var(--danger); }
 .weight-snap.sum-under { background: var(--info); }
+
+/* ===== Carteira: atual × alvo ===== */
+
+.cmp { display: flex; flex-direction: column; gap: 14px; }
+
+/* As duas barras 100% alinhadas: é o alinhamento que faz a diferença saltar aos olhos. */
+.cmp-bars { padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+.cmp-bar-block { display: flex; flex-direction: column; gap: 6px; }
+.cmp-bar-head { display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; flex-wrap: wrap; }
+.cmp-bar-label { font-weight: 700; font-size: 14px; }
+.cmp-bar-caption { font-size: 12px; }
+
+.cmp-list { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.cmp-list h3 { margin: 0; }
+.cmp-list-head { display: flex; justify-content: space-between; align-items: baseline;
+  gap: 10px; flex-wrap: wrap; }
+.cmp-scale { font-size: 11px; font-variant-numeric: tabular-nums; }
+.cmp-note { font-size: 12px; margin: 0; }
+
+.cmp-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;
+  gap: 6px; }
+.cmp-row { display: grid; grid-template-columns: 74px 1fr auto; align-items: center;
+  gap: 8px; padding: 6px 0; }
+.cmp-ticker { font-weight: 700; font-size: 14px; overflow: hidden; text-overflow: ellipsis; }
+.cmp-classname { color: var(--ink); }
+
+/* Eixo divergente: a POLARIDADE é a geometria (lado do zero), não a cor — por isso a cor
+   segue livre significando a classe do ativo, e a leitura sobrevive a daltonismo. */
+.cmp-axis { position: relative; height: 14px; background: var(--surface-soft);
+  border-radius: 4px; }
+.cmp-axis::before { content: ""; position: absolute; left: 50%; top: -2px; bottom: -2px;
+  width: 1px; background: var(--line); }
+.cmp-fill { position: absolute; top: 0; height: 100%; border-radius: 3px; min-width: 2px; }
+
+.cmp-nums { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+.cmp-delta { font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; }
+.cmp-detail { font-size: 11px; font-variant-numeric: tabular-nums; }
+.cmp-brl { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25;
+  font-size: 12px; white-space: nowrap; }
+.cmp-brl-buy { color: var(--green); font-weight: 600; }
+.cmp-brl-over { color: var(--muted); }
+.cmp-tag { font-size: 11px; }
+.cmp-row-off_target .cmp-ticker { text-decoration: line-through; text-decoration-thickness: 1px; }
+.cmp-row-not_bought .cmp-ticker { opacity: 0.75; }
+
+@media (min-width: 640px) {
+  .cmp-row { grid-template-columns: 96px 1fr auto auto; gap: 12px; }
+  .cmp-nums { flex-direction: row; align-items: baseline; gap: 8px; }
+}

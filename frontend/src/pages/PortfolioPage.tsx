@@ -1,28 +1,29 @@
 import { useMemo, useState } from "react";
 import { ApiError } from "../api/client";
-import { useFixedIncome, useIncome, usePortfolio } from "../api/queries";
+import { useFixedIncome, useIncome, usePortfolio, usePreferences } from "../api/queries";
 import type { Position } from "../types";
 import { PieChart, type Slice } from "../components/PieChart";
 import { AssetLink } from "../components/AssetLink";
 import { Tooltip } from "../components/Tooltip";
 import { YocCell } from "../components/YocCell";
 import { money, pct } from "../lib/format";
-import { BESST_COLORS, BESST_DEFENSIVE, PALETTE, besstCategory } from "../lib/palette";
+import { PALETTE } from "../lib/palette";
+import { PortfolioVsTarget } from "../components/PortfolioVsTarget";
+import { buildComparison } from "../lib/comparison";
 
-type GroupBy = "asset" | "class" | "sector" | "tag" | "besst";
+type GroupBy = "target" | "asset" | "class" | "sector";
 
 const GROUPS: { key: GroupBy; label: string }[] = [
+  { key: "target", label: "Atual × alvo" },
   { key: "asset", label: "Por ativo" },
   { key: "class", label: "Por classe" },
   { key: "sector", label: "Por setor" },
-  { key: "tag", label: "Por tag" },
-  { key: "besst", label: "BESST" },
 ];
 
 interface Member {
   ticker: string;
   name: string | null;
-  value: number; // contribuição da posição para este grupo (no caso de tag, valor rateado)
+  value: number; // contribuição da posição para este grupo
 }
 interface Group {
   label: string;
@@ -48,13 +49,7 @@ function aggregate(positions: Position[], by: GroupBy): Group[] {
     const base = { ticker: p.ticker, name: p.name ?? null };
     if (by === "asset") add(p.ticker, { ...base, value: p.value });
     else if (by === "class") add(p.asset_class || "OUTROS", { ...base, value: p.value });
-    else if (by === "sector") add(p.sector || "Sem setor", { ...base, value: p.value });
-    else if (by === "besst") add(besstCategory(p.sector), { ...base, value: p.value });
-    else {
-      const tags = p.tags ?? [];
-      if (tags.length === 0) add("Sem tag", { ...base, value: p.value });
-      else tags.forEach((t) => add(t, { ...base, value: p.value / tags.length }));
-    }
+    else add(p.sector || "Sem setor", { ...base, value: p.value });
   }
 
   let items = Array.from(map.values()).sort((a, b) => b.value - a.value);
@@ -78,7 +73,9 @@ export function PortfolioPage() {
   const { data: pf, isLoading, error } = usePortfolio();
   const income = useIncome();
   const fixedIncome = useFixedIncome(); // só pelo CDI de referência (SGS/BCB)
-  const [by, setBy] = useState<GroupBy>("class");
+  const preferences = usePreferences();
+  // abre na comparação: "como estou em relação ao que planejei" é a pergunta da aba
+  const [by, setBy] = useState<GroupBy>("target");
   const [active, setActive] = useState<number | null>(null);
 
   // DY/YoC por ticker, a partir da renda passiva (única fonte com DY de mercado por ativo).
@@ -91,27 +88,31 @@ export function PortfolioPage() {
   }, [income.data]);
 
   const positions = pf?.positions ?? [];
-  const groups = useMemo(() => aggregate(positions, by), [positions, by]);
+  const groups = useMemo(
+    () => (by === "target" ? [] : aggregate(positions, by)),
+    [positions, by],
+  );
+
+  const comparison = useMemo(
+    () =>
+      buildComparison(
+        positions,
+        pf?.total_value ?? 0,
+        preferences.data?.targets ?? {},
+        preferences.data?.class_targets ?? {},
+      ),
+    [positions, pf?.total_value, preferences.data],
+  );
 
   const slices: Slice[] = useMemo(
     () =>
       groups.map((g, i) => ({
         label: g.label,
         value: g.value,
-        color: by === "besst" ? BESST_COLORS[besstCategory(g.label)] : PALETTE[i % PALETTE.length],
+        color: PALETTE[i % PALETTE.length],
       })),
     [groups, by],
   );
-
-  // % defensivo (BESST): soma das categorias essenciais ÷ total.
-  const defensivePct = useMemo(() => {
-    if (by !== "besst") return null;
-    const total = groups.reduce((s, g) => s + g.value, 0) || 1;
-    const def = groups
-      .filter((g) => (BESST_DEFENSIVE as string[]).includes(g.label))
-      .reduce((s, g) => s + g.value, 0);
-    return def / total;
-  }, [groups, by]);
 
   if (isLoading) return <main className="page"><p className="muted">Carregando carteira…</p></main>;
 
@@ -186,14 +187,12 @@ export function PortfolioPage() {
         ))}
       </div>
 
+      {by === "target" && <PortfolioVsTarget comparison={comparison} />}
+
+      {by !== "target" && (
       <div className="pf-chart">
         <div className="pf-chart-pie">
           <PieChart slices={slices} active={active} onActive={setActive} ariaLabel={ariaLabel} />
-          {by === "besst" && defensivePct != null && (
-            <p className="besst-center-note">
-              {pct(defensivePct, 0)} em setores perenes (defensivo)
-            </p>
-          )}
         </div>
         <ul className="legend" role="list">
           {slices.map((s, i) => (
@@ -220,6 +219,7 @@ export function PortfolioPage() {
           ))}
         </ul>
       </div>
+      )}
 
       {by === "asset" && (
         <div className="pf-drill">

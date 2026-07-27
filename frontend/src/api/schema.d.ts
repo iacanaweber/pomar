@@ -1243,11 +1243,6 @@ export interface components {
              */
             net_performance_pct?: number | null;
             /**
-             * Tags
-             * @description Tags do Ghostfolio nesta posição.
-             */
-            tags?: string[];
-            /**
              * Source
              * @description Origem do dado.
              * @default ghostfolio:holdings

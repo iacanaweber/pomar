@@ -85,7 +85,6 @@ class GhostfolioClient:
                     cost_basis=cost,
                     average_price=avg,
                     net_performance_pct=_net_perf(h),
-                    tags=_tags(h),
                 )
             )
             by_class[cls] = by_class.get(cls, 0.0) + weight
@@ -140,17 +139,3 @@ def _first_sector(holding: dict) -> Optional[str]:
     if countries and isinstance(countries, list):
         return countries[0].get("name")
     return holding.get("sector")
-
-
-def _tags(holding: dict) -> list[str]:
-    """Extrai os nomes das tags do Ghostfolio (lista de {id,name} ou de strings)."""
-    raw = holding.get("tags") or []
-    out: list[str] = []
-    for t in raw:
-        if isinstance(t, dict):
-            name = t.get("name")
-            if name:
-                out.append(str(name))
-        elif t:
-            out.append(str(t))
-    return out
