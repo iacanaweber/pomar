@@ -107,6 +107,8 @@ h3 { font-size: 15px; margin: 18px 0 8px; }
   flex-direction: column;
   gap: 14px;
 }
+/* O submit é o clímax do formulário: um respiro extra o separa dos refinamentos. */
+.controls > .primary { margin-top: 4px; }
 .field { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: 14px; }
 .money { display: flex; align-items: center; gap: 8px; border: 2px solid var(--line);
   border-radius: 10px; padding: 10px 12px; font-size: 22px; }
@@ -286,14 +288,19 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .targets-sum.warn { color: var(--amber); font-weight: 600; }
 .money { background: var(--card); }
 .money input { background: transparent; color: var(--ink); }
+/* O foco é indicado no BOX (o input interno tem outline:0): com autofocus, a tela
+   já abre destacando onde começar. Inválido vence o foco enquanto o erro persistir. */
+.money:focus-within { border-color: var(--leaf); }
 .money.money-invalid { border-color: var(--err-border); }
 .field-error { color: var(--err-ink); font-size: 12px; font-weight: 500; }
 
-/* Desktop */
+/* Desktop: o formulário PERMANECE em coluna — o fluxo é linear (quanto tenho →
+   em que classes → recomendações) e o conteúdo atual (campo de valor grande +
+   fieldset de chips) não emparelha lado a lado. No desktop muda a densidade:
+   mais respiro no card e o campo de valor com largura de campo de valor. */
 @media (min-width: 640px) {
-  .controls { flex-direction: row; flex-wrap: wrap; align-items: flex-end; }
-  .controls .field { flex: 1; min-width: 200px; }
-  .controls .primary { flex-basis: 100%; }
+  .controls { padding: 22px; gap: 16px; }
+  .controls > .field .money { max-width: 380px; }
 }
 
 /* ===== v3 — preço-teto, objetivo de renda, reserva, calendário, watchlist ===== */
@@ -444,6 +451,11 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .class-chip > span:not(.class-chip-meta) { display: flex; flex-direction: column; }
 .class-chip-name + .class-chip-meta { margin-top: 1px; }
 .class-picker-meta { font-size: 12px; margin: 0; }
+/* Desktop: as 4 classes cabem numa linha só — o refinamento perde altura e o
+   formulário inteiro (pergunta → classes → CTA) entra numa dobra. */
+@media (min-width: 640px) {
+  .class-chips { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
 
 /* Empty state: sem carteira alvo não há plano possível. */
 .empty-target { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
