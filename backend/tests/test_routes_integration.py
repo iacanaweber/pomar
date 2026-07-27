@@ -130,19 +130,3 @@ def test_orders_crud(authed_client):
     assert len(lst["items"]) == 1
     assert c.delete(f"/api/orders/{r['id']}").status_code == 200
     assert c.get("/api/orders").json()["items"] == []
-
-
-def test_income_goal_with_persisted_target(authed_client, monkeypatch):
-    from app.models.portfolio import Allocations, Portfolio
-
-    async def empty_pf(*a, **k):
-        return Portfolio(total_value=0.0, as_of="2026-01-01T00:00:00Z", allocations=Allocations())
-
-    monkeypatch.setattr("app.api.routes_income.get_enriched_portfolio", empty_pf)
-    c = authed_client
-    c.put("/api/preferences", json={"target_monthly_income": 5000.0})
-    g = c.get("/api/income/goal").json()
-    assert g["target_monthly_income"] == 5000.0
-    assert g["gap_monthly"] == 5000.0   # carteira vazia → renda atual 0
-    assert g["pct_achieved"] == 0.0
-    assert g["required_monthly_contribution"] is not None

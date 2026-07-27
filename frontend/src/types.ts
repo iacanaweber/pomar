@@ -18,27 +18,15 @@ export type PreferencesBody = Schemas["PreferencesBody"];
 export type WatchlistAdd = Schemas["WatchlistAdd"];
 export type IncomeResponse = Schemas["IncomeResponse"];
 export type IncomeAsset = Schemas["IncomeAsset"];
-export type ProjectionRequest = Schemas["ProjectionRequest"];
-export type ProjectionResponse = Schemas["ProjectionResponse"];
-export type ProjectionPoint = Schemas["ProjectionPoint"];
 export type AssetDetailResponse = Schemas["AssetDetailResponse"];
 export type Asset = Schemas["Asset"];
 export type Fundamentals = Schemas["Fundamentals"];
 export type ReserveSuggestion = Schemas["ReserveSuggestion"];
 
-// --- Objetivo de renda + calendário ---
-export type IncomeGoalResponse = Schemas["IncomeGoalResponse"];
-export type CalendarResponse = Schemas["CalendarResponse"];
-export type CalendarMonth = Schemas["CalendarMonth"];
-
-// --- Renda realizada, snapshots (bola de neve real) e proventos anunciados (v4) ---
+// --- Renda realizada e Yield on Cost (dos snapshots mensais) ---
 export type RealizedIncomeResponse = Schemas["RealizedIncomeResponse"];
 export type RealizedMonth = Schemas["RealizedMonth"];
-export type SnapshotsResponse = Schemas["SnapshotsResponse"];
-export type SnapshotPoint = Schemas["SnapshotPoint"];
 export type YocPoint = Schemas["YocPoint"];
-export type AnnouncedResponse = Schemas["AnnouncedResponse"];
-export type AnnouncedPayment = Schemas["AnnouncedPayment"];
 
 // --- Planos salvos e radar da watchlist (v4) ---
 export type PlanSummary = Schemas["PlanSummary"];
@@ -65,12 +53,6 @@ export interface FixedIncomeEntry {
 export type OrderIn = Schemas["OrderIn"];
 export type OrderOut = Schemas["OrderOut"];
 export type OrdersListResponse = Schemas["OrdersListResponse"];
-
-/** Item de proventos por ativo dentro de um mês do calendário (dict livre no backend). */
-export interface CalendarByAsset {
-  ticker: string;
-  income: number;
-}
 
 // --- Tipos de respostas que o FastAPI devolve como dict livre (sem response_model),
 //     portanto não vêm tipados no OpenAPI; declarados aqui manualmente. ---

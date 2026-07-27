@@ -1,16 +1,13 @@
 import type {
   AccountIn,
   AccountSummary,
-  AnnouncedResponse,
   AssetDetailResponse,
   AuthStatus,
-  CalendarResponse,
   EntryIn,
   FixedIncomeEntry,
   FixedIncomeSummary,
   Glossary,
   HealthStatus,
-  IncomeGoalResponse,
   IncomeResponse,
   OrderIn,
   OrderOut,
@@ -21,11 +18,8 @@ import type {
   Portfolio,
   Preferences,
   PreferencesBody,
-  ProjectionRequest,
-  ProjectionResponse,
   RadarResponse,
   RealizedIncomeResponse,
-  SnapshotsResponse,
   StrategiesResponse,
   WatchlistItem,
   YocPoint,
@@ -120,13 +114,7 @@ export const api = {
 
   // renda passiva
   income: () => request<IncomeResponse>("/api/income", {}, 60000),
-  projection: (body: ProjectionRequest) =>
-    request<ProjectionResponse>("/api/income/projection", json(body)),
-  incomeGoal: () => request<IncomeGoalResponse>("/api/income/goal", {}, 60000),
-  incomeCalendar: () => request<CalendarResponse>("/api/income/calendar", {}, 60000),
   incomeRealized: () => request<RealizedIncomeResponse>("/api/income/realized", {}, 30000),
-  incomeSnapshots: () => request<SnapshotsResponse>("/api/income/snapshots"),
-  incomeAnnounced: () => request<AnnouncedResponse>("/api/income/announced", {}, 60000),
   yocHistory: (ticker: string) => request<YocPoint[]>(`/api/income/yoc/${ticker}`),
 
   // renda fixa (rastreador / reserva) — lista TUDO; a UI separa ativas de arquivadas

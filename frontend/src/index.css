@@ -258,15 +258,6 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .pf-drill-name { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pf-drill-val { white-space: nowrap; }
 
-/* Renda passiva */
-.income-now { display: flex; flex-wrap: wrap; gap: 12px; margin: 14px 0; }
-.income-stat { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
-  padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 140px; }
-.income-stat strong { font-size: 18px; }
-.income-big { font-size: 26px; color: var(--green); }
-.income-gross-note { font-size: 12px; }
-.snowball-svg { width: 100%; height: auto; margin: 8px 0; }
-
 /* Links de ativo + detalhe */
 .asset-link { color: var(--green); font-weight: 700; text-decoration: none; }
 .asset-link:hover { text-decoration: underline; }
@@ -351,17 +342,11 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   background: var(--green); color: var(--on-accent); padding: 10px 18px; border-radius: 999px;
   font-weight: 700; font-size: 14px; box-shadow: 0 6px 20px rgba(0,0,0,.25); z-index: 50; }
 
-/* GoalProgress + aportador */
-.goal-card { position: relative; }
+/* Barra de progresso (reserva) */
 .goal-head { display: flex; justify-content: space-between; align-items: center; }
 .goal-bar { margin: 10px 0 6px; }
 .goal-bar-label { font-size: 12px; color: var(--muted); display: block; margin-top: 4px; }
-.goal-target { margin: 4px 0; font-size: 14px; }
 .goal-status { margin: 6px 0; font-size: 14px; }
-.goal-empty { display: flex; flex-direction: column; gap: 8px; }
-.goal-edit { display: flex; flex-direction: column; gap: 10px; }
-.goal-nextbuy { display: flex; flex-direction: column; gap: 4px; margin-top: 10px;
-  padding: 10px 12px; background: var(--chip-bg); border-radius: 10px; font-size: 14px; }
 
 /* Reserva / renda fixa */
 .reserve-card-head { display: flex; justify-content: space-between; align-items: flex-start;
@@ -412,30 +397,6 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .yoc-dy { color: var(--muted); }
 .yoc-yoc { font-weight: 600; }
 .yoc-up { color: var(--green); }
-.income-asset-row { grid-template-columns: auto 1fr auto; }
-.income-asset-yields { font-size: 12px; color: var(--muted); }
-.yoc-tag { font-weight: 600; }
-
-/* Calendário */
-.cal-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
-.cal-total { font-size: 14px; color: var(--muted); }
-.cal-total strong { color: var(--green); }
-.cal-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.cal-month { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
-  overflow: hidden; border: 2px solid transparent; }
-.cal-month.cal-current { border-color: var(--green); }
-.cal-month-head { width: 100%; display: grid; grid-template-columns: 90px 1fr auto auto;
-  align-items: center; gap: 10px; background: none; border: 0; padding: 12px 14px; cursor: pointer;
-  text-align: left; min-height: 44px; }
-.cal-month-name { font-weight: 700; font-size: 14px; }
-.cal-now-tag { color: var(--green); font-size: 11px; font-weight: 600; }
-.cal-bar-track { height: 12px; background: var(--track); border-radius: 999px; }
-.cal-bar-fill { height: 100%; background: var(--leaf); border-radius: 999px; }
-.cal-month-val { font-weight: 700; font-size: 13px; white-space: nowrap; }
-.cal-byasset { list-style: none; margin: 0; padding: 0 14px 12px; display: flex; flex-wrap: wrap;
-  gap: 6px 16px; font-size: 13px; }
-.cal-skeleton { height: 56px; opacity: 0.5; }
-
 /* Watchlist */
 .watchlist-add { display: flex; gap: 8px; margin-bottom: 8px; }
 .watchlist-add input { flex: 1; padding: 12px; border: 2px solid var(--line); border-radius: 10px;
@@ -465,22 +426,6 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 }
 
 /* ===== v4: renda realizada, radar, marcos, planos e reserva ===== */
-
-/* Renda recebida (barras mensais dos dividendos do Ghostfolio) */
-.realized-bars { display: flex; align-items: flex-end; gap: 6px; margin: 12px 0 4px;
-  overflow-x: auto; padding-bottom: 4px; }
-.realized-bar-col { display: flex; flex-direction: column; align-items: center; gap: 3px;
-  min-width: 44px; }
-.realized-bar { width: 26px; border-radius: 4px 4px 0 0; background: var(--green);
-  opacity: 0.85; }
-.realized-bar-val { font-size: 10px; color: var(--muted); white-space: nowrap; }
-.realized-bar-label { font-size: 11px; color: var(--muted); }
-
-/* Marcos de renda e 'e se aportar mais' */
-.goal-milestone { font-size: 13px; margin: 6px 0 0; }
-.whatif-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 8px; }
-.whatif-chip { background: var(--chip-bg); color: var(--green); border-radius: 999px;
-  padding: 4px 12px; font-size: 12px; font-weight: 600; }
 
 /* Reinvestimento assistido + radar de teto */
 .reinvest-banner { background: var(--chip-bg); border: 1px solid var(--line);

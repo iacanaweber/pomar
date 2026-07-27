@@ -5,9 +5,7 @@ import type {
   EntryIn,
   OrderIn,
   PlanRequest,
-  Preferences,
   PreferencesBody,
-  ProjectionRequest,
 } from "../types";
 
 export const keys = {
@@ -19,11 +17,7 @@ export const keys = {
   preferences: ["preferences"] as const,
   watchlist: ["watchlist"] as const,
   income: ["income"] as const,
-  incomeGoal: ["income-goal"] as const,
-  incomeCalendar: ["income-calendar"] as const,
   incomeRealized: ["income-realized"] as const,
-  incomeSnapshots: ["income-snapshots"] as const,
-  incomeAnnounced: ["income-announced"] as const,
   fixedIncome: ["fixed-income"] as const,
   orders: ["orders"] as const,
   planLatest: ["plan-latest"] as const,
@@ -120,47 +114,10 @@ export const usePlanLatest = () =>
 export const usePlanHistory = () =>
   useQuery({ queryKey: keys.planHistory, queryFn: api.planHistory });
 
-/** 'Próximo melhor aporte' — plano com a ESTRATÉGIA e parâmetros salvos do usuário
- *  (antes rodava 'equilibrado' hardcoded: um barsista via conselho de outra filosofia).
- *  Query cacheada: o POST /plan é caro (até 60s) e não deve rodar a cada mount. */
-export function useNextBuy(prefs?: Preferences) {
-  const req: PlanRequest | null = prefs
-    ? {
-        aporte: prefs.aporte_default && prefs.aporte_default > 0 ? prefs.aporte_default : 1000,
-        strategy: prefs.strategy,
-        targets: prefs.targets,
-        max_assets: prefs.max_assets,
-        max_weight_per_asset: prefs.max_weight_per_asset,
-        min_ticket: prefs.min_ticket,
-        allow_empty_portfolio: false,
-        focus: prefs.focus, // mesmo foco da aba Plantar — conselho coerente entre abas
-      }
-    : null;
-  return useQuery({
-    queryKey: ["next-buy", req],
-    queryFn: () => api.plan(req!),
-    enabled: req != null,
-    staleTime: 10 * 60 * 1000,
-    retry: false,
-  });
-}
-
 export const useIncome = () => useQuery({ queryKey: keys.income, queryFn: api.income });
-
-export const useIncomeGoal = () =>
-  useQuery({ queryKey: keys.incomeGoal, queryFn: api.incomeGoal });
-
-export const useIncomeCalendar = () =>
-  useQuery({ queryKey: keys.incomeCalendar, queryFn: api.incomeCalendar });
 
 export const useIncomeRealized = () =>
   useQuery({ queryKey: keys.incomeRealized, queryFn: api.incomeRealized });
-
-export const useIncomeSnapshots = () =>
-  useQuery({ queryKey: keys.incomeSnapshots, queryFn: api.incomeSnapshots });
-
-export const useIncomeAnnounced = () =>
-  useQuery({ queryKey: keys.incomeAnnounced, queryFn: api.incomeAnnounced });
 
 export const useYocHistory = (ticker: string) =>
   useQuery({
@@ -252,11 +209,3 @@ export function useDeleteOrder() {
 
 export const useAsset = (ticker: string) =>
   useQuery({ queryKey: ["asset", ticker], queryFn: () => api.asset(ticker), enabled: !!ticker });
-
-/** Projeção bola de neve: query cacheada pelos parâmetros (recalcula ao mudar os inputs). */
-export const useProjection = (params: ProjectionRequest) =>
-  useQuery({
-    queryKey: ["projection", params],
-    queryFn: () => api.projection(params),
-    staleTime: Infinity,
-  });

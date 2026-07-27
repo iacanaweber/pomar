@@ -5,7 +5,6 @@ import { GlossaryProvider } from "./app/GlossaryProvider";
 import { Onboarding } from "./components/Onboarding";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AssetPage } from "./pages/AssetPage";
-import { IncomePage } from "./pages/IncomePage";
 import { LoginPage } from "./pages/LoginPage";
 import { PlanPage } from "./pages/PlanPage";
 import { PortfolioPage } from "./pages/PortfolioPage";
@@ -13,9 +12,6 @@ import { PortfolioPage } from "./pages/PortfolioPage";
 // Telas novas: carregadas sob demanda para não pesar o bundle inicial.
 const WatchlistPage = lazy(() =>
   import("./pages/WatchlistPage").then((m) => ({ default: m.WatchlistPage })),
-);
-const CalendarPage = lazy(() =>
-  import("./pages/CalendarPage").then((m) => ({ default: m.CalendarPage })),
 );
 const ReservePage = lazy(() =>
   import("./pages/ReservePage").then((m) => ({ default: m.ReservePage })),
@@ -25,9 +21,7 @@ const TABS: { to: string; label: string }[] = [
   { to: "/plano", label: "Plantar" },
   { to: "/carteira", label: "Carteira" },
   { to: "/reserva", label: "Reserva" },
-  { to: "/renda", label: "Renda" },
   { to: "/watchlist", label: "Descobrir" },
-  { to: "/calendario", label: "Calendário" },
 ];
 
 function PageFallback() {
@@ -84,9 +78,7 @@ function AppShell() {
             }
           />
           <Route path="/carteira" element={<PortfolioPage />} />
-          <Route path="/renda" element={<IncomePage />} />
           <Route path="/watchlist" element={<WatchlistPage />} />
-          <Route path="/calendario" element={<CalendarPage />} />
           <Route path="/ativo/:ticker" element={<AssetPage />} />
           <Route path="/reserva" element={<ReservePage />} />
           <Route path="*" element={<Navigate to="/plano" replace />} />
