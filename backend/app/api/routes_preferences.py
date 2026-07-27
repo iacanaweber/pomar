@@ -31,7 +31,7 @@ class PreferencesBody(BaseModel):
     def _class_targets_validos(
         cls, v: Optional[Dict[str, Dict[str, float]]]
     ) -> Optional[Dict[str, Dict[str, float]]]:
-        """Carteira alvo por classe: {"FII": {"BTGL11": 0.4, ...}}. Pesos somam 1 por classe;
+        """Carteira alvo por classe: {"FII": {"AAA11": 0.4, ...}}. Pesos somam 1 por classe;
         classe com dict vazio remove a cesta daquela classe."""
         if v is None:
             return None

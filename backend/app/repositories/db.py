@@ -149,7 +149,7 @@ _MIGRATIONS: list[tuple[int, str]] = [
     ),
     (
         5,
-        # v5: carteira alvo por classe ({"FII": {"BTGL11": 0.4, ...}}) — na v6 ela virou o
+        # v5: carteira alvo por classe ({"FII": {"AAA11": 0.4, ...}}) — na v6 ela virou o
         # coração do plano. A coluna `focus` (e watchlist.favorite, preferences.strategy,
         # weights_json, max_assets…) ficou órfã: migração SQLite aqui é ADITIVA, nunca
         # dropamos coluna aplicada; elas apenas deixaram de ser lidas e escritas.

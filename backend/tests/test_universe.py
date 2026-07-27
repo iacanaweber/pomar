@@ -40,7 +40,7 @@ def _pf() -> Portfolio:
         as_of="2026-07-10T00:00:00Z",
         positions=[
             Position(ticker="ANTIGO3", asset_class="STOCK", value=600.0, weight=0.6, sector="Bancos"),
-            Position(ticker="BBSE3", asset_class="STOCK", value=400.0, weight=0.4),
+            Position(ticker="AAA3", asset_class="STOCK", value=400.0, weight=0.4),
         ],
         allocations=Allocations(by_class={"STOCK": 1.0}),
     )
@@ -50,12 +50,12 @@ async def test_baskets_fetch_only_target_portfolio_tickers(captured):
     """Com cesta, buscar posições que estão FORA da carteira alvo é gasto puro: o fetch de
     mercado domina o tempo do plano e esses ativos não podem receber compra."""
     assets = await universe_svc.build_universe(
-        _pf(), None, None, class_baskets={"STOCK": {"BBSE3": 0.6, "BBDC4": 0.4}},
+        _pf(), None, None, class_baskets={"STOCK": {"AAA3": 0.6, "BBB3": 0.4}},
     )
-    assert set(captured["tickers"]) == {"BBSE3", "BBDC4"}
+    assert set(captured["tickers"]) == {"AAA3", "BBB3"}
     assert "ANTIGO3" not in captured["tickers"]
-    assert captured["hints"] == {"BBSE3": "STOCK", "BBDC4": "STOCK"}
-    assert {a.ticker for a in assets} == {"BBSE3", "BBDC4"}
+    assert captured["hints"] == {"AAA3": "STOCK", "BBB3": "STOCK"}
+    assert {a.ticker for a in assets} == {"AAA3", "BBB3"}
 
 
 async def test_basket_ticker_hint_wins_over_ghostfolio(captured):
@@ -63,11 +63,11 @@ async def test_basket_ticker_hint_wins_over_ghostfolio(captured):
     do Ghostfolio (que às vezes chama FII de ação)."""
     pf = Portfolio(
         total_value=100.0, as_of="2026-07-10T00:00:00Z",
-        positions=[Position(ticker="BTGL11", asset_class="STOCK", value=100.0, weight=1.0)],
+        positions=[Position(ticker="XYZ11", asset_class="STOCK", value=100.0, weight=1.0)],
         allocations=Allocations(by_class={"STOCK": 1.0}),
     )
-    await universe_svc.build_universe(pf, None, None, class_baskets={"FII": {"BTGL11": 1.0}})
-    assert captured["hints"]["BTGL11"] == "FII"
+    await universe_svc.build_universe(pf, None, None, class_baskets={"FII": {"XYZ11": 1.0}})
+    assert captured["hints"]["XYZ11"] == "FII"
 
 
 async def test_without_baskets_uses_positions_and_watchlist(captured, db, monkeypatch):

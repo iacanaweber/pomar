@@ -197,7 +197,7 @@ function BasketEditor({
       <div className="basket-add">
         <input
           list={`basket-tickers-${cls}`}
-          placeholder="Ticker (ex.: BBSE3)"
+          placeholder="Ticker (ex.: PETR4)"
           value={newTicker}
           aria-label={`Ticker para adicionar à carteira alvo de ${label}`}
           onChange={(e) => setNewTicker(e.target.value)}

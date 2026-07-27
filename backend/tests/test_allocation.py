@@ -34,20 +34,20 @@ def _spent(ranking: list[PlanAsset]) -> float:
 
 def test_buys_the_deficit_not_the_biggest_position():
     """Quem está acima do peso-alvo recebe 0; o déficit inteiro vai para quem falta."""
-    pf = _pf({"BTGL11": ("FII", 5000.0), "HGRE11": ("FII", 3000.0)}, {"FII": 1.0})
-    ranking = _ranking(("BTGL11", "FII"), ("HGRE11", "FII"), ("KNCR11", "FII"))
-    prices = {"BTGL11": 100.0, "HGRE11": 50.0, "KNCR11": 10.0}
+    pf = _pf({"AAA11": ("FII", 5000.0), "BBB11": ("FII", 3000.0)}, {"FII": 1.0})
+    ranking = _ranking(("AAA11", "FII"), ("BBB11", "FII"), ("CCC11", "FII"))
+    prices = {"AAA11": 100.0, "BBB11": 50.0, "CCC11": 10.0}
     lots = {t: 1 for t in prices}
-    basket = {"BTGL11": 0.4, "HGRE11": 0.3, "KNCR11": 0.3}
-    # cesta resultante = 8000 + 2000 = 10000 -> alvos 4000/3000/3000; BTGL11 e HGRE11 já
-    # no alvo ou acima, todo o déficit (3000) é do KNCR11
+    basket = {"AAA11": 0.4, "BBB11": 0.3, "CCC11": 0.3}
+    # cesta resultante = 8000 + 2000 = 10000 -> alvos 4000/3000/3000; AAA11 e BBB11 já
+    # no alvo ou acima, todo o déficit (3000) é do CCC11
     unallocated = allocate(
         2000.0, ranking, pf, prices, lots, {"FII": 1.0}, {"FII": basket}, min_ticket=50.0
     )
-    kncr = next(r for r in ranking if r.ticker == "KNCR11")
-    assert kncr.suggested is not None and kncr.suggested.shares == 200
-    assert next(r for r in ranking if r.ticker == "BTGL11").suggested is None
-    assert next(r for r in ranking if r.ticker == "HGRE11").suggested is None
+    atrasado = next(r for r in ranking if r.ticker == "CCC11")
+    assert atrasado.suggested is not None and atrasado.suggested.shares == 200
+    assert next(r for r in ranking if r.ticker == "AAA11").suggested is None
+    assert next(r for r in ranking if r.ticker == "BBB11").suggested is None
     assert abs((_spent(ranking) + unallocated) - 2000.0) < 0.05
 
 

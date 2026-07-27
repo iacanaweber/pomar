@@ -159,8 +159,9 @@ async def test_class_targets_roundtrip(db, settings):
     p = await preferences_repo.get(db, settings)
     assert p["class_targets"] == {}
     baskets = {
-        "FII": {"BTGL11": 0.4, "HGRE11": 0.3, "KNCR11": 0.3},
-        "STOCK": {"BBSE3": 0.2208, "BBDC4": 0.2159, "TAEE11": 0.5633},
+        "FII": {"AAA11": 0.4, "BBB11": 0.3, "CCC11": 0.3},
+        # pesos com 4 casas de propósito: a carteira alvo é fina (ex.: 43,21%)
+        "STOCK": {"AAA3": 0.4321, "BBB3": 0.3210, "CCC3": 0.2469},
     }
     await preferences_repo.put(db, {"class_targets": baskets}, settings)
     p = await preferences_repo.get(db, settings)
@@ -176,13 +177,13 @@ async def test_snapshot_mensal_grava_uma_vez_e_le_yoc(db):
     income = {
         "total_value": 50_000.0, "annual_income": 3_000.0, "monthly_income": 250.0,
         "portfolio_yield": 0.06, "yield_on_cost": 0.08,
-        "by_asset": [{"ticker": "ITSA4", "yield_on_cost": 0.11, "annual_income": 900.0}],
+        "by_asset": [{"ticker": "AAA3", "yield_on_cost": 0.11, "annual_income": 900.0}],
     }
     assert await snapshots_repo.save_if_new_month(db, income) is True
     assert await snapshots_repo.save_if_new_month(db, income) is False  # 1 por mês
     rows = await snapshots_repo.list_all(db)
     assert len(rows) == 1 and rows[0]["total_value"] == 50_000.0
-    hist = await snapshots_repo.yoc_history(db, "itsa4")
+    hist = await snapshots_repo.yoc_history(db, "aaa3")
     assert len(hist) == 1 and hist[0]["yoc"] == 0.11
     # carteira vazia nunca vira histórico
     assert await snapshots_repo.save_if_new_month(db, {"total_value": 0.0}) is False
