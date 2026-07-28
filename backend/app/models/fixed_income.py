@@ -72,13 +72,19 @@ class AccountSummary(BaseModel):
     benchmark: Optional[str] = None
     archived: bool = False
     current_balance: float = 0.0
-    # Rendimento da última atualização de saldo (vs a anterior), anualizado base 252.
+    # Rendimento de TODO o histórico (retorno tempo-ponderado, base 252) — é o número da tela.
+    history_yield_annual: Optional[float] = Field(None, description="Rendimento anualizado (fração).")
+    history_yield_gain: Optional[float] = Field(None, description="Ganho acumulado no histórico (BRL).")
+    history_yield_from: Optional[str] = None
+    history_yield_to: Optional[str] = None
+    history_yield_business_days: Optional[int] = None
+    # Última atualização de saldo (vs a anterior) — diagnóstico: janela curta, taxa instável.
     last_yield_annual: Optional[float] = Field(None, description="Rendimento anualizado (fração).")
     last_yield_gain: Optional[float] = Field(None, description="Ganho do período (BRL).")
     last_yield_from: Optional[str] = None
     last_yield_to: Optional[str] = None
     last_yield_business_days: Optional[int] = None
-    pct_of_cdi: Optional[float] = Field(None, description="Rendimento como fração do CDI (1.0 = 100%).")
+    pct_of_cdi: Optional[float] = Field(None, description="Rendimento do histórico como fração do CDI (1.0 = 100%).")
 
 
 class FixedIncomeSummary(BaseModel):

@@ -108,12 +108,14 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     },
     "fixed_income_yield": {
         "label": "Rendimento da reserva",
-        "definition": "Taxa anualizada (base 252 dias úteis) derivada das suas atualizações de "
-        "saldo, ponderando aportes e resgates pelo tempo em que o dinheiro ficou aplicado "
-        "(método Modified Dietz). Comparada ao CDI do período (% do CDI).",
+        "definition": "Taxa anualizada (base 252 dias úteis) de TODO o histórico da conta: cada "
+        "intervalo entre dois saldos rende à sua própria taxa (método Modified Dietz, que pondera "
+        "aportes e resgates pelo tempo aplicado) e os intervalos são encadeados. Aportar ou "
+        "resgatar não move a taxa — só o rendimento do produto move.",
         "source": "calculado: lançamentos da conta (saldos, aportes, resgates) + CDI do Banco Central",
         "interpretation": "~100% do CDI é o esperado para uma boa reserva líquida. Muito abaixo, "
-        "considere trocar de produto; o número fica mais preciso a cada atualização de saldo.",
+        "considere trocar de produto. Atenção ao imposto: o IR retido num resgate sai do saldo e "
+        "aparece aqui como rendimento menor.",
     },
     "net_performance": {
         "label": "Retorno da posição",

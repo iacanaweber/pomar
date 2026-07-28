@@ -542,6 +542,22 @@ export interface components {
              */
             current_balance: number;
             /**
+             * History Yield Annual
+             * @description Rendimento anualizado (fração).
+             */
+            history_yield_annual?: number | null;
+            /**
+             * History Yield Gain
+             * @description Ganho acumulado no histórico (BRL).
+             */
+            history_yield_gain?: number | null;
+            /** History Yield From */
+            history_yield_from?: string | null;
+            /** History Yield To */
+            history_yield_to?: string | null;
+            /** History Yield Business Days */
+            history_yield_business_days?: number | null;
+            /**
              * Last Yield Annual
              * @description Rendimento anualizado (fração).
              */
@@ -559,7 +575,7 @@ export interface components {
             last_yield_business_days?: number | null;
             /**
              * Pct Of Cdi
-             * @description Rendimento como fração do CDI (1.0 = 100%).
+             * @description Rendimento do histórico como fração do CDI (1.0 = 100%).
              */
             pct_of_cdi?: number | null;
         };

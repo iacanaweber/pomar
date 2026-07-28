@@ -224,8 +224,27 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
   const [open, setOpen] = useState(false);
   const [showEntries, setShowEntries] = useState(false);
 
-  const pctCdiText =
-    account.pct_of_cdi != null ? `${Math.round(account.pct_of_cdi * 100)}% do CDI` : null;
+  const annual = account.history_yield_annual;
+  const cdiText =
+    account.pct_of_cdi != null
+      ? `${Math.round(account.pct_of_cdi * 100)}% do CDI`
+      : annual != null && annual < 0
+      ? "abaixo de zero"
+      : "—";
+
+  const days = account.history_yield_business_days ?? 0;
+  const period =
+    account.history_yield_from != null
+      ? `Desde ${isoToBR(account.history_yield_from)} · ${days} ${days === 1 ? "dia útil" : "dias úteis"}`
+      : null;
+
+  // A última janela é curta e o usuário escolhe seu tamanho ao decidir quando atualizar o
+  // saldo — anualizá-la produzia a manchete errada. Fica como caixa (R$) e período.
+  const lastDays = account.last_yield_business_days ?? 0;
+  const showLast =
+    account.last_yield_gain != null &&
+    account.last_yield_from != null &&
+    account.last_yield_from !== account.history_yield_from;
 
   const rename = () => {
     const name = window.prompt("Novo nome da conta:", account.name);
@@ -256,23 +275,31 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
       <div className="reserve-metrics">
         <div className="reserve-metric">
           <Tooltip metricKey="fixed_income_yield">
-            <span className="muted">Último rendimento</span>
+            <span className="muted">Rendimento</span>
           </Tooltip>
-          <strong>
-            {account.last_yield_annual != null ? `${pct(account.last_yield_annual)} a.a.` : "—"}
-          </strong>
+          <strong>{annual != null ? `${pct(annual)} a.a.` : "—"}</strong>
         </div>
         <div className="reserve-metric">
           <span className="muted">vs. CDI</span>
-          <strong>{pctCdiText ?? "—"}</strong>
+          <strong>{cdiText}</strong>
         </div>
-        {account.last_yield_gain != null && (
+        {account.history_yield_gain != null && (
           <div className="reserve-metric">
-            <span className="muted">Ganho no período</span>
-            <strong>{money(account.last_yield_gain)}</strong>
+            <span className="muted">Ganho acumulado</span>
+            <strong>{money(account.history_yield_gain)}</strong>
           </div>
         )}
       </div>
+
+      {period && <p className="reserve-window">{period}</p>}
+      {showLast && (
+        <p className="reserve-window">
+          Última janela: {money(account.last_yield_gain!)} em {lastDays}{" "}
+          {lastDays === 1 ? "dia útil" : "dias úteis"} ({isoToBR(account.last_yield_from!)} →{" "}
+          {isoToBR(account.last_yield_to!)})
+          {account.last_yield_gain! < 0 && " · o IR retido num resgate cai aqui"}
+        </p>
+      )}
 
       <div className="reserve-actions">
         <button className="link-button" onClick={() => setOpen((v) => !v)}>
@@ -297,7 +324,7 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
       {open && <EntryForm account={account} onDone={() => setOpen(false)} />}
       {showEntries && <EntriesList accountId={account.id} />}
 
-      {account.last_yield_annual == null && (
+      {annual == null && (
         <p className="note-desc" style={{ padding: "0 14px 12px" }}>
           O rendimento aparece quando há um <strong>ponto de partida (aporte ou saldo) e um saldo
           atual em data posterior</strong>.{cdiAnnual != null ? ` CDI hoje: ${pct(cdiAnnual)} a.a.` : ""}

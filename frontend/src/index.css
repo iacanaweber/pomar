@@ -351,6 +351,11 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .reserve-balance { font-size: 18px; color: var(--green); white-space: nowrap; }
 .reserve-metrics { display: flex; flex-wrap: wrap; gap: 12px; padding: 0 14px 10px; }
 .reserve-metric { display: flex; flex-direction: column; gap: 1px; font-size: 13px; min-width: 110px; }
+/* Rodapé do cartão: a janela que a taxa cobre, e a última atualização como diagnóstico.
+   Sem isso a taxa aparecia sem contexto — "−2,5% a.a." de uma janela de 2 dias lia igual
+   a "−2,5% a.a." de um ano. */
+.reserve-window { margin: 0; padding: 0 14px 4px; font-size: 12px; color: var(--muted); }
+.reserve-window:last-of-type { padding-bottom: 10px; }
 .reserve-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 0 14px 12px; }
 .reserve-archive { color: var(--danger); }
 .reserve-entries { list-style: none; margin: 0; padding: 0 14px 12px; display: flex; flex-direction: column; gap: 6px; }

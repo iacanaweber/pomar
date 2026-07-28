@@ -81,8 +81,9 @@ async def delete_entry(db: Database, entry_id: int) -> None:
 
 
 async def account_summary(db: Database, account: Dict[str, Any]) -> Dict[str, Any]:
-    """Monta o resumo de uma conta (saldo atual + rendimento da última atualização)."""
+    """Monta o resumo de uma conta (saldo atual + rendimento do histórico e da última janela)."""
     entries = await list_entries(db, account["id"])
+    hy = fi.history_yield(entries)
     ly = fi.last_yield(entries)
     return {
         "id": account["id"],
@@ -92,6 +93,11 @@ async def account_summary(db: Database, account: Dict[str, Any]) -> Dict[str, An
         "benchmark": account.get("benchmark"),
         "archived": bool(account.get("archived")),
         "current_balance": fi.current_balance(entries),
+        "history_yield_annual": hy["annualized"] if hy else None,
+        "history_yield_gain": hy["gain"] if hy else None,
+        "history_yield_from": hy["from_date"] if hy else None,
+        "history_yield_to": hy["to_date"] if hy else None,
+        "history_yield_business_days": hy["business_days"] if hy else None,
         "last_yield_annual": ly["annualized"] if ly else None,
         "last_yield_gain": ly["gain"] if ly else None,
         "last_yield_from": ly["from_date"] if ly else None,

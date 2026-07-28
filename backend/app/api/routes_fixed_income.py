@@ -20,7 +20,9 @@ router = APIRouter()
 
 async def _summary_with_cdi(account: dict, cdi: float | None) -> AccountSummary:
     s = await repo.account_summary(get_db(), account)
-    s["pct_of_cdi"] = fi.pct_of_cdi(s.get("last_yield_annual"), cdi)
+    # compara com o CDI o rendimento do HISTÓRICO, não o da última janela: é o único dos dois
+    # que não muda de valor conforme o usuário decide quando atualizar o saldo.
+    s["pct_of_cdi"] = fi.pct_of_cdi(s.get("history_yield_annual"), cdi)
     return AccountSummary(**s)
 
 

@@ -49,7 +49,7 @@ def test_last_yield_treats_midperiod_deposit_as_principal():
     ]
     ly = fi.last_yield(entries)
     assert ly is not None
-    assert ly["principal_before"] == 10_500.0  # aporte entra como principal, não como rendimento
+    assert ly["principal_after_flows"] == 10_500.0  # aporte entra como principal, não como rendimento
     assert ly["gain"] == 500.0                  # 11000 - 10500
     assert ly["annualized"] is not None and ly["annualized"] > 0
 
@@ -68,7 +68,7 @@ def test_last_yield_from_deposit_baseline():
     ]
     ly = fi.last_yield(entries)
     assert ly is not None
-    assert ly["principal_before"] == 10_000.0
+    assert ly["principal_after_flows"] == 10_000.0
     assert abs(ly["gain"] - 128.41) < 1e-6
     assert ly["annualized"] is not None and ly["annualized"] > 0
 
@@ -123,6 +123,107 @@ def test_dietz_um_aporte_um_saldo_continua_exato():
     res = fi.last_yield(entries)
     assert res is not None
     assert abs(res["period_return"] - 0.01) < 1e-9
+
+
+def test_history_yield_encadeia_todo_o_historico():
+    """Três janelas rendendo exatamente 1% cada: o histórico é (1.01)³ − 1, não a última."""
+    entries = [
+        {"id": 1, "kind": "balance", "amount": 10_000.00, "entry_date": "2026-01-02"},
+        {"id": 2, "kind": "balance", "amount": 10_100.00, "entry_date": "2026-02-02"},
+        {"id": 3, "kind": "balance", "amount": 10_201.00, "entry_date": "2026-03-02"},
+        {"id": 4, "kind": "balance", "amount": 10_303.01, "entry_date": "2026-04-02"},
+    ]
+    hy = fi.history_yield(entries)
+    assert hy is not None
+    assert abs(hy["period_return"] - (1.01**3 - 1)) < 1e-6
+    assert hy["gain"] == 303.01
+    assert hy["from_date"] == "2026-01-02" and hy["to_date"] == "2026-04-02"
+    # a última janela sozinha vê só 1% — o histórico vê os três
+    assert fi.last_yield(entries)["period_return"] < hy["period_return"]
+
+
+def test_history_yield_ignora_aportes_e_resgates_na_taxa():
+    """Duas contas com o MESMO rendimento e fluxos diferentes têm a mesma taxa (é o ponto
+    do retorno tempo-ponderado). O `gain` em reais, esse sim, difere."""
+    base = [
+        {"id": 1, "kind": "balance", "amount": 10_000.0, "entry_date": "2026-01-02"},
+        {"id": 2, "kind": "balance", "amount": 10_100.0, "entry_date": "2026-02-02"},
+        {"id": 3, "kind": "balance", "amount": 10_201.0, "entry_date": "2026-03-02"},
+    ]
+    # mesma trajetória de taxa (+1% ao mês), mas com R$5.000 aportados no meio
+    com_aporte = [
+        {"id": 1, "kind": "balance", "amount": 10_000.0, "entry_date": "2026-01-02"},
+        {"id": 2, "kind": "balance", "amount": 10_100.0, "entry_date": "2026-02-02"},
+        {"id": 3, "kind": "deposit", "amount": 5_000.0, "entry_date": "2026-02-02"},
+        {"id": 4, "kind": "balance", "amount": 15_251.0, "entry_date": "2026-03-02"},  # +1%
+    ]
+    a, b = fi.history_yield(base), fi.history_yield(com_aporte)
+    assert abs(a["annualized"] - b["annualized"]) < 1e-4
+    assert a["gain"] == 201.0 and b["gain"] == 251.0
+
+
+def test_history_yield_dilui_ruido_da_ultima_janela():
+    """Caso real que motivou a mudança: um resgate com IR retido deixa a última janela
+    (2 dias úteis) em −2,5% a.a.; o histórico inteiro segue mostrando o rendimento real."""
+    entries = [
+        {"id": 1, "kind": "deposit", "amount": 10_000.00, "entry_date": "2026-05-27"},
+        {"id": 2, "kind": "balance", "amount": 10_173.19, "entry_date": "2026-07-06"},
+        {"id": 3, "kind": "balance", "amount": 10_198.87, "entry_date": "2026-07-10"},
+        {"id": 4, "kind": "balance", "amount": 10_211.73, "entry_date": "2026-07-14"},
+        {"id": 5, "kind": "balance", "amount": 10_250.41, "entry_date": "2026-07-22"},
+        {"id": 6, "kind": "balance", "amount": 10_269.81, "entry_date": "2026-07-25"},
+        {"id": 7, "kind": "withdrawal", "amount": 1_400.00, "entry_date": "2026-07-28"},
+        {"id": 8, "kind": "balance", "amount": 8_867.76, "entry_date": "2026-07-28"},
+    ]
+    assert fi.last_yield(entries)["annualized"] < 0          # a janela curta acusa prejuízo
+    hy = fi.history_yield(entries)
+    assert 0.15 < hy["annualized"] < 0.18                     # o histórico, ~16,8% a.a.
+    assert hy["gain"] == 267.76                               # 8.867,76 − 10.000 + 1.400
+    assert hy["business_days"] == 43
+
+
+def test_fluxo_no_mesmo_dia_do_saldo_anterior_nao_vira_rendimento():
+    """Regressão: a fronteira do sub-período é POSICIONAL, não por data. Um aporte lançado
+    depois do saldo, no mesmo dia, entrava no saldo final mas ficava fora dos fluxos —
+    R$5.000 de dinheiro novo viravam 'rendimento' (a taxa ia a ~10.000% a.a.)."""
+    entries = [
+        {"id": 1, "kind": "balance", "amount": 10_000.0, "entry_date": "2026-07-01"},
+        {"id": 2, "kind": "deposit", "amount": 5_000.0, "entry_date": "2026-07-01"},
+        {"id": 3, "kind": "balance", "amount": 15_060.0, "entry_date": "2026-07-31"},
+    ]
+    ly = fi.last_yield(entries)
+    assert ly["gain"] == 60.0
+    assert ly["annualized"] < 0.10
+    assert fi.history_yield(entries)["gain"] == 60.0
+
+
+def test_resgate_no_mesmo_dia_lancado_apos_o_saldo_sai_do_saldo_atual():
+    """Regressão: quem atualiza o saldo de manhã e resgata à tarde lança os dois no mesmo
+    dia. Comparando só datas, o resgate era descartado e o saldo ficava superestimado."""
+    entries = [
+        {"id": 1, "kind": "balance", "amount": 10_000.0, "entry_date": "2026-07-28"},
+        {"id": 2, "kind": "withdrawal", "amount": 1_400.0, "entry_date": "2026-07-28"},
+    ]
+    assert fi.current_balance(entries) == 8_600.0
+    # e na ordem inversa (resgate primeiro, saldo já líquido) o saldo manda
+    invertido = [
+        {"id": 1, "kind": "withdrawal", "amount": 1_400.0, "entry_date": "2026-07-28"},
+        {"id": 2, "kind": "balance", "amount": 8_600.0, "entry_date": "2026-07-28"},
+    ]
+    assert fi.current_balance(invertido) == 8_600.0
+
+
+def test_history_yield_sem_saldo_ou_sem_dias_uteis():
+    assert fi.history_yield([]) is None
+    assert fi.history_yield([{"id": 1, "kind": "deposit", "amount": 100.0, "entry_date": "2026-07-01"}]) is None
+    # saldo único sem aporte anterior: não há sub-período
+    assert fi.history_yield([{"id": 1, "kind": "balance", "amount": 100.0, "entry_date": "2026-07-01"}]) is None
+
+
+def test_pct_of_cdi_nao_reporta_taxa_negativa():
+    """'−18% do CDI' se lia como rendimento; a conta tinha encolhido. Omitir é mais honesto."""
+    assert fi.pct_of_cdi(-0.0248, 0.138) is None
+    assert fi.pct_of_cdi(0.0, 0.138) == 0.0
 
 
 def test_feriados_gerados_batem_com_a_lista_curada_2024_2027():
