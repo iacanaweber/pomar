@@ -158,6 +158,70 @@ _MIGRATIONS: list[tuple[int, str]] = [
         ALTER TABLE preferences ADD COLUMN class_targets_json TEXT;
         """,
     ),
+    (
+        6,
+        # v6: rótulos genéricos por DIMENSÃO, em vez de uma coluna por ideia nova. A
+        # dimensão 'bucket' dirige a compra (é a generalização de class_targets_json);
+        # 'indexer' e 'geography' descrevem o ativo. Os rótulos EMBUTIDOS não entram aqui:
+        # são semeados de forma idempotente no boot (data/labels_seed.py), para acrescentar
+        # um builtin novo não exigir migração.
+        """
+        CREATE TABLE IF NOT EXISTS labels (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            dimension   TEXT NOT NULL,          -- 'indexer' | 'geography' | 'bucket' | futuro
+            code        TEXT NOT NULL,          -- 'CDI','SELIC','IPCA','PREFIXADO','LCI','BR','INTL'
+            name        TEXT NOT NULL,
+            builtin     INTEGER NOT NULL DEFAULT 0,
+            created_at  TEXT,
+            UNIQUE (dimension, code)
+        );
+
+        CREATE TABLE IF NOT EXISTS label_assignments (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            subject_type TEXT NOT NULL,         -- 'ticker' | 'fi_account'
+            subject_id   TEXT NOT NULL,         -- ticker normalizado OU id da conta como texto
+            label_id     INTEGER NOT NULL REFERENCES labels(id) ON DELETE CASCADE,
+            weight       REAL NOT NULL DEFAULT 1.0,   -- exposição parcial (ex.: 60% INTL / 40% BR)
+            created_at   TEXT,
+            UNIQUE (subject_type, subject_id, label_id)
+        );
+        CREATE INDEX IF NOT EXISTS idx_label_subject ON label_assignments(subject_type, subject_id);
+        """,
+    ),
+    (
+        7,
+        # v7: uma conta de renda fixa deixa de ser só "reserva". `counts_in_portfolio=0` por
+        # DEFAULT é deliberado: nenhuma conta pré-existente passa a contar no patrimônio (e
+        # a mexer nos alvos em R$ das demais classes) sem ação explícita do usuário.
+        # `purpose='earmarked'` é dinheiro com destino definido — a conta que provisiona o
+        # IR do ano seguinte — e nunca entra na carteira, mesmo marcada.
+        """
+        ALTER TABLE fixed_income_accounts ADD COLUMN counts_in_portfolio INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE fixed_income_accounts ADD COLUMN purpose             TEXT    NOT NULL DEFAULT 'investment';
+        ALTER TABLE fixed_income_accounts ADD COLUMN liquidity           TEXT    NOT NULL DEFAULT 'unknown';
+        ALTER TABLE fixed_income_accounts ADD COLUMN redeem_days         INTEGER;
+        """,
+    ),
+    (
+        8,
+        # v8: o `reserve_target` (fração do patrimônio) é APOSENTADO como percentual e
+        # renasce como PISO em R$ dentro da classe RENDA_FIXA:
+        #     alvo_RF = max(peso_RF × patrimônio, piso_corrigido)
+        # Com `reserve_floor_index='ipca'` o piso é corrigido a partir de
+        # `reserve_floor_date` — um piso nominal encolhe sozinho e a tela nunca avisa.
+        #
+        # `legacy_in_total` é do bloco "ativos fora do alvo" e vem junto por necessidade do
+        # motor de migração: `_migrate` compara com MAX(version), então uma versão MENOR
+        # acrescentada depois seria pulada em silêncio — as versões precisam nascer em
+        # ordem crescente no tempo. DEFAULT 1 reproduz o comportamento de hoje (o legado
+        # entra no denominador da comparação atual × alvo).
+        """
+        ALTER TABLE preferences ADD COLUMN reserve_floor_amount REAL    NOT NULL DEFAULT 0.0;
+        ALTER TABLE preferences ADD COLUMN reserve_floor_date   TEXT;
+        ALTER TABLE preferences ADD COLUMN reserve_floor_index  TEXT    NOT NULL DEFAULT 'none';
+        ALTER TABLE preferences ADD COLUMN legacy_in_total      INTEGER NOT NULL DEFAULT 1;
+        """,
+    ),
 ]
 
 
