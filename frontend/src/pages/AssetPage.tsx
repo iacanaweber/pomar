@@ -1,6 +1,12 @@
 import { useNavigate, useParams } from "react-router-dom";
 import { ApiError } from "../api/client";
-import { useAsset, useYocHistory } from "../api/queries";
+import {
+  useAssignments,
+  useAsset,
+  useLabels,
+  useSetAssignments,
+  useYocHistory,
+} from "../api/queries";
 import { CeilingBadge } from "../components/CeilingBadge";
 import { Tooltip } from "../components/Tooltip";
 import type { Fundamentals } from "../types";
@@ -26,6 +32,84 @@ function YocEvolution({ ticker }: { ticker: string }) {
         De <strong>{pct(first.yoc ?? 0)}</strong> em {first.month} para{" "}
         <strong>{pct(last.yoc ?? 0)}</strong> em {last.month}
         {trend > 0.001 ? " — sua renda sobre o custo está crescendo. 🌱" : ""}
+      </p>
+    </div>
+  );
+}
+
+/** Rótulos do ativo que o usuário pode sobrescrever: a cesta em que ele é comprado
+ *  (bucket, que DIRIGE a compra) e o domicílio (geografia, só visualização).
+ *
+ *  A geografia mostra de onde veio o rótulo: "(default)" quando é o mapa curado, sem
+ *  sufixo quando foi escolha do usuário. Sem essa distinção, um default plausível pareceria
+ *  uma decisão que ele nunca tomou. */
+function AssetLabels({ ticker, assetClass }: { ticker: string; assetClass: string }) {
+  const buckets = useLabels("bucket");
+  const geos = useLabels("geography");
+  const setAssignments = useSetAssignments();
+  const atual = useAssignments({
+    dimension: "geography",
+    subjectType: "ticker",
+    subjects: [ticker],
+    includeDefaults: true,
+  });
+  const bucketAtual = useAssignments({
+    dimension: "bucket",
+    subjectType: "ticker",
+    subjects: [ticker],
+  });
+
+  const geo = atual.data?.[0];
+  const bucket = bucketAtual.data?.[0];
+
+  const salvar = (dimension: "bucket" | "geography", code: string, labels = geos.data) => {
+    const label = (labels ?? []).find((l) => l.code === code);
+    setAssignments.mutate({
+      subject_type: "ticker",
+      subject_id: ticker,
+      dimension,
+      items: label ? [{ label_id: label.id, weight: 1 }] : [],
+    });
+  };
+
+  return (
+    <div className="alloc asset-labels">
+      <h3 style={{ marginTop: 0 }}>Classificação</h3>
+      <div className="adv-row">
+        <label className="field">
+          <span>Cesta na carteira alvo</span>
+          <select
+            value={bucket?.code ?? ""}
+            onChange={(e) => salvar("bucket", e.target.value, buckets.data)}
+          >
+            <option value="">Automática ({assetClass})</option>
+            {(buckets.data ?? []).map((l) => (
+              <option key={l.id} value={l.code}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span>Geografia</span>
+          <select value={geo?.code ?? "BR"} onChange={(e) => salvar("geography", e.target.value)}>
+            {(geos.data ?? []).map((l) => (
+              <option key={l.id} value={l.code}>
+                {l.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+        {geo && geo.source !== "user"
+          ? `Geografia herdada do mapa do app (${geo.name}).`
+          : "Geografia escolhida por você."}{" "}
+        A classificação é por domicílio do ativo, não por origem da receita.
+      </p>
+      <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+        A cesta escolhida à mão tem precedência sobre a classificação automática — é assim
+        que um ETF de renda fixa passa a compor a cesta de renda fixa.
       </p>
     </div>
   );
@@ -127,6 +211,8 @@ export function AssetPage() {
           ))}
         </ul>
       )}
+
+      <AssetLabels ticker={asset.ticker} assetClass={asset.asset_class} />
 
       <div className="alloc">
         <h3>Fundamentos</h3>

@@ -763,3 +763,98 @@ def test_plan_avisa_renda_fixa_com_meta_e_sem_indexador(authed_client, monkeypat
     assert any("indexador" in w for w in r["warnings"])
     # e a renda fixa não entra no alocador de cotas
     assert r["classes_applied"] == ["STOCK"]
+
+
+# --- composição do patrimônio (dimensões secundárias) ---------------------------------
+
+def test_exposure_inclui_a_renda_fixa_marcada(authed_client, _stub_cdi, monkeypatch):
+    from app.models.portfolio import Allocations, Portfolio, Position
+
+    c = authed_client
+    conta = _conta(c, "Tesouro Selic", counts_in_portfolio=True).json()
+    fora = _conta(c, "Conta corrente").json()
+    _saldo(c, conta["id"], 30_000.0)
+    _saldo(c, fora["id"], 9_000.0)
+
+    async def carteira(gf, cache, overrides=None):
+        return Portfolio(
+            total_value=70_000.0, as_of="2026-06-01T00:00:00Z", allocations=Allocations(),
+            positions=[
+                Position(ticker="AAA3", asset_class="STOCK", sector="Bancos",
+                         value=50_000.0, weight=0.71),
+                Position(ticker="IVVB11", asset_class="ETF", sector="Exterior",
+                         value=20_000.0, weight=0.29),
+            ],
+        )
+
+    monkeypatch.setattr("app.api.routes_portfolio.get_enriched_portfolio", carteira)
+    r = c.get("/api/portfolio/exposure").json()
+    assert r["total"] == 100_000.0  # 70k de RV + 30k da conta marcada (a outra fica fora)
+    assert r["rv_total"] == 70_000.0 and r["rf_total"] == 30_000.0
+
+    dims = {d["dimension"]: {i["code"]: i for i in d["items"]} for d in r["dimensions"]}
+    assert dims["class"]["RENDA_FIXA"]["value"] == 30_000.0
+    assert dims["class"]["RENDA_FIXA"]["name"] == "Renda fixa"
+    # IVVB11 é internacional pelo mapa curado; a conta de renda fixa é brasileira
+    assert dims["geography"]["INTL"]["value"] == 20_000.0
+    assert dims["geography"]["BR"]["value"] == 80_000.0
+    assert dims["geography"]["BR"]["pct"] == 0.8
+
+
+def test_exposure_mostra_meta_e_desvio_sem_afetar_a_compra(authed_client, _stub_cdi, monkeypatch):
+    from app.models.portfolio import Allocations, Portfolio, Position
+
+    c = authed_client
+    assert c.put("/api/preferences", json={
+        "dimension_targets": {"geography": {"INTL": 0.3}},
+    }).status_code == 200
+
+    async def carteira(gf, cache, overrides=None):
+        return Portfolio(
+            total_value=100_000.0, as_of="2026-06-01T00:00:00Z", allocations=Allocations(),
+            positions=[Position(ticker="IVVB11", asset_class="ETF", value=20_000.0, weight=0.2),
+                       Position(ticker="AAA3", asset_class="STOCK", value=80_000.0, weight=0.8)],
+        )
+
+    monkeypatch.setattr("app.api.routes_portfolio.get_enriched_portfolio", carteira)
+    geo = next(d for d in c.get("/api/portfolio/exposure").json()["dimensions"]
+               if d["dimension"] == "geography")
+    intl = next(i for i in geo["items"] if i["code"] == "INTL")
+    assert intl["target_pct"] == 0.3 and intl["deviation_pp"] == -10.0
+
+    # e a meta não entra em lugar nenhum do plano
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+    c.put("/api/preferences", json={"class_targets": {"STOCK": {"AAA3": 1.0}}})
+    plano = c.post("/api/plan", json={"aporte": 1000.0, "classes": ["STOCK"],
+                                      "min_ticket": 10.0}).json()
+    assert not any("INTL" in w or "geogra" in w.lower() for w in plano["warnings"])
+
+
+def test_dimensao_bucket_nao_aceita_meta_secundaria(authed_client):
+    """Meta vinculante em duas dimensões independentes é um sistema sobredeterminado."""
+    r = authed_client.put(
+        "/api/preferences", json={"dimension_targets": {"bucket": {"STOCK": 0.5}}}
+    )
+    assert r.status_code == 422
+
+
+def test_meta_secundaria_acima_de_100_e_recusada(authed_client):
+    r = authed_client.put(
+        "/api/preferences", json={"dimension_targets": {"geography": {"BR": 0.8, "INTL": 0.5}}}
+    )
+    assert r.status_code == 422
+    # abaixo de 100% é legítimo: "quero 20% internacional" e sem opinião sobre o resto
+    ok = authed_client.put(
+        "/api/preferences", json={"dimension_targets": {"geography": {"INTL": 0.2}}}
+    )
+    assert ok.status_code == 200
+
+
+def test_exposure_degrada_sem_ghostfolio(authed_client, _stub_cdi):
+    """A renda fixa continua correta e a resposta diz o que ficou de fora."""
+    c = authed_client
+    conta = _conta(c, "CDB", counts_in_portfolio=True).json()
+    _saldo(c, conta["id"], 10_000.0)
+    r = c.get("/api/portfolio/exposure").json()
+    assert r["total"] == 10_000.0 and r["rv_total"] == 0.0
+    assert any("carteira" in w for w in r["warnings"])

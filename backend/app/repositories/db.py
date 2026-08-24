@@ -222,6 +222,16 @@ _MIGRATIONS: list[tuple[int, str]] = [
         ALTER TABLE preferences ADD COLUMN legacy_in_total      INTEGER NOT NULL DEFAULT 1;
         """,
     ),
+    (
+        9,
+        # v9: metas das dimensões SECUNDÁRIAS (geografia, tipo de ativo). São informativas e
+        # não têm efeito algum sobre a compra: metas vinculantes em duas dimensões
+        # independentes formam um sistema sobredeterminado, sem solução para a maioria das
+        # combinações. A dimensão que dirige a compra continua sendo só `class_targets_json`.
+        """
+        ALTER TABLE preferences ADD COLUMN dimension_targets_json TEXT;
+        """,
+    ),
 ]
 
 

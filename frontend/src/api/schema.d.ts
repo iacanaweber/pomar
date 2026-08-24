@@ -129,6 +129,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/portfolio/exposure": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Exposure
+         * @description Composição do patrimônio INTEIRO — renda variável mais a renda fixa que conta.
+         *
+         *     Enquanto a renda fixa vivia só na aba Reserva, o gráfico da Carteira contava a história
+         *     toda; deixou de contar no momento em que uma conta pode ser marcada como patrimônio.
+         *     Sem isto, quem tem 30% em Tesouro Selic veria uma carteira 100% em bolsa.
+         *
+         *     `geography` e `sector` são visualização: nenhuma decisão de compra passa por elas. A
+         *     meta é opcional e informativa — metas vinculantes em duas dimensões independentes
+         *     formam um sistema sobredeterminado, e resolver isso é problema de otimização com
+         *     folga, não de rebalanceamento proporcional.
+         */
+        get: operations["exposure_api_portfolio_exposure_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/universe": {
         parameters: {
             query?: never;
@@ -949,6 +978,108 @@ export interface components {
             /** Note */
             note?: string | null;
         };
+        /** ExposureDimension */
+        ExposureDimension: {
+            /**
+             * Dimension
+             * @description 'class' | 'sector' | 'geography'.
+             */
+            dimension: string;
+            /** Items */
+            items?: components["schemas"]["ExposureItem"][];
+        };
+        /**
+         * ExposureItem
+         * @description Uma fatia de uma dimensão de composição, com a meta OPCIONAL e informativa.
+         */
+        ExposureItem: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Value
+             * @description Valor em BRL.
+             * @default 0
+             */
+            value: number;
+            /**
+             * Pct
+             * @description Fatia do patrimônio (0..1).
+             * @default 0
+             */
+            pct: number;
+            /**
+             * Target Pct
+             * @description Meta informativa (0..1), se houver.
+             */
+            target_pct?: number | null;
+            /**
+             * Deviation Pp
+             * @description Atual − meta, em pontos percentuais.
+             */
+            deviation_pp?: number | null;
+            /** Members */
+            members?: components["schemas"]["ExposureMember"][];
+        };
+        /**
+         * ExposureMember
+         * @description O que compõe uma fatia — um ticker ou uma conta de renda fixa.
+         */
+        ExposureMember: {
+            /**
+             * Label
+             * @description Ticker ou nome da conta.
+             */
+            label: string;
+            /**
+             * Name
+             * @description Nome do ativo ou instituição.
+             */
+            name?: string | null;
+            /**
+             * Value
+             * @description Contribuição para esta fatia (BRL).
+             * @default 0
+             */
+            value: number;
+        };
+        /**
+         * ExposureResponse
+         * @description Composição do patrimônio INTEIRO: renda variável + renda fixa que conta na carteira.
+         *
+         *     O total daqui é maior que o de `/api/portfolio`, que lê só o Ghostfolio. As dimensões
+         *     além de `class` são de visualização: nenhuma decisão de compra passa por elas.
+         */
+        ExposureResponse: {
+            /**
+             * Total
+             * @description Patrimônio (BRL): renda variável + renda fixa marcada.
+             * @default 0
+             */
+            total: number;
+            /**
+             * Rv Total
+             * @description Parte de renda variável (BRL).
+             * @default 0
+             */
+            rv_total: number;
+            /**
+             * Rf Total
+             * @description Parte de renda fixa que conta na carteira (BRL).
+             * @default 0
+             */
+            rf_total: number;
+            /** Dimensions */
+            dimensions?: components["schemas"]["ExposureDimension"][];
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+            /** Warnings */
+            warnings?: string[];
+        };
         /** FixedIncomeSummary */
         FixedIncomeSummary: {
             /** Accounts */
@@ -1676,6 +1807,15 @@ export interface components {
              */
             reserve_floor_index?: ("none" | "ipca") | null;
             /**
+             * Dimension Targets
+             * @description Metas das dimensões SECUNDÁRIAS ({'geography': {'INTL': 0.2}}). Informativas: não têm efeito algum sobre a compra.
+             */
+            dimension_targets?: {
+                [key: string]: {
+                    [key: string]: number;
+                };
+            } | null;
+            /**
              * Legacy In Total
              * @description Se os ativos fora da carteira alvo entram no patrimônio que serve de base para os alvos em R$ das demais classes.
              */
@@ -2053,6 +2193,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Portfolio"];
+                };
+            };
+        };
+    };
+    exposure_api_portfolio_exposure_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExposureResponse"];
                 };
             };
         };

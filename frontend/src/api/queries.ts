@@ -34,6 +34,10 @@ export const useAuthStatus = () => useQuery({ queryKey: keys.auth, queryFn: api.
 export const useGlossaryQuery = () =>
   useQuery({ queryKey: keys.glossary, queryFn: api.glossary, staleTime: Infinity });
 export const usePortfolio = () => useQuery({ queryKey: keys.portfolio, queryFn: api.portfolio });
+/** Composição do patrimônio inteiro — inclui a renda fixa marcada, ao contrário de
+ *  `usePortfolio`, que é a leitura crua do Ghostfolio. */
+export const useExposure = () =>
+  useQuery({ queryKey: [...keys.portfolio, "exposure"], queryFn: api.exposure });
 export const usePreferences = () =>
   useQuery({ queryKey: keys.preferences, queryFn: api.preferences });
 export const useWatchlist = () => useQuery({ queryKey: keys.watchlist, queryFn: api.watchlist });

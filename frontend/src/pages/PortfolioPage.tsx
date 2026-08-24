@@ -1,6 +1,12 @@
 import { useMemo, useState } from "react";
 import { ApiError } from "../api/client";
-import { useFixedIncome, useIncome, usePortfolio, usePreferences } from "../api/queries";
+import {
+  useExposure,
+  useFixedIncome,
+  useIncome,
+  usePortfolio,
+  usePreferences,
+} from "../api/queries";
 import type { Position } from "../types";
 import { PieChart, type Slice } from "../components/PieChart";
 import { AssetLink } from "../components/AssetLink";
@@ -11,14 +17,24 @@ import { PALETTE } from "../lib/palette";
 import { PortfolioVsTarget } from "../components/PortfolioVsTarget";
 import { buildComparison } from "../lib/comparison";
 
-type GroupBy = "target" | "asset" | "class" | "sector";
+type GroupBy = "target" | "asset" | "class" | "geography" | "sector";
 
 const GROUPS: { key: GroupBy; label: string }[] = [
   { key: "target", label: "Atual × alvo" },
   { key: "asset", label: "Por ativo" },
   { key: "class", label: "Por classe" },
+  { key: "geography", label: "Por geografia" },
   { key: "sector", label: "Por setor" },
 ];
+
+/** Dimensões cuja composição vem do backend: elas incluem a renda fixa marcada, e a
+ *  aritmética (rateio de exposição parcial, metas, desvios) é testada lá. */
+const FROM_EXPOSURE: GroupBy[] = ["class", "geography", "sector"];
+
+/** Desvio em pontos percentuais, com sinal — a meta secundária é informativa, então o
+ *  número aparece do lado do valor em vez de virar barra ou alerta. */
+const signedPp = (n: number) =>
+  `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(1).replace(".", ",")} p.p.`;
 
 interface Member {
   ticker: string;
@@ -29,11 +45,12 @@ interface Group {
   label: string;
   value: number;
   members: Member[];
+  targetPct?: number | null;
+  deviationPp?: number | null;
 }
 
-/** Agrega as posições conforme a visão escolhida, guardando os ATIVOS de cada grupo
- *  (para o detalhamento ao clicar numa fatia). */
-function aggregate(positions: Position[], by: GroupBy): Group[] {
+/** Agrega as POSIÇÕES (renda variável) — usado só na visão "por ativo". */
+function aggregate(positions: Position[]): Group[] {
   const map = new Map<string, Group>();
   const add = (key: string, m: Member) => {
     let g = map.get(key);
@@ -46,10 +63,7 @@ function aggregate(positions: Position[], by: GroupBy): Group[] {
   };
 
   for (const p of positions) {
-    const base = { ticker: p.ticker, name: p.name ?? null };
-    if (by === "asset") add(p.ticker, { ...base, value: p.value });
-    else if (by === "class") add(p.asset_class || "OUTROS", { ...base, value: p.value });
-    else add(p.sector || "Sem setor", { ...base, value: p.value });
+    add(p.ticker, { ticker: p.ticker, name: p.name ?? null, value: p.value });
   }
 
   let items = Array.from(map.values()).sort((a, b) => b.value - a.value);
@@ -71,6 +85,7 @@ function aggregate(positions: Position[], by: GroupBy): Group[] {
 
 export function PortfolioPage() {
   const { data: pf, isLoading, error } = usePortfolio();
+  const exposure = useExposure();
   const income = useIncome();
   const fixedIncome = useFixedIncome(); // só pelo CDI de referência (SGS/BCB)
   const preferences = usePreferences();
@@ -88,10 +103,27 @@ export function PortfolioPage() {
   }, [income.data]);
 
   const positions = pf?.positions ?? [];
-  const groups = useMemo(
-    () => (by === "target" ? [] : aggregate(positions, by)),
-    [positions, by],
-  );
+  const groups = useMemo(() => {
+    if (by === "asset") return aggregate(positions);
+    if (!FROM_EXPOSURE.includes(by)) return [];
+    const dim = (exposure.data?.dimensions ?? []).find((d) => d.dimension === by);
+    return (dim?.items ?? []).map((i) => ({
+      label: i.name,
+      value: i.value,
+      targetPct: i.target_pct,
+      deviationPp: i.deviation_pp,
+      members: (i.members ?? []).map((m) => ({
+        ticker: m.label,
+        name: m.name ?? null,
+        value: m.value,
+      })),
+    }));
+  }, [positions, by, exposure.data]);
+
+  // Um total só para a página inteira: o patrimônio com a renda fixa que conta na carteira.
+  // Enquanto a renda fixa vivia só na aba Reserva os dois números coincidiam; hoje, mostrar
+  // o do Ghostfolio como "patrimônio" esconderia justamente o que o usuário acabou de marcar.
+  const total = exposure.data?.total ?? pf?.total_value ?? 0;
 
   const comparison = useMemo(
     () =>
@@ -143,14 +175,20 @@ export function PortfolioPage() {
 
   const ariaLabel = `Distribuição da carteira por ${
     GROUPS.find((g) => g.key === by)?.label ?? by
-  }: ${slices.map((s) => `${s.label} ${pct(s.value / pf.total_value)}`).join(", ")}`;
+  }: ${slices.map((s) => `${s.label} ${pct(s.value / total)}`).join(", ")}`;
 
   return (
     <main className="page">
       <div className="pf-summary">
         <span className="muted">Patrimônio total</span>
-        <strong className="pf-total">{money(pf.total_value)}</strong>
-        <span className="muted">{positions.length} posições</span>
+        <strong className="pf-total">{money(total)}</strong>
+        <span className="muted">
+          {positions.length} posições
+          {(exposure.data?.rf_total ?? 0) > 0 && (
+            <> · renda variável {money(exposure.data!.rv_total)} · renda fixa{" "}
+              {money(exposure.data!.rf_total)}</>
+          )}
+        </span>
         {(portfolioDy != null || portfolioYoc != null) && (
           <span className="pf-yields">
             {portfolioYoc != null && (
@@ -200,7 +238,7 @@ export function PortfolioPage() {
               key={s.label}
               role="listitem"
               tabIndex={0}
-              aria-label={`${s.label}: ${money(s.value)}, ${pct(s.value / pf.total_value)}`}
+              aria-label={`${s.label}: ${money(s.value)}, ${pct(s.value / total)}`}
               className={`legend-item ${active != null && active !== i ? "dim" : ""} ${active === i ? "legend-on" : ""}`}
               onClick={() => setActive(active === i ? null : i)}
               onKeyDown={(e) => {
@@ -213,12 +251,30 @@ export function PortfolioPage() {
               <span className="legend-dot" style={{ background: s.color }} />
               <span className="legend-label">{s.label}</span>
               <span className="legend-val">
-                {money(s.value)} <span className="muted">· {pct(s.value / pf.total_value)}</span>
+                {money(s.value)} <span className="muted">· {pct(s.value / total)}</span>
+                {groups[i]?.deviationPp != null && (
+                  <span className="muted legend-target">
+                    {" "}
+                    · meta {pct(groups[i].targetPct ?? 0)} ({signedPp(groups[i].deviationPp!)})
+                  </span>
+                )}
               </span>
             </li>
           ))}
         </ul>
       </div>
+      )}
+
+      {by === "geography" && (
+        <p className="muted pf-note">
+          Classificação por domicílio do ativo, não por origem da receita: empresa brasileira
+          com receita majoritariamente externa continua em Brasil.
+        </p>
+      )}
+      {FROM_EXPOSURE.includes(by) && (exposure.data?.rf_total ?? 0) > 0 && (
+        <p className="muted pf-note">
+          Inclui {money(exposure.data!.rf_total)} de renda fixa marcada como parte da carteira.
+        </p>
       )}
 
       {by === "asset" && (
@@ -233,7 +289,7 @@ export function PortfolioPage() {
                   <li key={p.ticker} className="pf-drill-item pf-asset-row">
                     <span className="pf-drill-ticker"><AssetLink ticker={p.ticker} /></span>
                     <span className="pf-asset-val">
-                      {money(p.value)} <span className="muted">· {pct(p.value / pf.total_value)}</span>
+                      {money(p.value)} <span className="muted">· {pct(p.value / total)}</span>
                     </span>
                     <YocCell dividendYield={y?.dy} yieldOnCost={y?.yoc} />
                     {p.net_performance_pct != null && (
@@ -271,7 +327,7 @@ export function PortfolioPage() {
                 <span className="pf-drill-ticker"><AssetLink ticker={m.ticker} /></span>
                 {m.name && <span className="pf-drill-name">{m.name}</span>}
                 <span className="pf-drill-val">
-                  {money(m.value)} <span className="muted">· {pct(m.value / pf.total_value)}</span>
+                  {money(m.value)} <span className="muted">· {pct(m.value / total)}</span>
                 </span>
               </li>
             ))}

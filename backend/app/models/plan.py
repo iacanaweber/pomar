@@ -24,6 +24,16 @@ INVESTABLE_CLASSES = ("STOCK", "FII", "ETF", "BDR")
 RENDA_FIXA = "RENDA_FIXA"
 ALLOCATION_CLASSES = (*INVESTABLE_CLASSES, RENDA_FIXA)
 
+# Rótulo em português de cada classe — fonte única, para as telas não divergirem.
+CLASS_LABEL = {
+    "STOCK": "Ações",
+    "FII": "FIIs",
+    "ETF": "ETFs",
+    "BDR": "BDRs",
+    RENDA_FIXA: "Renda fixa",
+    "UNKNOWN": "Outros",
+}
+
 
 class SuggestedBuy(BaseModel):
     """Quanto comprar de um ativo — com a aritmética completa, auditável."""

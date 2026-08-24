@@ -35,6 +35,7 @@ def _defaults(settings: Settings) -> Dict[str, Any]:
         "reserve_floor_date": None,
         "reserve_floor_index": "none",
         "legacy_in_total": True,
+        "dimension_targets": {},
     }
 
 
@@ -57,6 +58,11 @@ def _row_to_prefs(row: Dict[str, Any], settings: Settings) -> Dict[str, Any]:
             "reserve_floor_index": row.get("reserve_floor_index") or "none",
             "legacy_in_total": bool(
                 row["legacy_in_total"] if row.get("legacy_in_total") is not None else 1
+            ),
+            "dimension_targets": (
+                json.loads(row["dimension_targets_json"])
+                if row.get("dimension_targets_json")
+                else {}
             ),
         }
     )
@@ -106,8 +112,8 @@ async def put(db: Database, prefs: Dict[str, Any], settings: Settings) -> Dict[s
             (id, aporte_default, targets_json, min_ticket, lot_mode, reserve_target,
              bazin_target_mode, bazin_target_yield, class_targets_json,
              reserve_floor_amount, reserve_floor_date, reserve_floor_index, legacy_in_total,
-             updated_at)
-        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             dimension_targets_json, updated_at)
+        VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
             aporte_default=excluded.aporte_default,
             targets_json=excluded.targets_json,
@@ -121,6 +127,7 @@ async def put(db: Database, prefs: Dict[str, Any], settings: Settings) -> Dict[s
             reserve_floor_date=excluded.reserve_floor_date,
             reserve_floor_index=excluded.reserve_floor_index,
             legacy_in_total=excluded.legacy_in_total,
+            dimension_targets_json=excluded.dimension_targets_json,
             updated_at=excluded.updated_at
         """,
         (
@@ -136,6 +143,7 @@ async def put(db: Database, prefs: Dict[str, Any], settings: Settings) -> Dict[s
             merged["reserve_floor_date"],
             merged["reserve_floor_index"],
             int(bool(merged["legacy_in_total"])),
+            json.dumps(merged["dimension_targets"]),
             datetime.now(timezone.utc).isoformat(),
         ),
     )

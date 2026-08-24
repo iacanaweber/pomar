@@ -35,3 +35,43 @@ class Portfolio(BaseModel):
     as_of: str = Field(..., description="Carimbo ISO da leitura.")
     source: str = Field("ghostfolio", description="Origem dos dados.")
     warnings: List[str] = Field(default_factory=list)
+
+
+class ExposureMember(BaseModel):
+    """O que compõe uma fatia — um ticker ou uma conta de renda fixa."""
+
+    label: str = Field(..., description="Ticker ou nome da conta.")
+    name: Optional[str] = Field(None, description="Nome do ativo ou instituição.")
+    value: float = Field(0.0, description="Contribuição para esta fatia (BRL).")
+
+
+class ExposureItem(BaseModel):
+    """Uma fatia de uma dimensão de composição, com a meta OPCIONAL e informativa."""
+
+    code: str
+    name: str
+    value: float = Field(0.0, description="Valor em BRL.")
+    pct: float = Field(0.0, description="Fatia do patrimônio (0..1).")
+    target_pct: Optional[float] = Field(None, description="Meta informativa (0..1), se houver.")
+    deviation_pp: Optional[float] = Field(None, description="Atual − meta, em pontos percentuais.")
+    members: List[ExposureMember] = Field(default_factory=list)
+
+
+class ExposureDimension(BaseModel):
+    dimension: str = Field(..., description="'class' | 'sector' | 'geography'.")
+    items: List[ExposureItem] = Field(default_factory=list)
+
+
+class ExposureResponse(BaseModel):
+    """Composição do patrimônio INTEIRO: renda variável + renda fixa que conta na carteira.
+
+    O total daqui é maior que o de `/api/portfolio`, que lê só o Ghostfolio. As dimensões
+    além de `class` são de visualização: nenhuma decisão de compra passa por elas.
+    """
+
+    total: float = Field(0.0, description="Patrimônio (BRL): renda variável + renda fixa marcada.")
+    rv_total: float = Field(0.0, description="Parte de renda variável (BRL).")
+    rf_total: float = Field(0.0, description="Parte de renda fixa que conta na carteira (BRL).")
+    dimensions: List[ExposureDimension] = Field(default_factory=list)
+    currency: str = "BRL"
+    warnings: List[str] = Field(default_factory=list)

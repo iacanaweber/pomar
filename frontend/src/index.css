@@ -681,3 +681,9 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   .cmp-row { grid-template-columns: 96px 1fr auto auto; gap: 12px; }
   .cmp-nums { flex-direction: row; align-items: baseline; gap: 8px; }
 }
+
+/* Composição do patrimônio: notas de rodapé da visão e a meta secundária na legenda.
+   A meta é informativa, então ela fica ao lado do valor — sem barra, sem alerta. */
+.pf-note { font-size: 12px; margin: 8px 0 0; text-align: center; }
+.legend-target { white-space: nowrap; }
+.asset-labels { display: flex; flex-direction: column; gap: 8px; }

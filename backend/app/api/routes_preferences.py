@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.config import get_settings
 from app.deps import get_db
+from app.data.labels_seed import DIMENSIONS
 from app.models.plan import ALLOCATION_CLASSES
 from app.repositories import preferences_repo
 
@@ -40,6 +41,11 @@ class PreferencesBody(BaseModel):
     reserve_floor_index: Optional[Literal["none", "ipca"]] = Field(
         None, description="'ipca' corrige o piso pela inflação; 'none' o deixa nominal."
     )
+    dimension_targets: Optional[Dict[str, Dict[str, float]]] = Field(
+        None,
+        description="Metas das dimensões SECUNDÁRIAS ({'geography': {'INTL': 0.2}}). "
+        "Informativas: não têm efeito algum sobre a compra.",
+    )
     legacy_in_total: Optional[bool] = Field(
         None,
         description="Se os ativos fora da carteira alvo entram no patrimônio que serve de "
@@ -62,6 +68,39 @@ class PreferencesBody(BaseModel):
         if d.year < 1994:  # Plano Real; antes disso é typo
             raise ValueError(f"Ano {d.year} parece um erro de digitação.")
         return d.isoformat()
+
+    @field_validator("dimension_targets")
+    @classmethod
+    def _dimension_targets_validos(
+        cls, v: Optional[Dict[str, Dict[str, float]]]
+    ) -> Optional[Dict[str, Dict[str, float]]]:
+        """Metas de visualização. `bucket` não entra aqui: a dimensão que dirige a compra é
+        `targets` + `class_targets`, e aceitar uma segunda meta vinculante criaria um
+        sistema sobredeterminado sem solução para a maioria das combinações.
+
+        A soma pode ficar ABAIXO de 100%: "quero 20% internacional" é uma meta completa
+        para quem não quer opinar sobre o resto. Acima de 100% é impossível, e aí é erro.
+        """
+        if v is None:
+            return None
+        permitidas = tuple(d for d in DIMENSIONS if d != "bucket")
+        out: Dict[str, Dict[str, float]] = {}
+        for raw_dim, weights in v.items():
+            d = (raw_dim or "").strip().lower()
+            if d not in permitidas:
+                raise ValueError(
+                    f"dimensão '{raw_dim}' não aceita meta; use {', '.join(permitidas)}."
+                )
+            if not weights:
+                continue  # metas removidas
+            norm = {c.strip().upper(): float(w) for c, w in weights.items()}
+            if any(w <= 0 for w in norm.values()):
+                raise ValueError(f"metas de {d} devem ser > 0.")
+            total = sum(norm.values())
+            if total > 1.0 + 0.001:
+                raise ValueError(f"metas de {d} somam {total * 100:.1f}% — mais que a carteira.")
+            out[d] = norm
+        return out
 
     @field_validator("class_targets")
     @classmethod

@@ -7,6 +7,7 @@ import type {
   AssignmentsIn,
   AuthStatus,
   EntryIn,
+  ExposureResponse,
   FixedIncomeEntry,
   FixedIncomeSummary,
   Glossary,
@@ -98,6 +99,8 @@ export const api = {
 
   // carteira / mercado
   portfolio: () => request<Portfolio>("/api/portfolio"),
+  // composição do patrimônio INTEIRO (renda variável + renda fixa marcada), por dimensão
+  exposure: () => request<ExposureResponse>("/api/portfolio/exposure", {}, 30000),
   asset: (ticker: string) => request<AssetDetailResponse>(`/api/asset/${ticker}`, {}, 30000),
 
   // preferências / watchlist

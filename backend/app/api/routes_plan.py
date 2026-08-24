@@ -15,6 +15,7 @@ from app.config import get_settings
 from app.deps import get_brapi, get_cache, get_db, get_ghostfolio, get_sgs
 from app.models.plan import (
     ALLOCATION_CLASSES,
+    CLASS_LABEL,
     INVESTABLE_CLASSES,
     RENDA_FIXA,
     PlanAsset,
@@ -34,9 +35,6 @@ from app.services.universe import build_universe
 
 router = APIRouter()
 
-CLASS_LABEL = {
-    "STOCK": "Ações", "FII": "FIIs", "ETF": "ETFs", "BDR": "BDRs", RENDA_FIXA: "Renda fixa",
-}
 
 # Diferença mínima (em pontos percentuais) para dizer que o ativo está "abaixo do alvo".
 GAP_PP_MIN = 0.5
