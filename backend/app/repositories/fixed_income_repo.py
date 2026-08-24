@@ -18,11 +18,18 @@ def _now() -> str:
 async def create_account(
     db: Database, name: str, institution: Optional[str] = None,
     kind: Optional[str] = None, benchmark: Optional[str] = None,
+    counts_in_portfolio: bool = False, purpose: str = "investment",
+    liquidity: str = "unknown", redeem_days: Optional[int] = None,
 ) -> int:
+    if purpose == "earmarked" and counts_in_portfolio:
+        raise ValueError(fi.EARMARKED_NA_CARTEIRA)
     return await db.insert(
-        """INSERT INTO fixed_income_accounts (name, institution, kind, benchmark, created_at, archived)
-           VALUES (?, ?, ?, ?, ?, 0)""",
-        (name.strip(), institution, kind, benchmark, _now()),
+        """INSERT INTO fixed_income_accounts
+               (name, institution, kind, benchmark, created_at, archived,
+                counts_in_portfolio, purpose, liquidity, redeem_days)
+           VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)""",
+        (name.strip(), institution, kind, benchmark, _now(),
+         int(bool(counts_in_portfolio)), purpose, liquidity, redeem_days),
     )
 
 
@@ -39,10 +46,26 @@ async def get_account(db: Database, account_id: int) -> Optional[Dict[str, Any]]
 
 
 async def update_account(db: Database, account_id: int, **fields: Any) -> None:
-    allowed = {"name", "institution", "kind", "benchmark", "archived"}
+    """PATCH parcial. A combinação proibida é checada contra o estado MESCLADO.
+
+    Validar só o que veio no corpo deixaria passar o caminho mais provável do erro: marcar
+    a conta hoje e mudá-la para 'earmarked' amanhã, cada passo válido isoladamente.
+    """
+    allowed = {
+        "name", "institution", "kind", "benchmark", "archived",
+        "counts_in_portfolio", "purpose", "liquidity", "redeem_days",
+    }
     sets = {k: v for k, v in fields.items() if k in allowed and v is not None}
     if not sets:
         return
+    if "counts_in_portfolio" in sets:
+        sets["counts_in_portfolio"] = int(bool(sets["counts_in_portfolio"]))
+    current = await get_account(db, account_id)
+    if current is None:
+        raise LookupError("conta não encontrada.")
+    merged = {**current, **sets}
+    if (merged.get("purpose") or "investment") == "earmarked" and merged.get("counts_in_portfolio"):
+        raise ValueError(fi.EARMARKED_NA_CARTEIRA)
     cols = ", ".join(f"{k} = ?" for k in sets)
     await db.execute(
         f"UPDATE fixed_income_accounts SET {cols} WHERE id = ?", (*sets.values(), account_id)
@@ -92,6 +115,11 @@ async def account_summary(db: Database, account: Dict[str, Any]) -> Dict[str, An
         "kind": account.get("kind"),
         "benchmark": account.get("benchmark"),
         "archived": bool(account.get("archived")),
+        "counts_in_portfolio": bool(account.get("counts_in_portfolio")),
+        "purpose": account.get("purpose") or "investment",
+        "liquidity": account.get("liquidity") or "unknown",
+        "redeem_days": account.get("redeem_days"),
+        "in_portfolio": fi.counts_in_portfolio(account),
         "current_balance": fi.current_balance(entries),
         "history_yield_annual": hy["annualized"] if hy else None,
         "history_yield_gain": hy["gain"] if hy else None,
@@ -106,10 +134,39 @@ async def account_summary(db: Database, account: Dict[str, Any]) -> Dict[str, An
     }
 
 
-async def total_balance(db: Database) -> float:
-    """Soma do saldo atual de todas as contas não arquivadas (= reserva atual)."""
-    total = 0.0
-    for acc in await list_accounts(db, include_archived=False):
+async def balances(db: Database, include_archived: bool = False) -> List[Dict[str, Any]]:
+    """[{**conta, 'balance': saldo}] — base única das somas, para não repetir a varredura."""
+    out: List[Dict[str, Any]] = []
+    for acc in await list_accounts(db, include_archived=include_archived):
         entries = await list_entries(db, acc["id"])
-        total += fi.current_balance(entries)
-    return round(total, 2)
+        out.append({**acc, "balance": fi.current_balance(entries)})
+    return out
+
+
+async def total_balance(db: Database) -> float:
+    """Tudo que existe na aba Reserva (contas não arquivadas), conte na carteira ou não."""
+    return round(sum(a["balance"] for a in await balances(db)), 2)
+
+
+async def portfolio_balance(db: Database) -> float:
+    """A parte da renda fixa que É patrimônio: marcada e com propósito 'investment'."""
+    return round(
+        sum(a["balance"] for a in await balances(db) if fi.counts_in_portfolio(a)), 2
+    )
+
+
+async def liquid_reserve(db: Database) -> float:
+    """Reserva LÍQUIDA — a única que satisfaz o piso.
+
+    Uma LCI travada por dois anos soma normalmente no peso percentual da classe, mas não
+    conta aqui. Sem essa separação o app mostraria a reserva como cumprida enquanto o
+    dinheiro está preso, que é exatamente a falha que a reserva existe para evitar.
+    """
+    return round(
+        sum(
+            a["balance"]
+            for a in await balances(db)
+            if fi.counts_in_portfolio(a) and fi.is_immediately_liquid(a)
+        ),
+        2,
+    )

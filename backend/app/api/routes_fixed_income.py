@@ -32,9 +32,21 @@ async def fixed_income_summary(include_archived: bool = False) -> FixedIncomeSum
     cdi = await get_sgs().cdi_annual()
     accounts = await repo.list_accounts(db, include_archived=include_archived)
     summaries = [await _summary_with_cdi(a, cdi) for a in accounts]
-    # o total da reserva conta só as contas ATIVAS, mesmo listando as arquivadas
-    total = round(sum(s.current_balance for s in summaries if not s.archived), 2)
-    return FixedIncomeSummary(accounts=summaries, total_balance=total, cdi_annual=cdi)
+    # os totais contam só as contas ATIVAS, mesmo quando as arquivadas são listadas
+    ativas = [s for s in summaries if not s.archived]
+    total = round(sum(s.current_balance for s in ativas), 2)
+    na_carteira = round(sum(s.current_balance for s in ativas if s.in_portfolio), 2)
+    liquida = round(
+        sum(s.current_balance for s in ativas if s.in_portfolio and s.liquidity == "immediate"), 2
+    )
+    return FixedIncomeSummary(
+        accounts=summaries,
+        total_balance=total,
+        portfolio_balance=na_carteira,
+        liquid_balance=liquida,
+        excluded_balance=round(total - na_carteira, 2),
+        cdi_annual=cdi,
+    )
 
 
 @router.post("/fixed-income/accounts", response_model=AccountSummary)
@@ -42,7 +54,14 @@ async def create_account(body: AccountIn) -> AccountSummary:
     if not body.name.strip():
         raise HTTPException(status_code=422, detail="Nome da conta é obrigatório.")
     db = get_db()
-    acc_id = await repo.create_account(db, body.name, body.institution, body.kind, body.benchmark)
+    try:
+        acc_id = await repo.create_account(
+            db, body.name, body.institution, body.kind, body.benchmark,
+            counts_in_portfolio=body.counts_in_portfolio, purpose=body.purpose,
+            liquidity=body.liquidity, redeem_days=body.redeem_days,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     acc = await repo.get_account(db, acc_id)
     return await _summary_with_cdi(acc, await get_sgs().cdi_annual())
 
@@ -58,7 +77,10 @@ async def update_account(account_id: int, body: AccountPatch) -> AccountSummary:
     if "name" in fields and not str(fields["name"]).strip():
         raise HTTPException(status_code=422, detail="Nome da conta não pode ficar vazio.")
     if fields:
-        await repo.update_account(db, account_id, **fields)
+        try:
+            await repo.update_account(db, account_id, **fields)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
     return await _summary_with_cdi(await repo.get_account(db, account_id), await get_sgs().cdi_annual())
 
 

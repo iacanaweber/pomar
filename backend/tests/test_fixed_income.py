@@ -249,3 +249,26 @@ def test_feriados_gerados_batem_com_a_lista_curada_2024_2027():
     # 2028+ coberto (era o ponto cego): Sexta-feira Santa de 2028 = 14/04
     assert date(2028, 4, 14) in B3_HOLIDAYS
     assert date(2030, 1, 1) in B3_HOLIDAYS
+
+
+# --- o que conta na carteira e o que satisfaz o piso ---------------------------------
+
+def test_conta_so_entra_na_carteira_marcada_e_como_investimento():
+    from app.services import fixed_income as fi
+
+    marcada = {"counts_in_portfolio": 1, "purpose": "investment"}
+    assert fi.counts_in_portfolio(marcada) is True
+    # earmarked vence a marcação: a provisão do IR não é patrimônio investível
+    assert fi.counts_in_portfolio({"counts_in_portfolio": 1, "purpose": "earmarked"}) is False
+    assert fi.counts_in_portfolio({"counts_in_portfolio": 0, "purpose": "investment"}) is False
+    # linha antiga (pré-v7), sem as colunas preenchidas
+    assert fi.counts_in_portfolio({}) is False
+
+
+def test_so_liquidez_imediata_satisfaz_o_piso():
+    from app.services import fixed_income as fi
+
+    assert fi.is_immediately_liquid({"liquidity": "immediate"}) is True
+    for travada in ("scheduled", "locked", "unknown"):
+        assert fi.is_immediately_liquid({"liquidity": travada}) is False
+    assert fi.is_immediately_liquid({}) is False

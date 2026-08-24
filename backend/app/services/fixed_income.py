@@ -235,6 +235,30 @@ def history_yield(entries: List[Dict], holidays: frozenset[date] = B3_HOLIDAYS) 
     }
 
 
+EARMARKED_NA_CARTEIRA = (
+    "conta com propósito 'earmarked' não entra na carteira: é dinheiro com destino "
+    "definido, e contá-lo mexeria nos alvos em R$ de todas as outras classes."
+)
+
+
+def counts_in_portfolio(account: Dict) -> bool:
+    """A conta entra no patrimônio? Precisa estar MARCADA e ser de propósito 'investment'.
+
+    A dupla condição é deliberada: `purpose='earmarked'` vence a marcação, aqui e na
+    interface. A provisão do IR do ano que vem é dinheiro com dono, não patrimônio
+    investível — deixá-la entrar aumentaria o total e, com ele, o alvo em R$ de todas as
+    outras classes, pedindo aporte para cobrir um dinheiro que já está comprometido.
+    """
+    return bool(account.get("counts_in_portfolio")) and (
+        account.get("purpose") or "investment"
+    ) == "investment"
+
+
+def is_immediately_liquid(account: Dict) -> bool:
+    """Resgate a qualquer momento (D+0/D+1) — a única liquidez que serve de emergência."""
+    return (account.get("liquidity") or "unknown") == "immediate"
+
+
 def pct_of_cdi(annualized: Optional[float], cdi_annual: Optional[float]) -> Optional[float]:
     """Rendimento como fração do CDI (ex.: 1.02 = 102% do CDI). None se faltar dado.
 

@@ -68,7 +68,10 @@ def _stub_cdi(monkeypatch):
 
 def test_fixed_income_account_and_yield(authed_client, _stub_cdi):
     c = authed_client
-    acc = c.post("/api/fixed-income/accounts", json={"name": "CDB X", "kind": "cdb"}).json()
+    acc = c.post(
+        "/api/fixed-income/accounts",
+        json={"name": "CDB X", "kind": "cdb", "liquidity": "immediate"},
+    ).json()
     assert acc["current_balance"] == 0.0 and acc["last_yield_annual"] is None
     aid = acc["id"]
     # saldo inicial e atualização posterior -> rendimento calculado
@@ -87,7 +90,9 @@ def test_fixed_income_account_and_yield(authed_client, _stub_cdi):
 
 def test_fixed_income_list_and_delete_entry(authed_client, _stub_cdi):
     c = authed_client
-    aid = c.post("/api/fixed-income/accounts", json={"name": "Conta X"}).json()["id"]
+    aid = c.post(
+        "/api/fixed-income/accounts", json={"name": "Conta X", "liquidity": "immediate"}
+    ).json()["id"]
     c.post(f"/api/fixed-income/accounts/{aid}/entries",
            json={"kind": "deposit", "amount": 10_000.0, "entry_date": "2026-06-01"})
     c.post(f"/api/fixed-income/accounts/{aid}/entries",
@@ -459,3 +464,74 @@ def test_clear_assignments_route(authed_client):
     assert c.get(
         "/api/labels/assignments?subject_type=ticker&subject_id=AAA11"
     ).json() == []
+
+
+# --- renda fixa: o que conta na carteira ---------------------------------------------
+
+def _conta(c, nome, **extra):
+    body = {"name": nome, "liquidity": "immediate", **extra}
+    return c.post("/api/fixed-income/accounts", json=body)
+
+
+def _saldo(c, aid, valor, quando="2026-06-01"):
+    return c.post(
+        f"/api/fixed-income/accounts/{aid}/entries",
+        json={"kind": "balance", "amount": valor, "entry_date": quando},
+    )
+
+
+def test_conta_do_ir_rende_na_reserva_e_nao_entra_na_carteira(authed_client, _stub_cdi):
+    """Caso canônico: a provisão do IR aparece na Reserva, com rendimento, e em lugar
+    nenhum da Carteira — nem influenciando o aporte."""
+    c = authed_client
+    selic = _conta(c, "Tesouro Selic", counts_in_portfolio=True).json()
+    lci = _conta(c, "LCI 2 anos", counts_in_portfolio=True, liquidity="locked",
+                 redeem_days=730).json()
+    ir = _conta(c, "Provisão IR 2027", purpose="earmarked").json()
+
+    _saldo(c, selic["id"], 30_000.0, "2026-01-05")
+    _saldo(c, selic["id"], 31_200.0, "2026-06-01")
+    _saldo(c, lci["id"], 20_000.0, "2026-01-05")
+    _saldo(c, ir["id"], 5_000.0, "2026-01-05")
+    _saldo(c, ir["id"], 5_180.0, "2026-06-01")
+
+    s = c.get("/api/fixed-income/summary").json()
+    assert s["total_balance"] == 56_380.0          # tudo que existe na aba Reserva
+    assert s["portfolio_balance"] == 51_200.0      # Selic + LCI (o IR fica de fora)
+    assert s["liquid_balance"] == 31_200.0         # só a Selic satisfaz o piso
+    assert s["excluded_balance"] == 5_180.0        # o IR, com o motivo no `purpose`
+
+    contas = {a["name"]: a for a in s["accounts"]}
+    assert contas["Provisão IR 2027"]["in_portfolio"] is False
+    assert contas["Provisão IR 2027"]["purpose"] == "earmarked"
+    # e continua sendo uma conta normal na Reserva: rendimento calculado
+    assert contas["Provisão IR 2027"]["history_yield_annual"] is not None
+    assert contas["LCI 2 anos"]["in_portfolio"] is True and contas["LCI 2 anos"]["redeem_days"] == 730
+
+
+def test_earmarked_nao_pode_contar_na_carteira(authed_client, _stub_cdi):
+    c = authed_client
+    ruim = _conta(c, "IR", purpose="earmarked", counts_in_portfolio=True)
+    assert ruim.status_code == 422
+
+    # e não dá para chegar lá em dois passos, cada um válido isoladamente
+    aid = _conta(c, "IR", counts_in_portfolio=True).json()["id"]
+    virou = c.patch(f"/api/fixed-income/accounts/{aid}", json={"purpose": "earmarked"})
+    assert virou.status_code == 422
+    assert c.get("/api/fixed-income/summary").json()["accounts"][0]["purpose"] == "investment"
+
+
+def test_liquidez_e_obrigatoria_no_cadastro_novo(authed_client, _stub_cdi):
+    sem = authed_client.post("/api/fixed-income/accounts", json={"name": "CDB sem resposta"})
+    assert sem.status_code == 422
+    assert "liquidity" in sem.text
+
+
+def test_conta_pode_ser_desmarcada_da_carteira(authed_client, _stub_cdi):
+    c = authed_client
+    aid = _conta(c, "CDB", counts_in_portfolio=True).json()["id"]
+    _saldo(c, aid, 1_000.0)
+    assert c.get("/api/fixed-income/summary").json()["portfolio_balance"] == 1_000.0
+    c.patch(f"/api/fixed-income/accounts/{aid}", json={"counts_in_portfolio": False})
+    s = c.get("/api/fixed-income/summary").json()
+    assert s["portfolio_balance"] == 0.0 and s["total_balance"] == 1_000.0
