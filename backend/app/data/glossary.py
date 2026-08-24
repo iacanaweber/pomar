@@ -106,6 +106,25 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "interpretation": "Ex.: 10% = a cada aporte, a reserva é completada primeiro; o restante "
         "vai para as compras sugeridas.",
     },
+    "reserve_floor": {
+        "label": "Piso da reserva",
+        "definition": "O mínimo, em reais, que deve ficar em renda fixa de resgate imediato. "
+        "Não é uma reserva separada: é um piso dentro da própria classe de renda fixa, e o "
+        "alvo da classe é o maior entre o peso percentual e este piso.",
+        "source": "configuração (preferências) + saldos das contas de resgate imediato que "
+        "contam na carteira",
+        "interpretation": "Aplicação com carência soma no peso da classe, mas não conta para "
+        "o piso — o piso mede o dinheiro disponível hoje. Com a correção pelo IPCA ligada, "
+        "ele sobe alguns reais por mês para não encolher em poder de compra.",
+    },
+    "liquid_reserve": {
+        "label": "Reserva líquida",
+        "definition": "Soma das contas que contam na carteira, com propósito de investimento "
+        "e resgate imediato (D+0/D+1). É o número que responde 'quanto eu tiro hoje'.",
+        "source": "calculado: saldos do rastreador de renda fixa filtrados por liquidez",
+        "interpretation": "Menor que o total de renda fixa sempre que houver CDB com carência, "
+        "LCI/LCA travadas ou dinheiro reservado para outro fim (como a provisão de imposto).",
+    },
     "fixed_income_yield": {
         "label": "Rendimento da reserva",
         "definition": "Taxa anualizada (base 252 dias úteis) de TODO o histórico da conta: cada "

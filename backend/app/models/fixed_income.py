@@ -134,6 +134,24 @@ class AccountSummary(BaseModel):
     pct_of_cdi: Optional[float] = Field(None, description="Rendimento do histórico como fração do CDI (1.0 = 100%).")
 
 
+class FloorStatus(BaseModel):
+    """Piso da reserva contra a renda fixa LÍQUIDA — o indicador próprio da aba Reserva.
+
+    Fica separado do total de renda fixa de propósito: o piso mede se existe dinheiro
+    disponível HOJE, e uma aplicação travada não responde a essa pergunta por mais que
+    engorde o patrimônio.
+    """
+
+    floor_nominal: float = 0.0
+    floor_corrected: float = 0.0
+    floor_date: Optional[str] = None
+    index: str = "none"
+    index_available: bool = True
+    liquid_reserve: float = 0.0
+    deficit: float = 0.0
+    pct_filled: float = 1.0
+
+
 class FixedIncomeSummary(BaseModel):
     accounts: List[AccountSummary] = Field(default_factory=list)
     total_balance: float = Field(0.0, description="Tudo que existe na aba Reserva (contas ativas).")
@@ -147,6 +165,9 @@ class FixedIncomeSummary(BaseModel):
     )
     excluded_balance: float = Field(
         0.0, description="Saldo que não conta na carteira (não marcado ou earmarked)."
+    )
+    floor: Optional[FloorStatus] = Field(
+        None, description="Status do piso da reserva (nulo quando não há piso configurado)."
     )
     cdi_annual: Optional[float] = Field(None, description="CDI anualizado (fração), benchmark.")
     currency: str = "BRL"

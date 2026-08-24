@@ -1,7 +1,10 @@
 import type {
   AccountIn,
+  AccountPatch,
   AccountSummary,
   AssetDetailResponse,
+  AssignmentOut,
+  AssignmentsIn,
   AuthStatus,
   EntryIn,
   FixedIncomeEntry,
@@ -9,6 +12,10 @@ import type {
   Glossary,
   HealthStatus,
   IncomeResponse,
+  IndexersResponse,
+  LabelDimension,
+  LabelIn,
+  LabelOut,
   OrderIn,
   OrderOut,
   OrdersListResponse,
@@ -111,7 +118,7 @@ export const api = {
   fixedIncome: () => request<FixedIncomeSummary>("/api/fixed-income/summary?include_archived=true"),
   createAccount: (body: AccountIn) =>
     request<AccountSummary>("/api/fixed-income/accounts", json(body)),
-  updateAccount: (id: number, body: Partial<AccountIn> & { archived?: boolean }) =>
+  updateAccount: (id: number, body: AccountPatch) =>
     request<AccountSummary>(`/api/fixed-income/accounts/${id}`, { ...json(body), method: "PATCH" }),
   archiveAccount: (id: number) =>
     request<{ ok: boolean }>(`/api/fixed-income/accounts/${id}`, { method: "DELETE" }),
@@ -124,6 +131,32 @@ export const api = {
       `/api/fixed-income/accounts/${accountId}/entries/${entryId}`,
       { method: "DELETE" },
     ),
+
+  // composição da classe RENDA_FIXA por tag de indexador (atual × alvo)
+  indexers: () => request<IndexersResponse>("/api/fixed-income/indexers", {}, 30000),
+
+  // rótulos por dimensão (bucket dirige a compra; indexer e geography descrevem)
+  labels: (dimension?: LabelDimension) =>
+    request<LabelOut[]>(`/api/labels${dimension ? `?dimension=${dimension}` : ""}`),
+  createLabel: (body: LabelIn) => request<LabelOut>("/api/labels", json(body)),
+  deleteLabel: (id: number) => request<{ ok: boolean }>(`/api/labels/${id}`, { method: "DELETE" }),
+  assignments: (params: {
+    dimension?: LabelDimension;
+    subjectType?: "ticker" | "fi_account";
+    subjectId?: string;
+    subjects?: string[];
+    includeDefaults?: boolean;
+  }) => {
+    const q = new URLSearchParams();
+    if (params.dimension) q.set("dimension", params.dimension);
+    if (params.subjectType) q.set("subject_type", params.subjectType);
+    if (params.subjectId) q.set("subject_id", params.subjectId);
+    if (params.subjects?.length) q.set("subjects", params.subjects.join(","));
+    if (params.includeDefaults) q.set("include_defaults", "true");
+    return request<AssignmentOut[]>(`/api/labels/assignments?${q.toString()}`);
+  },
+  setAssignments: (body: AssignmentsIn) =>
+    request<AssignmentOut[]>("/api/labels/assignments", { ...json(body), method: "PUT" }),
 
   // ordens ("já comprei")
   orders: () => request<OrdersListResponse>("/api/orders"),

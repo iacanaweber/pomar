@@ -1,4 +1,4 @@
-import { CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
+import { ALLOCATION_CLASSES, CLASS_LABEL } from "../lib/classes";
 import { shareOfTotal, sumPct, type Row } from "../lib/basket";
 
 /** Cores das CLASSES. Uma matiz por classe, em ordem fixa (nunca cicladas): a cor segue
@@ -12,6 +12,7 @@ const CLASS_HUE: Record<string, string> = {
   FII: "var(--viz-fii)",
   ETF: "var(--viz-etf)",
   BDR: "var(--viz-bdr)",
+  RENDA_FIXA: "var(--viz-rf)",
 };
 
 const fmt = (n: number) => `${n.toFixed(2).replace(".", ",")}%`;
@@ -57,7 +58,7 @@ interface ClassView {
 export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
   const totalMeta = classes.reduce((s, c) => s + c.classPct, 0);
 
-  const views: ClassView[] = INVESTABLE_CLASSES.map((cls) => {
+  const views: ClassView[] = ALLOCATION_CLASSES.map((cls) => {
     const item = classes.find((c) => c.cls === cls);
     const classPct = item?.classPct ?? 0;
     // maior peso primeiro: a rampa de cor fica monotônica com a magnitude
@@ -159,7 +160,8 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
         </>
       )}
       <p className="muted tp-note">
-        A % de cada ativo é sobre a carteira INTEIRA: meta da classe × peso dele na classe.
+        A % de cada item é sobre a carteira INTEIRA: meta da classe × peso dele na classe. Em
+        renda fixa o item é o indexador, não um ticker.
       </p>
     </section>
   );

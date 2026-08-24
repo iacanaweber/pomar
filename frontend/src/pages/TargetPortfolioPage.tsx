@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { usePortfolio, usePreferences, useSavePreferences, useWatchlist } from "../api/queries";
+import {
+  useIndexers,
+  useLabels,
+  usePortfolio,
+  usePreferences,
+  useSavePreferences,
+  useWatchlist,
+} from "../api/queries";
 import { SavedToast } from "../components/SavedToast";
 import { TargetPortfolioChart } from "../components/TargetPortfolioChart";
 import {
@@ -15,7 +22,7 @@ import {
   type Row,
   type SumState,
 } from "../lib/basket";
-import { CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
+import { ALLOCATION_CLASSES, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
 import { parseBRL } from "../lib/format";
 
 const fmtPct = (n: number) => n.toFixed(2).replace(".", ",");
@@ -128,13 +135,22 @@ function BasketEditor({
   const portfolio = usePortfolio();
   const savePrefs = useSavePreferences();
   const preferences = usePreferences();
+  // Em renda fixa o item da cesta é uma TAG DE INDEXADOR (CDI, IPCA, LCI…), não um ticker:
+  // mesma aritmética de pesos, outro tipo de item — e outra lista de sugestões.
+  const isRF = cls === RENDA_FIXA;
+  const indexerLabels = useLabels("indexer");
+  const indexers = useIndexers();
   const [newTicker, setNewTicker] = useState("");
 
   const label = CLASS_LABEL[cls] ?? cls;
-  const suggestions = (watchlist.data?.items ?? [])
-    .filter((i) => i.asset_class === cls && i.valid === 1)
-    .map((i) => i.ticker)
-    .filter((t) => !rows.some((r) => r.ticker === t));
+  const suggestions = isRF
+    ? (indexerLabels.data ?? [])
+        .map((l) => l.code)
+        .filter((code) => !rows.some((r) => r.ticker === code))
+    : (watchlist.data?.items ?? [])
+        .filter((i) => i.asset_class === cls && i.valid === 1)
+        .map((i) => i.ticker)
+        .filter((t) => !rows.some((r) => r.ticker === t));
 
   const total = sumPct(rows);
   const state = sumState(rows);
@@ -151,12 +167,17 @@ function BasketEditor({
   };
 
   /** Semeia a composição com os pesos ATUAIS da carteira — ponto de partida honesto para
-   *  quem já investe: começa de onde está e ajusta, em vez de digitar do zero. */
+   *  quem já investe: começa de onde está e ajusta, em vez de digitar do zero.
+   *  Em renda fixa a "posição atual" é o valor por indexador (contas + ativos atribuídos). */
   const seedFromPortfolio = () => {
-    const positions = (portfolio.data?.positions ?? [])
-      .filter((p) => p.asset_class === cls)
-      .map((p) => ({ ticker: p.ticker, value: p.value }));
-    const seeded = fromCurrentValues(positions);
+    const atual = isRF
+      ? (indexers.data?.items ?? [])
+          .filter((i) => i.value > 0)
+          .map((i) => ({ ticker: i.code, value: i.value }))
+      : (portfolio.data?.positions ?? [])
+          .filter((p) => p.asset_class === cls)
+          .map((p) => ({ ticker: p.ticker, value: p.value }));
+    const seeded = fromCurrentValues(atual);
     if (seeded.length) onChange(seeded);
   };
 
@@ -175,6 +196,7 @@ function BasketEditor({
       <p className="muted">
         O peso é dentro de {label}: some 100% aqui e a fatia de {label} continua sendo a meta
         da classe. O gráfico no topo mostra quanto isso vale sobre a carteira inteira.
+        {isRF && " Aqui os itens são indexadores, e a compra é feita fora do app."}
       </p>
 
       <div className="basket-rows">
@@ -190,16 +212,23 @@ function BasketEditor({
           />
         ))}
         {rows.length === 0 && (
-          <p className="muted">Nenhum ativo ainda — adicione o primeiro abaixo.</p>
+          <p className="muted">
+            {isRF ? "Nenhum indexador ainda" : "Nenhum ativo ainda"} — adicione o primeiro abaixo.
+          </p>
         )}
       </div>
 
       <div className="basket-add">
         <input
           list={`basket-tickers-${cls}`}
-          placeholder="Ticker (ex.: PETR4)"
+          inputMode="text"
+          placeholder={isRF ? "Indexador (ex.: CDI)" : "Ticker (ex.: PETR4)"}
           value={newTicker}
-          aria-label={`Ticker para adicionar à carteira alvo de ${label}`}
+          aria-label={
+            isRF
+              ? `Indexador para adicionar à carteira alvo de ${label}`
+              : `Ticker para adicionar à carteira alvo de ${label}`
+          }
           onChange={(e) => setNewTicker(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -238,7 +267,7 @@ function BasketEditor({
 
       <div className="basket-tools">
         <button type="button" className="link-button" onClick={seedFromPortfolio}>
-          📥 Usar pesos atuais da carteira
+          📥 {isRF ? "Usar o que já está aplicado" : "Usar pesos atuais da carteira"}
         </button>
         <button
           type="button"
@@ -277,7 +306,7 @@ function ClassTargetsEditor({
   onSaved: () => void;
 }) {
   const savePrefs = useSavePreferences();
-  const rows: Row[] = INVESTABLE_CLASSES.map((c) => ({ ticker: c, pct: pct[c] ?? 0 }));
+  const rows: Row[] = ALLOCATION_CLASSES.map((c) => ({ ticker: c, pct: pct[c] ?? 0 }));
   const total = sumPct(rows);
   const state = sumState(rows);
 
@@ -289,7 +318,7 @@ function ClassTargetsEditor({
         a composição de cada classe vem abaixo.
       </p>
       <div className="adv-row">
-        {INVESTABLE_CLASSES.map((cls) => (
+        {ALLOCATION_CLASSES.map((cls) => (
           <label className="field" key={cls}>
             <span>{CLASS_LABEL[cls]}</span>
             <input
@@ -354,7 +383,7 @@ export function TargetPortfolioPage() {
   const savedClassPct = useMemo(
     () =>
       Object.fromEntries(
-        INVESTABLE_CLASSES.map((c) => [c, round2((prefs?.targets?.[c] ?? 0) * 100)]),
+        ALLOCATION_CLASSES.map((c) => [c, round2((prefs?.targets?.[c] ?? 0) * 100)]),
       ),
     [prefs],
   );
@@ -371,7 +400,7 @@ export function TargetPortfolioPage() {
   // Deep-link /alvo#FII abre a classe já expandida (vem dos avisos do plano).
   useEffect(() => {
     const cls = hash.replace("#", "").toUpperCase();
-    if (INVESTABLE_CLASSES.includes(cls as never)) setOpen(cls);
+    if (ALLOCATION_CLASSES.includes(cls as never)) setOpen(cls);
   }, [hash]);
 
   const effectivePct = classPct ?? savedClassPct;
@@ -390,7 +419,7 @@ export function TargetPortfolioPage() {
     }
   };
 
-  const chartData = INVESTABLE_CLASSES.map((cls) => ({
+  const chartData = ALLOCATION_CLASSES.map((cls) => ({
     cls,
     classPct: effectivePct[cls] ?? 0,
     rows: rowsOf(cls),
@@ -419,7 +448,7 @@ export function TargetPortfolioPage() {
 
           <h2 className="section-title">Composição de cada classe</h2>
           <ul className="cards">
-            {INVESTABLE_CLASSES.map((cls) => {
+            {ALLOCATION_CLASSES.map((cls) => {
               const rows = rowsOf(cls);
               const n = rows.length;
               const sum = sumPct(rows);

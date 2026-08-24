@@ -14,6 +14,7 @@ const CLASS_HUE: Record<string, string> = {
   FII: "var(--viz-fii)",
   ETF: "var(--viz-etf)",
   BDR: "var(--viz-bdr)",
+  RENDA_FIXA: "var(--viz-rf)",
   UNKNOWN: "var(--muted)",
 };
 

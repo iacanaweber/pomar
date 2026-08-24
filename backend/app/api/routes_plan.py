@@ -7,7 +7,7 @@ vêm marcados mesmo sem compra sugerida — antecipar é decisão do usuário, n
 """
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
@@ -29,6 +29,7 @@ from app.services import reserve as reserve_svc
 from app.services.allocation import allocate
 from app.services.analysis import analyze_asset, resolve_bazin_target_yield
 from app.services.portfolio_service import get_enriched_portfolio
+from app.services.reserve_service import resolve_floor
 from app.services.universe import build_universe
 
 router = APIRouter()
@@ -241,18 +242,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
             )
             liquid_reserve = 0.0
 
-    ipca_factor = None
-    floor_index = str(prefs.get("reserve_floor_index") or "none")
-    floor_date = prefs.get("reserve_floor_date")
-    if floor_nominal > 0 and floor_index == "ipca" and floor_date:
-        try:
-            ipca_factor = await get_sgs().ipca_factor_since(date.fromisoformat(floor_date[:10]))
-        except Exception:  # noqa: BLE001
-            ipca_factor = None  # o status já sinaliza a correção indisponível
-
-    floor = reserve_svc.floor_status(
-        floor_nominal, liquid_reserve, floor_index, ipca_factor, floor_date
-    )
+    floor = await resolve_floor(prefs, liquid_reserve, get_sgs(), floor_nominal)
     if floor_nominal > 0 and not floor["index_available"]:
         warnings.append(
             "Não consegui buscar o IPCA para corrigir o piso da reserva; usando o valor "

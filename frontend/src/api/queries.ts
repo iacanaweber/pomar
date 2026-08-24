@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import type {
   AccountIn,
+  AssignmentsIn,
   EntryIn,
+  LabelDimension,
+  LabelIn,
   OrderIn,
   PlanRequest,
   PreferencesBody,
@@ -20,6 +23,9 @@ export const keys = {
   orders: ["orders"] as const,
   planLatest: ["plan-latest"] as const,
   watchlistRadar: ["watchlist-radar"] as const,
+  labels: ["labels"] as const,
+  assignments: ["label-assignments"] as const,
+  indexers: ["indexers"] as const,
 };
 
 export const useHealth = () => useQuery({ queryKey: keys.health, queryFn: api.health });
@@ -163,6 +169,47 @@ export function useUpdateAccount() {
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.fixedIncome }),
   });
 }
+
+// --- Rótulos por dimensão e cesta de indexadores ---
+
+/** Os rótulos mudam raramente (os embutidos são fixos), então valem uma cache longa. */
+export const useLabels = (dimension: LabelDimension) =>
+  useQuery({
+    queryKey: [...keys.labels, dimension],
+    queryFn: () => api.labels(dimension),
+    staleTime: 10 * 60 * 1000,
+  });
+
+export const useAssignments = (params: Parameters<typeof api.assignments>[0]) =>
+  useQuery({
+    queryKey: [...keys.assignments, params],
+    queryFn: () => api.assignments(params),
+    enabled: !!params.dimension,
+  });
+
+export function useSetAssignments() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: AssignmentsIn) => api.setAssignments(body),
+    // rótulo de bucket muda a classificação da carteira inteira; o de indexador muda a
+    // cesta de renda fixa. Invalidar de menos aqui deixa a tela mentindo até o F5.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: keys.assignments });
+      qc.invalidateQueries({ queryKey: keys.indexers });
+      qc.invalidateQueries({ queryKey: keys.portfolio });
+    },
+  });
+}
+
+export function useCreateLabel() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: LabelIn) => api.createLabel(body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.labels }),
+  });
+}
+
+export const useIndexers = () => useQuery({ queryKey: keys.indexers, queryFn: api.indexers });
 
 // --- Ordens ("já comprei") ---
 export const useOrders = () => useQuery({ queryKey: keys.orders, queryFn: api.orders });

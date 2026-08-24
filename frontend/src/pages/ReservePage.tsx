@@ -4,110 +4,195 @@ import { ApiError } from "../api/client";
 import {
   useAddEntry,
   useArchiveAccount,
+  useAssignments,
   useCreateAccount,
   useDeleteEntry,
   useEntries,
   useFixedIncome,
-  usePortfolio,
+  useLabels,
   usePreferences,
   useSavePreferences,
+  useSetAssignments,
   useUpdateAccount,
 } from "../api/queries";
-import type { AccountSummary } from "../types";
+import type {
+  AccountSummary,
+  AssignmentOut,
+  FloorStatus,
+  Liquidity,
+  NewLiquidity,
+  Purpose,
+} from "../types";
 import { brToISO, isoToBR, money, parseBRL, pct, todayBR } from "../lib/format";
 import { Tooltip } from "../components/Tooltip";
 
-/** Barra alvo × atual da reserva, NA PRÓPRIA página (antes só existia dentro do plano e
- *  só com alvo configurado nos ajustes avançados — a J4 'como está minha reserva?' não
- *  tinha tela). Permite definir/editar o alvo aqui mesmo. */
-function ReserveGoal({ totalReserve }: { totalReserve: number }) {
+/** Piso da reserva: o mínimo que fica em renda fixa de RESGATE IMEDIATO.
+ *
+ *  Não é uma reserva separada da carteira — é um piso dentro da própria classe de renda
+ *  fixa, então o mesmo dinheiro nunca aparece duas vezes no patrimônio. Aplicação travada
+ *  soma no peso da classe e não conta aqui: o piso mede o que está disponível hoje.
+ */
+function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefined }) {
   const prefs = usePreferences();
   const savePrefs = useSavePreferences();
-  const portfolio = usePortfolio();
   const [editing, setEditing] = useState(false);
-  const [targetPct, setTargetPct] = useState<number | null>(null);
+  const [amount, setAmount] = useState("");
+  const [index, setIndex] = useState<"none" | "ipca">("none");
+  const [date, setDate] = useState(todayBR());
 
-  const savedTarget = prefs.data?.reserve_target ?? 0;
-  const shownPct = targetPct ?? Math.round(savedTarget * 100);
-  const totalRV = portfolio.data?.total_value ?? 0;
+  const dateInvalid = date.trim() !== "" && brToISO(date) === null;
+
+  const open = () => {
+    const saved = prefs.data;
+    setAmount(saved?.reserve_floor_amount ? String(saved.reserve_floor_amount).replace(".", ",") : "");
+    setIndex(saved?.reserve_floor_index ?? "none");
+    setDate(saved?.reserve_floor_date ? isoToBR(saved.reserve_floor_date) : todayBR());
+    setEditing(true);
+  };
 
   const save = () => {
+    const value = parseBRL(amount);
+    if (!(value >= 0) || dateInvalid) return;
     savePrefs.mutate(
-      { reserve_target: (shownPct || 0) / 100 },
+      {
+        reserve_floor_amount: value,
+        reserve_floor_index: index,
+        reserve_floor_date: index === "ipca" ? brToISO(date) : null,
+      },
       { onSuccess: () => setEditing(false) },
     );
   };
 
-  if (savedTarget <= 0 && !editing) {
+  if (editing) {
+    return (
+      <form
+        className="controls reserve-goal"
+        onSubmit={(e) => {
+          e.preventDefault();
+          save();
+        }}
+      >
+        <label className="field">
+          <span>Piso da reserva (R$)</span>
+          <div className="money">
+            <span>R$</span>
+            <input
+              inputMode="decimal"
+              placeholder="ex.: 30.000,00"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              autoFocus
+            />
+          </div>
+        </label>
+        <div className="adv-row">
+          <label className="field">
+            <span>Correção</span>
+            <select value={index} onChange={(e) => setIndex(e.target.value as "none" | "ipca")}>
+              <option value="none">Nenhuma (valor nominal)</option>
+              <option value="ipca">IPCA a partir da data-base</option>
+            </select>
+          </label>
+          {index === "ipca" && (
+            <label className="field">
+              <span>Data-base</span>
+              <input
+                inputMode="numeric"
+                placeholder="dd/mm/aaaa"
+                maxLength={10}
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+              {dateInvalid && <span className="field-error">Use o formato dd/mm/aaaa.</span>}
+            </label>
+          )}
+        </div>
+        {index === "ipca" && (
+          <p className="note-desc" style={{ marginTop: 0 }}>
+            Com a correção ligada, o piso sobe alguns reais por mês e o plano pede aportes
+            residuais na renda fixa de tempos em tempos.
+          </p>
+        )}
+        <div className="reserve-actions">
+          <button className="primary" type="submit" disabled={savePrefs.isPending || dateInvalid}>
+            {savePrefs.isPending ? "Salvando…" : "Salvar piso"}
+          </button>
+          <button className="link-button" type="button" onClick={() => setEditing(false)}>
+            Cancelar
+          </button>
+        </div>
+      </form>
+    );
+  }
+
+  if (!floor || floor.floor_nominal <= 0) {
     return (
       <div className="alloc reserve-goal">
         <p className="muted" style={{ margin: 0 }}>
-          Sem reserva-alvo definida. No método Barsi, completar a reserva vem <strong>antes</strong>{" "}
-          da renda variável — defina um alvo e o plano prioriza automaticamente.
+          Sem piso definido — nenhum aporte é desviado para a renda fixa.
         </p>
-        <button className="link-button" onClick={() => setEditing(true)}>
-          Definir reserva-alvo
+        <button className="link-button" onClick={open}>
+          Definir piso da reserva
         </button>
       </div>
     );
   }
 
-  const targetAmount = (shownPct / 100) * (totalRV + totalReserve);
-  const gap = Math.max(0, targetAmount - totalReserve);
-  const filled = targetAmount > 0 ? Math.min(1, totalReserve / targetAmount) : 1;
+  const filled = Math.round(floor.pct_filled * 100);
+  const corrigido = floor.index === "ipca" && floor.index_available;
 
   return (
     <div className="alloc reserve-goal">
       <div className="goal-head">
-        <Tooltip metricKey="reserve_target">
-          <h3 style={{ margin: 0 }}>Meta da reserva</h3>
+        <Tooltip metricKey="reserve_floor">
+          <h3 style={{ margin: 0 }}>Piso da reserva</h3>
         </Tooltip>
-        {!editing && (
-          <button className="link-button" onClick={() => setEditing(true)}>editar</button>
-        )}
+        <button className="link-button" onClick={open}>
+          editar
+        </button>
       </div>
-      {editing ? (
-        <div className="reserve-actions" style={{ alignItems: "center" }}>
-          <label className="field" style={{ maxWidth: 160 }}>
-            <span>Reserva-alvo (% do patrimônio)</span>
-            <input
-              type="number"
-              min={0}
-              max={100}
-              value={shownPct}
-              onChange={(e) => setTargetPct(Number(e.target.value))}
-              autoFocus
-            />
-          </label>
-          <button className="primary" onClick={save} disabled={savePrefs.isPending}>
-            {savePrefs.isPending ? "Salvando…" : "Salvar"}
-          </button>
-          <button className="link-button" onClick={() => { setEditing(false); setTargetPct(null); }}>
-            Cancelar
-          </button>
+      <div
+        className="goal-bar"
+        role="progressbar"
+        aria-valuenow={filled}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Reserva líquida: ${filled}% do piso`}
+      >
+        <div className="alloc-track" style={{ height: 18 }}>
+          <div
+            className="alloc-cur"
+            style={{
+              width: `${Math.min(100, filled)}%`,
+              background: filled >= 100 ? "var(--green)" : "var(--leaf)",
+            }}
+          />
         </div>
-      ) : (
-        <>
-          <div className="goal-bar" role="progressbar" aria-valuenow={Math.round(filled * 100)}
-               aria-valuemin={0} aria-valuemax={100} aria-label={`Reserva: ${Math.round(filled * 100)}% do alvo`}>
-            <div className="alloc-track" style={{ height: 18 }}>
-              <div className="alloc-cur" style={{ width: `${Math.round(filled * 100)}%`,
-                background: filled >= 1 ? "var(--green)" : "var(--leaf)" }} />
-            </div>
-            <span className="goal-bar-label">{Math.round(filled * 100)}% do alvo</span>
-          </div>
-          <p className="goal-status" style={{ marginBottom: 0 }}>
-            Alvo: <strong>{money(targetAmount)}</strong> ({shownPct}% do patrimônio) · atual{" "}
-            <strong>{money(totalReserve)}</strong>
-            {gap > 0 ? <> · faltam <strong>{money(gap)}</strong></> : <> · ✅ completa</>}
-          </p>
-          {portfolio.isError && (
-            <p className="muted" style={{ fontSize: 12 }}>
-              (carteira indisponível — o alvo considera só a reserva por enquanto)
-            </p>
-          )}
-        </>
+        <span className="goal-bar-label">{filled}% do piso</span>
+      </div>
+      <p className="goal-status" style={{ marginBottom: 0 }}>
+        Piso <strong>{money(floor.floor_corrected)}</strong> · reserva líquida{" "}
+        <strong>{money(floor.liquid_reserve)}</strong>
+        {floor.deficit > 0 ? (
+          <> · faltam <strong>{money(floor.deficit)}</strong></>
+        ) : (
+          <> · ✅ cumprido</>
+        )}
+      </p>
+      {corrigido && (
+        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+          Nominal {money(floor.floor_nominal)}, corrigido pelo IPCA desde{" "}
+          {floor.floor_date ? isoToBR(floor.floor_date) : "—"}.
+        </p>
       )}
+      {floor.index === "ipca" && !floor.index_available && (
+        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+          Correção do IPCA indisponível agora — exibindo o piso nominal.
+        </p>
+      )}
+      <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+        Só entra aqui o que tem resgate imediato e conta na carteira.
+      </p>
     </div>
   );
 }
@@ -157,6 +242,129 @@ const KIND_LABEL: Record<string, string> = {
   conta: "Conta",
   outro: "Outro",
 };
+
+const PURPOSE_LABEL: Record<string, string> = {
+  investment: "Investimento",
+  earmarked: "Reservado para outro fim",
+};
+
+const LIQUIDITY_LABEL: Record<string, string> = {
+  immediate: "Resgate imediato",
+  scheduled: "Janela ou vencimento",
+  locked: "Carência",
+  unknown: "Liquidez não informada",
+};
+
+/** Como a conta participa da carteira: se conta, para que serve e em quanto tempo o
+ *  dinheiro está na mão — mais a tag de indexador, que é o item dela na cesta de renda
+ *  fixa. São as três perguntas que decidem em que somas ela entra. */
+function AccountClassification({
+  account,
+  tag,
+}: {
+  account: AccountSummary;
+  tag: AssignmentOut | undefined;
+}) {
+  const update = useUpdateAccount();
+  const setAssignments = useSetAssignments();
+  const indexerLabels = useLabels("indexer");
+  const [open, setOpen] = useState(false);
+
+  const patch = (body: Parameters<typeof update.mutate>[0]["body"]) =>
+    update.mutate({ id: account.id, body });
+
+  const setTag = (code: string) => {
+    const label = (indexerLabels.data ?? []).find((l) => l.code === code);
+    setAssignments.mutate({
+      subject_type: "fi_account",
+      subject_id: String(account.id),
+      dimension: "indexer",
+      items: label ? [{ label_id: label.id, weight: 1 }] : [],
+    });
+  };
+
+  const resumo = [
+    account.in_portfolio ? "conta na carteira" : "fora da carteira",
+    LIQUIDITY_LABEL[account.liquidity] ?? account.liquidity,
+    tag?.code ?? "sem indexador",
+  ].join(" · ");
+
+  return (
+    <>
+      <p className="reserve-window reserve-class">
+        {resumo}{" "}
+        <button className="link-button reserve-rename" onClick={() => setOpen((v) => !v)}>
+          {open ? "▲ fechar" : "editar"}
+        </button>
+      </p>
+      {open && (
+        <div className="advanced">
+          <label className="class-chip class-chip-wide">
+            <input
+              type="checkbox"
+              checked={account.counts_in_portfolio}
+              disabled={account.purpose === "earmarked" || update.isPending}
+              onChange={(e) => patch({ counts_in_portfolio: e.target.checked })}
+            />
+            <span>
+              <span className="class-chip-name">Conta no patrimônio</span>
+              <span className="class-chip-meta">
+                {account.purpose === "earmarked"
+                  ? "indisponível: a conta está reservada para outro fim"
+                  : "entra nos gráficos e no cálculo dos alvos"}
+              </span>
+            </span>
+          </label>
+          <div className="adv-row">
+            <label className="field">
+              <span>Propósito</span>
+              <select
+                value={account.purpose}
+                onChange={(e) => patch({ purpose: e.target.value as Purpose })}
+              >
+                <option value="investment">{PURPOSE_LABEL.investment}</option>
+                <option value="earmarked">{PURPOSE_LABEL.earmarked}</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Liquidez</span>
+              <select
+                value={account.liquidity}
+                onChange={(e) => patch({ liquidity: e.target.value as Liquidity })}
+              >
+                {account.liquidity === "unknown" && (
+                  <option value="unknown">{LIQUIDITY_LABEL.unknown}</option>
+                )}
+                <option value="immediate">{LIQUIDITY_LABEL.immediate}</option>
+                <option value="scheduled">{LIQUIDITY_LABEL.scheduled}</option>
+                <option value="locked">{LIQUIDITY_LABEL.locked}</option>
+              </select>
+            </label>
+            <label className="field">
+              <span>Indexador</span>
+              <select value={tag?.code ?? ""} onChange={(e) => setTag(e.target.value)}>
+                <option value="">Sem indexador</option>
+                {(indexerLabels.data ?? []).map((l) => (
+                  <option key={l.id} value={l.code}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          {update.isError && (
+            <div className="banner banner-error">
+              ⚠️{" "}
+              {update.error instanceof ApiError
+                ? update.error.userMessage
+                : "Não consegui salvar a mudança."}
+            </div>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
 
 /** Formulário inline de lançamento (atualizar saldo / aporte / resgate) numa conta. */
 function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () => void }) {
@@ -218,7 +426,15 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
   );
 }
 
-function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnual?: number | null }) {
+function AccountCard({
+  account,
+  cdiAnnual,
+  tag,
+}: {
+  account: AccountSummary;
+  cdiAnnual?: number | null;
+  tag?: AssignmentOut;
+}) {
   const archive = useArchiveAccount();
   const update = useUpdateAccount();
   const [open, setOpen] = useState(false);
@@ -291,6 +507,8 @@ function AccountCard({ account, cdiAnnual }: { account: AccountSummary; cdiAnnua
         )}
       </div>
 
+      <AccountClassification account={account} tag={tag} />
+
       {period && <p className="reserve-window">{period}</p>}
       {showLast && (
         <p className="reserve-window">
@@ -343,16 +561,30 @@ function NewAccountForm() {
   const [kind, setKind] = useState("cdb");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState(todayBR());
+  // Liquidez é obrigatória no cadastro novo: sem ela o app não sabe se este dinheiro
+  // atende a uma emergência, e passaria a chutar.
+  const [liquidity, setLiquidity] = useState<NewLiquidity>("immediate");
+  const [purpose, setPurpose] = useState<Purpose>("investment");
+  const [counts, setCounts] = useState(true);
 
   const busy = create.isPending || addEntry.isPending;
   const dateInvalid = date.trim() !== "" && brToISO(date) === null;
+  const earmarked = purpose === "earmarked";
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (!name.trim() || dateInvalid) return;
     const value = parseBRL(amount);
     create.mutate(
-      { name: name.trim(), institution: institution.trim() || null, kind, benchmark: "cdi" },
+      {
+        name: name.trim(),
+        institution: institution.trim() || null,
+        kind,
+        benchmark: "cdi",
+        liquidity,
+        purpose,
+        counts_in_portfolio: earmarked ? false : counts,
+      },
       {
         onSuccess: (acc) => {
           // Se informou um saldo inicial, já registra como 1º "saldo" datado — assim a
@@ -397,6 +629,42 @@ function NewAccountForm() {
       </div>
       <div className="adv-row">
         <label className="field">
+          <span>Liquidez</span>
+          <select
+            value={liquidity}
+            onChange={(e) => setLiquidity(e.target.value as NewLiquidity)}
+          >
+            <option value="immediate">{LIQUIDITY_LABEL.immediate}</option>
+            <option value="scheduled">{LIQUIDITY_LABEL.scheduled}</option>
+            <option value="locked">{LIQUIDITY_LABEL.locked}</option>
+          </select>
+        </label>
+        <label className="field">
+          <span>Propósito</span>
+          <select value={purpose} onChange={(e) => setPurpose(e.target.value as Purpose)}>
+            <option value="investment">{PURPOSE_LABEL.investment}</option>
+            <option value="earmarked">{PURPOSE_LABEL.earmarked}</option>
+          </select>
+        </label>
+      </div>
+      <label className="class-chip class-chip-wide">
+        <input
+          type="checkbox"
+          checked={earmarked ? false : counts}
+          disabled={earmarked}
+          onChange={(e) => setCounts(e.target.checked)}
+        />
+        <span>
+          <span className="class-chip-name">Conta no patrimônio</span>
+          <span className="class-chip-meta">
+            {earmarked
+              ? "indisponível: dinheiro reservado para outro fim não entra na carteira"
+              : "entra nos gráficos e no cálculo dos alvos"}
+          </span>
+        </span>
+      </label>
+      <div className="adv-row">
+        <label className="field">
           <span>Saldo de partida (R$, opcional)</span>
           <input inputMode="decimal" placeholder="ex.: 10.000,00" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </label>
@@ -428,14 +696,22 @@ function NewAccountForm() {
   );
 }
 
+const AVISO_MARCAR = "pomar:reserva-aviso-marcar";
+
 export function ReservePage() {
   const navigate = useNavigate();
   const { data, isLoading, error } = useFixedIncome();
   const update = useUpdateAccount();
+  const tags = useAssignments({ dimension: "indexer", subjectType: "fi_account" });
   const [showArchived, setShowArchived] = useState(false);
+  const [avisoLido, setAvisoLido] = useState(() => !!localStorage.getItem(AVISO_MARCAR));
 
   const accounts = (data?.accounts ?? []).filter((a) => !a.archived);
   const archived = (data?.accounts ?? []).filter((a) => a.archived);
+  const tagOf = new Map((tags.data ?? []).map((t) => [t.subject_id, t]));
+  // Contas antigas nasceram fora da carteira (default deliberado): um aviso de uma linha,
+  // dispensável, em vez de mudar o comportamento delas por conta própria.
+  const precisaMarcar = accounts.length > 0 && accounts.every((a) => !a.counts_in_portfolio);
 
   return (
     <main className="page">
@@ -457,15 +733,31 @@ export function ReservePage() {
 
       {data && (
         <div className="pf-summary">
-          <span className="muted">Total em reserva</span>
+          <span className="muted">Total em renda fixa</span>
           <strong className="pf-total">{money(data.total_balance)}</strong>
+          <div className="reserve-totals">
+            <span>
+              Conta na carteira <strong>{money(data.portfolio_balance)}</strong>
+            </span>
+            <span>
+              <Tooltip metricKey="liquid_reserve">
+                <span>Reserva líquida</span>
+              </Tooltip>{" "}
+              <strong>{money(data.liquid_balance)}</strong>
+            </span>
+            {data.excluded_balance > 0 && (
+              <span>
+                Fora da carteira <strong>{money(data.excluded_balance)}</strong>
+              </span>
+            )}
+          </div>
           {data.cdi_annual != null && (
             <span className="muted">CDI de referência: {pct(data.cdi_annual)} a.a.</span>
           )}
         </div>
       )}
 
-      {data && <ReserveGoal totalReserve={data.total_balance} />}
+      {data && <ReserveFloorCard floor={data.floor} />}
 
       {data && accounts.length === 0 && (
         <div className="banner banner-warn">
@@ -474,10 +766,31 @@ export function ReservePage() {
         </div>
       )}
 
+      {precisaMarcar && !avisoLido && (
+        <p className="banner radar-banner">
+          Marque em cada conta se ela conta no patrimônio — nenhuma conta antiga passou a
+          contar sozinha.{" "}
+          <button
+            className="link-button"
+            onClick={() => {
+              localStorage.setItem(AVISO_MARCAR, "1");
+              setAvisoLido(true);
+            }}
+          >
+            ok, entendi
+          </button>
+        </p>
+      )}
+
       {accounts.length > 0 && (
         <ul className="cards" style={{ marginBottom: 16 }}>
           {accounts.map((a) => (
-            <AccountCard key={a.id} account={a} cdiAnnual={data?.cdi_annual} />
+            <AccountCard
+              key={a.id}
+              account={a}
+              cdiAnnual={data?.cdi_annual}
+              tag={tagOf.get(String(a.id))}
+            />
           ))}
         </ul>
       )}

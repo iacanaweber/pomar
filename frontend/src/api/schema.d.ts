@@ -356,6 +356,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/fixed-income/indexers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Indexers
+         * @description Composição da classe RENDA_FIXA por tag de indexador — atual × alvo.
+         *
+         *     Junta os dois lados da classe: os saldos das contas e as posições de renda variável que
+         *     o usuário atribuiu ao bucket `RENDA_FIXA` (um IMAB11 pesa na cesta ao lado de um CDB).
+         *     Ghostfolio fora do ar não derruba a resposta: a parte de renda fixa continua correta e
+         *     a resposta diz o que ficou de fora.
+         */
+        get: operations["indexers_api_fixed_income_indexers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/fixed-income/accounts": {
         parameters: {
             query?: never;
@@ -461,6 +486,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Labels */
+        get: operations["list_labels_api_labels_get"];
+        put?: never;
+        /** Create Label */
+        post: operations["create_label_api_labels_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/labels/assignments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Assignments */
+        get: operations["list_assignments_api_labels_assignments_get"];
+        /** Set Assignments */
+        put: operations["set_assignments_api_labels_assignments_put"];
+        post?: never;
+        /** Clear Assignments */
+        delete: operations["clear_assignments_api_labels_assignments_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/labels/{label_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete Label */
+        delete: operations["delete_label_api_labels__label_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api": {
         parameters: {
             query?: never;
@@ -501,11 +580,37 @@ export interface components {
              * @description 'cdi'|'selic'|'prefixado'|'ipca' (informativo).
              */
             benchmark?: string | null;
+            /**
+             * Counts In Portfolio
+             * @description Entra no patrimônio, nos gráficos e no cálculo de alvos.
+             * @default false
+             */
+            counts_in_portfolio: boolean;
+            /**
+             * Purpose
+             * @default investment
+             * @enum {string}
+             */
+            purpose: "investment" | "earmarked";
+            /**
+             * Liquidity
+             * @description 'immediate' (D+0/D+1) | 'scheduled' (janela/vencimento) | 'locked' (carência).
+             * @enum {string}
+             */
+            liquidity: "immediate" | "scheduled" | "locked";
+            /**
+             * Redeem Days
+             * @description Dias até o resgate cair na conta (informativo).
+             */
+            redeem_days?: number | null;
         };
         /**
          * AccountPatch
          * @description PATCH parcial da conta: só os campos enviados mudam. `archived=False` desarquiva —
          *     arquivar deixou de ser sem-volta na UI.
+         *
+         *     A combinação proibida (`earmarked` + contar na carteira) é validada contra o estado
+         *     MESCLADO, no repositório: aqui só se enxerga metade do par.
          */
         AccountPatch: {
             /** Name */
@@ -518,6 +623,14 @@ export interface components {
             benchmark?: string | null;
             /** Archived */
             archived?: boolean | null;
+            /** Counts In Portfolio */
+            counts_in_portfolio?: boolean | null;
+            /** Purpose */
+            purpose?: ("investment" | "earmarked") | null;
+            /** Liquidity */
+            liquidity?: ("immediate" | "scheduled" | "locked" | "unknown") | null;
+            /** Redeem Days */
+            redeem_days?: number | null;
         };
         /** AccountSummary */
         AccountSummary: {
@@ -536,6 +649,31 @@ export interface components {
              * @default false
              */
             archived: boolean;
+            /**
+             * Counts In Portfolio
+             * @default false
+             */
+            counts_in_portfolio: boolean;
+            /**
+             * Purpose
+             * @default investment
+             * @enum {string}
+             */
+            purpose: "investment" | "earmarked";
+            /**
+             * Liquidity
+             * @default unknown
+             * @enum {string}
+             */
+            liquidity: "immediate" | "scheduled" | "locked" | "unknown";
+            /** Redeem Days */
+            redeem_days?: number | null;
+            /**
+             * In Portfolio
+             * @description Efetivamente contabilizada no patrimônio (marcada e não earmarked).
+             * @default false
+             */
+            in_portfolio: boolean;
             /**
              * Current Balance
              * @default 0
@@ -728,6 +866,68 @@ export interface components {
             asset: components["schemas"]["Asset"];
             analysis: components["schemas"]["AssetAnalysis"];
         };
+        /** AssignmentItem */
+        AssignmentItem: {
+            /** Label Id */
+            label_id: number;
+            /**
+             * Weight
+             * @description Exposição parcial (ex.: 0.6 INTL + 0.4 BR). Os pesos da mesma dimensão somam 1.0; 'bucket' aceita um rótulo só e força peso 1.0.
+             * @default 1
+             */
+            weight: number;
+        };
+        /** AssignmentOut */
+        AssignmentOut: {
+            /** Subject Type */
+            subject_type: string;
+            /** Subject Id */
+            subject_id: string;
+            /** Dimension */
+            dimension: string;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Weight
+             * @default 1
+             */
+            weight: number;
+            /**
+             * Source
+             * @description 'user' quando o usuário escolheu; 'curated'/'suffix'/'fallback' quando o rótulo é o default herdado do mapa de `data/geography.py`.
+             * @default user
+             */
+            source: string;
+            /**
+             * Id
+             * @description Id da atribuição — nulo quando é default.
+             */
+            id?: number | null;
+            /** Label Id */
+            label_id?: number | null;
+        };
+        /**
+         * AssignmentsIn
+         * @description Substitui todas as atribuições de UMA dimensão para UM sujeito. Lista vazia limpa.
+         */
+        AssignmentsIn: {
+            /**
+             * Subject Type
+             * @enum {string}
+             */
+            subject_type: "ticker" | "fi_account";
+            /**
+             * Subject Id
+             * @description Ticker (normalizado) ou id da conta como texto.
+             */
+            subject_id: string;
+            /** Dimension */
+            dimension: string;
+            /** Items */
+            items?: components["schemas"]["AssignmentItem"][];
+        };
         /** EntryIn */
         EntryIn: {
             /**
@@ -755,9 +955,30 @@ export interface components {
             accounts?: components["schemas"]["AccountSummary"][];
             /**
              * Total Balance
+             * @description Tudo que existe na aba Reserva (contas ativas).
              * @default 0
              */
             total_balance: number;
+            /**
+             * Portfolio Balance
+             * @description Parte que conta na carteira (marcada e com propósito 'investment').
+             * @default 0
+             */
+            portfolio_balance: number;
+            /**
+             * Liquid Balance
+             * @description Reserva LÍQUIDA: da parte que conta na carteira, só o que tem resgate imediato. É o que satisfaz o piso da reserva.
+             * @default 0
+             */
+            liquid_balance: number;
+            /**
+             * Excluded Balance
+             * @description Saldo que não conta na carteira (não marcado ou earmarked).
+             * @default 0
+             */
+            excluded_balance: number;
+            /** @description Status do piso da reserva (nulo quando não há piso configurado). */
+            floor?: components["schemas"]["FloorStatus"] | null;
             /**
              * Cdi Annual
              * @description CDI anualizado (fração), benchmark.
@@ -768,6 +989,53 @@ export interface components {
              * @default BRL
              */
             currency: string;
+        };
+        /**
+         * FloorStatus
+         * @description Piso da reserva contra a renda fixa LÍQUIDA — o indicador próprio da aba Reserva.
+         *
+         *     Fica separado do total de renda fixa de propósito: o piso mede se existe dinheiro
+         *     disponível HOJE, e uma aplicação travada não responde a essa pergunta por mais que
+         *     engorde o patrimônio.
+         */
+        FloorStatus: {
+            /**
+             * Floor Nominal
+             * @default 0
+             */
+            floor_nominal: number;
+            /**
+             * Floor Corrected
+             * @default 0
+             */
+            floor_corrected: number;
+            /** Floor Date */
+            floor_date?: string | null;
+            /**
+             * Index
+             * @default none
+             */
+            index: string;
+            /**
+             * Index Available
+             * @default true
+             */
+            index_available: boolean;
+            /**
+             * Liquid Reserve
+             * @default 0
+             */
+            liquid_reserve: number;
+            /**
+             * Deficit
+             * @default 0
+             */
+            deficit: number;
+            /**
+             * Pct Filled
+             * @default 1
+             */
+            pct_filled: number;
         };
         /**
          * Fundamentals
@@ -906,6 +1174,96 @@ export interface components {
             currency: string;
             /** Warnings */
             warnings?: string[];
+        };
+        /**
+         * IndexerSlice
+         * @description Uma tag de indexador como item da cesta de RENDA_FIXA — o análogo de um ticker.
+         */
+        IndexerSlice: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Value
+             * @description Saldos das contas com a tag + posições de RV atribuídas.
+             * @default 0
+             */
+            value: number;
+            /**
+             * Current Pct
+             * @description Fatia da classe RENDA_FIXA hoje (0..1).
+             * @default 0
+             */
+            current_pct: number;
+            /**
+             * Target Pct
+             * @description Peso-alvo dentro da classe (0..1).
+             * @default 0
+             */
+            target_pct: number;
+            /**
+             * Gap
+             * @description Quanto falta em R$ para o peso-alvo (negativo = acima).
+             * @default 0
+             */
+            gap: number;
+        };
+        /** IndexersResponse */
+        IndexersResponse: {
+            /** Items */
+            items?: components["schemas"]["IndexerSlice"][];
+            /**
+             * Total
+             * @description Valor total da classe RENDA_FIXA (BRL).
+             * @default 0
+             */
+            total: number;
+            /** Warnings */
+            warnings?: string[];
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+        };
+        /** LabelIn */
+        LabelIn: {
+            /**
+             * Dimension
+             * @description 'bucket' | 'indexer' | 'geography'.
+             */
+            dimension: string;
+            /**
+             * Code
+             * @description Código curto, normalizado em MAIÚSCULAS (ex.: 'LCI').
+             */
+            code: string;
+            /**
+             * Name
+             * @description Nome exibido. Vazio usa o próprio código.
+             */
+            name?: string | null;
+        };
+        /** LabelOut */
+        LabelOut: {
+            /** Id */
+            id: number;
+            /**
+             * Dimension
+             * @description 'bucket' | 'indexer' | 'geography'.
+             */
+            dimension: string;
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Builtin
+             * @description Embutido — não pode ser removido.
+             * @default false
+             */
+            builtin: boolean;
         };
         /** LoginBody */
         LoginBody: {
@@ -1089,14 +1447,20 @@ export interface components {
             min_ticket: number;
             /**
              * Reserve Target
-             * @description Fração-alvo em reserva/renda fixa. Se omitido, usa as preferências.
+             * @deprecated
+             * @description APOSENTADO e IGNORADO: a reserva deixou de ser uma fração do patrimônio e virou um piso em R$ dentro da classe RENDA_FIXA (preferências).
              */
             reserve_target?: number | null;
             /**
              * Reserve Current
-             * @description Reserva já existente (BRL). Se omitido, usa o total do rastreador de RF.
+             * @description Sobrepõe a reserva LÍQUIDA lida do rastreador de renda fixa (BRL).
              */
             reserve_current?: number | null;
+            /**
+             * Reserve Floor
+             * @description Sobrepõe o piso da reserva das preferências (BRL).
+             */
+            reserve_floor?: number | null;
             /**
              * Allow Empty Portfolio
              * @description Permite gerar plano SEM conseguir ler a carteira (fail-open explícito). Por padrão o plano é abortado: alocar dinheiro real sobre carteira vazia produz sugestões materialmente erradas.
@@ -1280,7 +1644,11 @@ export interface components {
             min_ticket?: number | null;
             /** Lot Mode */
             lot_mode?: string | null;
-            /** Reserve Target */
+            /**
+             * Reserve Target
+             * @deprecated
+             * @description APOSENTADO: era a fração do patrimônio em renda fixa. Virou o peso da classe RENDA_FIXA (em `targets`) mais o piso em R$ (`reserve_floor_amount`).
+             */
             reserve_target?: number | null;
             /** Bazin Target Mode */
             bazin_target_mode?: string | null;
@@ -1292,6 +1660,26 @@ export interface components {
                     [key: string]: number;
                 };
             } | null;
+            /**
+             * Reserve Floor Amount
+             * @description Piso da reserva em R$ — o mínimo que fica em renda fixa LÍQUIDA.
+             */
+            reserve_floor_amount?: number | null;
+            /**
+             * Reserve Floor Date
+             * @description Data-base do piso (ISO). É de onde a correção pelo IPCA parte.
+             */
+            reserve_floor_date?: string | null;
+            /**
+             * Reserve Floor Index
+             * @description 'ipca' corrige o piso pela inflação; 'none' o deixa nominal.
+             */
+            reserve_floor_index?: ("none" | "ipca") | null;
+            /**
+             * Legacy In Total
+             * @description Se os ativos fora da carteira alvo entram no patrimônio que serve de base para os alvos em R$ das demais classes.
+             */
+            legacy_in_total?: boolean | null;
         };
         /**
          * RadarItem
@@ -1345,32 +1733,43 @@ export interface components {
         };
         /**
          * ReserveSuggestion
-         * @description Quanto do aporte direcionar à reserva/renda fixa antes da renda variável (Barsi/Bazin).
+         * @description Status do PISO da reserva e quanto deste aporte ele consome.
+         *
+         *     Os cinco primeiros campos mantêm os nomes que sempre tiveram porque o PAPEL deles não
+         *     mudou — alvo em R$, quanto existe, quanto falta, quanto está preenchido, quanto vai
+         *     agora. O que mudou foi a definição do alvo: era `fração × patrimônio` e passou a ser o
+         *     piso corrigido. Todos têm default para que `GET /plan/latest` continue conseguindo ler
+         *     os planos gravados antes desta mudança.
          */
         ReserveSuggestion: {
             /**
              * Target Amount
-             * @description Alvo de reserva em BRL (reserve_target × patrimônio).
+             * @description Piso corrigido — o alvo em BRL.
+             * @default 0
              */
             target_amount: number;
             /**
              * Current Amount
-             * @description Reserva atual (BRL) — do rastreador de renda fixa.
+             * @description Reserva LÍQUIDA (BRL): só contas que contam na carteira, de propósito 'investment' e com resgate imediato.
+             * @default 0
              */
             current_amount: number;
             /**
              * Gap
-             * @description Quanto falta para a reserva-alvo (BRL).
+             * @description Déficit do piso (BRL).
+             * @default 0
              */
             gap: number;
             /**
              * Pct Filled
-             * @description Fração da reserva-alvo já preenchida (0..1).
+             * @description Fração do piso já preenchida (0..1).
+             * @default 0
              */
             pct_filled: number;
             /**
              * Directed Now
              * @description Quanto deste aporte vai para a reserva (BRL).
+             * @default 0
              */
             directed_now: number;
             /**
@@ -1379,8 +1778,31 @@ export interface components {
              */
             benchmark_cdi_annual?: number | null;
             /**
+             * Floor Nominal
+             * @description Piso como o usuário digitou, sem correção.
+             * @default 0
+             */
+            floor_nominal: number;
+            /**
+             * Floor Date
+             * @description Data-base do piso (ISO).
+             */
+            floor_date?: string | null;
+            /**
+             * Floor Index
+             * @description 'none' | 'ipca'.
+             * @default none
+             */
+            floor_index: string;
+            /**
+             * Floor Index Available
+             * @description False quando o IPCA não veio e o piso exibido é o nominal.
+             * @default true
+             */
+            floor_index_available: boolean;
+            /**
              * Note
-             * @default Complete a reserva/CDI antes da renda variável.
+             * @default O piso da reserva é coberto antes de qualquer compra.
              */
             note: string;
         };
@@ -2021,6 +2443,26 @@ export interface operations {
             };
         };
     };
+    indexers_api_fixed_income_indexers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IndexersResponse"];
+                };
+            };
+        };
+    };
     create_account_api_fixed_income_accounts_post: {
         parameters: {
             query?: never;
@@ -2295,6 +2737,208 @@ export interface operations {
             header?: never;
             path: {
                 order_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_labels_api_labels_get: {
+        parameters: {
+            query?: {
+                dimension?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_label_api_labels_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_assignments_api_labels_assignments_get: {
+        parameters: {
+            query?: {
+                dimension?: string | null;
+                subject_type?: string | null;
+                subject_id?: string | null;
+                /** @description Lista separada por vírgula — resolve vários sujeitos de uma vez. */
+                subjects?: string | null;
+                /** @description Inclui o rótulo herdado do mapa curado para quem não tem escolha gravada. */
+                include_defaults?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_assignments_api_labels_assignments_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignmentsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignmentOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    clear_assignments_api_labels_assignments_delete: {
+        parameters: {
+            query: {
+                subject_type: string;
+                subject_id: string;
+                dimension: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_label_api_labels__label_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                label_id: number;
             };
             cookie?: never;
         };

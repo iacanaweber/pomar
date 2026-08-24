@@ -13,6 +13,7 @@ from app.models.fixed_income import (
     EntryIn,
     EntryOut,
     FixedIncomeSummary,
+    FloorStatus,
     IndexersResponse,
     IndexerSlice,
 )
@@ -22,6 +23,7 @@ from app.repositories import labels_repo, preferences_repo
 from app.services import fixed_income as fi
 from app.services import indexers as indexers_svc
 from app.services.portfolio_service import get_enriched_portfolio
+from app.services.reserve_service import resolve_floor
 from app.util import from_cents, to_cents
 
 router = APIRouter()
@@ -51,12 +53,16 @@ async def fixed_income_summary(include_archived: bool = False) -> FixedIncomeSum
     total = soma(ativas)
     na_carteira = soma([s for s in ativas if s.in_portfolio])
     liquida = soma([s for s in ativas if s.in_portfolio and s.liquidity == "immediate"])
+
+    prefs = await preferences_repo.get(db, get_settings())
+    piso = await resolve_floor(prefs, from_cents(liquida), get_sgs())
     return FixedIncomeSummary(
         accounts=summaries,
         total_balance=from_cents(total),
         portfolio_balance=from_cents(na_carteira),
         liquid_balance=from_cents(liquida),
         excluded_balance=from_cents(total - na_carteira),
+        floor=FloorStatus(**piso) if piso["floor_nominal"] > 0 else None,
         cdi_annual=cdi,
     )
 

@@ -33,9 +33,26 @@ export type RadarItem = Schemas["RadarItem"];
 
 // --- Renda fixa (rastreador) ---
 export type FixedIncomeSummary = Schemas["FixedIncomeSummary"];
+export type FloorStatus = Schemas["FloorStatus"];
 export type AccountSummary = Schemas["AccountSummary"];
 export type AccountIn = Schemas["AccountIn"];
+export type AccountPatch = Schemas["AccountPatch"];
 export type EntryIn = Schemas["EntryIn"];
+// Literals são inlinados pelo OpenAPI (não viram schema próprio): derivam do DTO.
+export type Purpose = AccountSummary["purpose"];
+export type Liquidity = AccountSummary["liquidity"];
+export type NewLiquidity = AccountIn["liquidity"];
+
+// --- Cesta de RENDA_FIXA: os itens são tags de indexador, não tickers ---
+export type IndexersResponse = Schemas["IndexersResponse"];
+export type IndexerSlice = Schemas["IndexerSlice"];
+
+// --- Rótulos por dimensão (bucket / indexer / geography) ---
+export type LabelOut = Schemas["LabelOut"];
+export type LabelIn = Schemas["LabelIn"];
+export type AssignmentOut = Schemas["AssignmentOut"];
+export type AssignmentsIn = Schemas["AssignmentsIn"];
+export type LabelDimension = "bucket" | "indexer" | "geography";
 
 /** Lançamento de renda fixa (a rota GET .../entries devolve { items: FixedIncomeEntry[] }). */
 export interface FixedIncomeEntry {
@@ -67,11 +84,19 @@ export interface Preferences {
   targets: Record<string, number>;
   min_ticket: number;
   lot_mode: string;
+  /** @deprecated Virou o peso da classe RENDA_FIXA + o piso em R$. Não é mais lido. */
   reserve_target: number;
   bazin_target_mode: string;
   bazin_target_yield?: number | null;
-  /** Carteira alvo: peso (0..1) de cada ativo dentro da sua classe. */
+  /** Carteira alvo: peso (0..1) de cada item dentro da sua classe. Em RENDA_FIXA o item
+   *  é uma tag de indexador (CDI, IPCA…); nas demais, um ticker. */
   class_targets: Record<string, Record<string, number>>;
+  /** Piso da reserva: o mínimo que fica em renda fixa de resgate imediato. */
+  reserve_floor_amount: number;
+  reserve_floor_date: string | null;
+  reserve_floor_index: "none" | "ipca";
+  /** Se os ativos fora da carteira alvo entram na base dos alvos em R$ das demais classes. */
+  legacy_in_total: boolean;
 }
 
 export interface WatchlistItem {
