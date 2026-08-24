@@ -7,7 +7,7 @@ vêm marcados mesmo sem compra sugerida — antecipar é decisão do usuário, n
 """
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, HTTPException
 
@@ -201,23 +201,43 @@ async def plan(req: PlanRequest) -> PlanResponse:
             "Continuam na carteira, mas não recebem aporte."
         )
 
-    # 6) reserva / renda fixa: prioriza completar a reserva antes da RV (Barsi/Bazin)
-    reserve_target = (
-        req.reserve_target if req.reserve_target is not None
-        else float(prefs.get("reserve_target") or 0.0)
+    # 6) piso da reserva: prioridade ABSOLUTA sobre qualquer compra. Só a renda fixa
+    # LÍQUIDA (contas marcadas, de propósito 'investment' e com resgate imediato) satisfaz
+    # o piso — uma LCI travada soma no peso da classe mas não serve de emergência.
+    floor_nominal = (
+        req.reserve_floor if req.reserve_floor is not None
+        else float(prefs.get("reserve_floor_amount") or 0.0)
     )
     if req.reserve_current is not None:
-        reserve_current = req.reserve_current
+        liquid_reserve = req.reserve_current
     else:
         try:
-            reserve_current = await fixed_income_repo.total_balance(get_db())
+            liquid_reserve = await fixed_income_repo.liquid_reserve(get_db())
         except Exception as exc:  # noqa: BLE001
-            warnings.append(f"Não consegui ler a renda fixa ({exc}); assumindo reserva atual = 0.")
-            reserve_current = 0.0
-    split = reserve_svc.split_aporte_reserva(
-        req.aporte, portfolio.total_value, reserve_current, reserve_target
+            warnings.append(
+                f"Não consegui ler a renda fixa ({exc}); assumindo reserva líquida = 0."
+            )
+            liquid_reserve = 0.0
+
+    ipca_factor = None
+    floor_index = str(prefs.get("reserve_floor_index") or "none")
+    floor_date = prefs.get("reserve_floor_date")
+    if floor_nominal > 0 and floor_index == "ipca" and floor_date:
+        try:
+            ipca_factor = await get_sgs().ipca_factor_since(date.fromisoformat(floor_date[:10]))
+        except Exception:  # noqa: BLE001
+            ipca_factor = None  # o status já sinaliza a correção indisponível
+
+    floor = reserve_svc.floor_status(
+        floor_nominal, liquid_reserve, floor_index, ipca_factor, floor_date
     )
-    aporte_rv = split["aporte_rv"]
+    if floor_nominal > 0 and not floor["index_available"]:
+        warnings.append(
+            "Não consegui buscar o IPCA para corrigir o piso da reserva; usando o valor "
+            "nominal por enquanto."
+        )
+    split = reserve_svc.direct_to_floor(req.aporte, floor["deficit"])
+    aporte_rv = split["remaining"]
 
     # 7) alocação do aporte de RENDA VARIÁVEL (após o pré-corte da reserva).
     # Lote conforme a preferência: 'fracionario' compra por unidade; 'integral' respeita
@@ -239,23 +259,24 @@ async def plan(req: PlanRequest) -> PlanResponse:
     for item in ranking:
         item.reasons = _plan_reasons(item, at_target)
 
-    # 8) sugestão de reserva (só quando há alvo de reserva definido)
+    # 8) status do piso (só quando existe um piso configurado — sem piso, sem card)
     reserve = None
-    if reserve_target > 0:
-        status = reserve_svc.reserve_status(
-            portfolio.total_value, reserve_current, reserve_target, req.aporte
-        )
+    if floor_nominal > 0:
         try:
             cdi = await get_sgs().cdi_annual()
         except Exception:  # noqa: BLE001
             cdi = None
         reserve = ReserveSuggestion(
-            target_amount=status["target_amount"],
-            current_amount=status["current_amount"],
-            gap=status["gap"],
-            pct_filled=status["pct_filled"],
-            directed_now=split["reserve_directed"],
+            target_amount=floor["floor_corrected"],
+            current_amount=floor["liquid_reserve"],
+            gap=floor["deficit"],
+            pct_filled=floor["pct_filled"],
+            directed_now=split["floor_directed"],
             benchmark_cdi_annual=cdi,
+            floor_nominal=floor["floor_nominal"],
+            floor_date=floor["floor_date"],
+            floor_index=floor["index"],
+            floor_index_available=floor["index_available"],
         )
 
     # compras primeiro (maior valor no topo); depois o resto, ordenado pelo desconto sobre

@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from app.repositories.db import Database
 from app.services import fixed_income as fi
+from app.util import from_cents, to_cents
 
 
 def _now() -> str:
@@ -143,16 +144,19 @@ async def balances(db: Database, include_archived: bool = False) -> List[Dict[st
     return out
 
 
+def _sum(rows: List[Dict[str, Any]]) -> float:
+    """Soma saldos em CENTAVOS inteiros e volta para reais só no fim (ver `util.to_cents`)."""
+    return from_cents(sum(to_cents(r["balance"]) for r in rows))
+
+
 async def total_balance(db: Database) -> float:
     """Tudo que existe na aba Reserva (contas não arquivadas), conte na carteira ou não."""
-    return round(sum(a["balance"] for a in await balances(db)), 2)
+    return _sum(await balances(db))
 
 
 async def portfolio_balance(db: Database) -> float:
     """A parte da renda fixa que É patrimônio: marcada e com propósito 'investment'."""
-    return round(
-        sum(a["balance"] for a in await balances(db) if fi.counts_in_portfolio(a)), 2
-    )
+    return _sum([a for a in await balances(db) if fi.counts_in_portfolio(a)])
 
 
 async def liquid_reserve(db: Database) -> float:
@@ -162,11 +166,7 @@ async def liquid_reserve(db: Database) -> float:
     conta aqui. Sem essa separação o app mostraria a reserva como cumprida enquanto o
     dinheiro está preso, que é exatamente a falha que a reserva existe para evitar.
     """
-    return round(
-        sum(
-            a["balance"]
-            for a in await balances(db)
-            if fi.counts_in_portfolio(a) and fi.is_immediately_liquid(a)
-        ),
-        2,
-    )
+    return _sum([
+        a for a in await balances(db)
+        if fi.counts_in_portfolio(a) and fi.is_immediately_liquid(a)
+    ])

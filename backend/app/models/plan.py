@@ -81,15 +81,32 @@ class PlanAsset(BaseModel):
 
 
 class ReserveSuggestion(BaseModel):
-    """Quanto do aporte direcionar à reserva/renda fixa antes da renda variável (Barsi/Bazin)."""
+    """Status do PISO da reserva e quanto deste aporte ele consome.
 
-    target_amount: float = Field(..., description="Alvo de reserva em BRL (reserve_target × patrimônio).")
-    current_amount: float = Field(..., description="Reserva atual (BRL) — do rastreador de renda fixa.")
-    gap: float = Field(..., description="Quanto falta para a reserva-alvo (BRL).")
-    pct_filled: float = Field(..., description="Fração da reserva-alvo já preenchida (0..1).")
-    directed_now: float = Field(..., description="Quanto deste aporte vai para a reserva (BRL).")
+    Os cinco primeiros campos mantêm os nomes que sempre tiveram porque o PAPEL deles não
+    mudou — alvo em R$, quanto existe, quanto falta, quanto está preenchido, quanto vai
+    agora. O que mudou foi a definição do alvo: era `fração × patrimônio` e passou a ser o
+    piso corrigido. Todos têm default para que `GET /plan/latest` continue conseguindo ler
+    os planos gravados antes desta mudança.
+    """
+
+    target_amount: float = Field(0.0, description="Piso corrigido — o alvo em BRL.")
+    current_amount: float = Field(
+        0.0,
+        description="Reserva LÍQUIDA (BRL): só contas que contam na carteira, de propósito "
+        "'investment' e com resgate imediato.",
+    )
+    gap: float = Field(0.0, description="Déficit do piso (BRL).")
+    pct_filled: float = Field(0.0, description="Fração do piso já preenchida (0..1).")
+    directed_now: float = Field(0.0, description="Quanto deste aporte vai para a reserva (BRL).")
     benchmark_cdi_annual: Optional[float] = Field(None, description="CDI anualizado (fração), referência.")
-    note: str = Field("Complete a reserva/CDI antes da renda variável.")
+    floor_nominal: float = Field(0.0, description="Piso como o usuário digitou, sem correção.")
+    floor_date: Optional[str] = Field(None, description="Data-base do piso (ISO).")
+    floor_index: str = Field("none", description="'none' | 'ipca'.")
+    floor_index_available: bool = Field(
+        True, description="False quando o IPCA não veio e o piso exibido é o nominal."
+    )
+    note: str = Field("O piso da reserva é coberto antes de qualquer compra.")
 
 
 class PlanResponse(BaseModel):
@@ -176,10 +193,20 @@ class PlanRequest(BaseModel):
         100.0, ge=0, description="Valor mínimo para ABRIR posição em um ativo (BRL)."
     )
     reserve_target: Optional[float] = Field(
-        None, ge=0, le=1, description="Fração-alvo em reserva/renda fixa. Se omitido, usa as preferências."
+        None,
+        ge=0,
+        le=1,
+        deprecated=True,
+        description="APOSENTADO e IGNORADO: a reserva deixou de ser uma fração do patrimônio "
+        "e virou um piso em R$ dentro da classe RENDA_FIXA (preferências).",
     )
     reserve_current: Optional[float] = Field(
-        None, ge=0, description="Reserva já existente (BRL). Se omitido, usa o total do rastreador de RF."
+        None,
+        ge=0,
+        description="Sobrepõe a reserva LÍQUIDA lida do rastreador de renda fixa (BRL).",
+    )
+    reserve_floor: Optional[float] = Field(
+        None, ge=0, description="Sobrepõe o piso da reserva das preferências (BRL)."
     )
     allow_empty_portfolio: bool = Field(
         False,

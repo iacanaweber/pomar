@@ -14,6 +14,7 @@ from app.models.fixed_income import (
 )
 from app.repositories import fixed_income_repo as repo
 from app.services import fixed_income as fi
+from app.util import from_cents, to_cents
 
 router = APIRouter()
 
@@ -34,17 +35,20 @@ async def fixed_income_summary(include_archived: bool = False) -> FixedIncomeSum
     summaries = [await _summary_with_cdi(a, cdi) for a in accounts]
     # os totais contam só as contas ATIVAS, mesmo quando as arquivadas são listadas
     ativas = [s for s in summaries if not s.archived]
-    total = round(sum(s.current_balance for s in ativas), 2)
-    na_carteira = round(sum(s.current_balance for s in ativas if s.in_portfolio), 2)
-    liquida = round(
-        sum(s.current_balance for s in ativas if s.in_portfolio and s.liquidity == "immediate"), 2
-    )
+
+    def soma(contas) -> int:
+        """Em centavos inteiros — o total precisa bater com a soma do que a tela mostra."""
+        return sum(to_cents(s.current_balance) for s in contas)
+
+    total = soma(ativas)
+    na_carteira = soma([s for s in ativas if s.in_portfolio])
+    liquida = soma([s for s in ativas if s.in_portfolio and s.liquidity == "immediate"])
     return FixedIncomeSummary(
         accounts=summaries,
-        total_balance=total,
-        portfolio_balance=na_carteira,
-        liquid_balance=liquida,
-        excluded_balance=round(total - na_carteira, 2),
+        total_balance=from_cents(total),
+        portfolio_balance=from_cents(na_carteira),
+        liquid_balance=from_cents(liquida),
+        excluded_balance=from_cents(total - na_carteira),
         cdi_annual=cdi,
     )
 

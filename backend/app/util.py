@@ -12,3 +12,18 @@ def normalize_ticker(ticker: str) -> str:
     if t.endswith(".SA"):
         t = t[:-3]
     return t
+
+
+def to_cents(value: float | int | None) -> int:
+    """Reais -> centavos inteiros, para somar dinheiro sem acumular erro de ponto flutuante.
+
+    O backend usa `float` na cadeia monetária inteira por herança; código novo que SOMA
+    valores acumula em centavos e volta para float só na borda (`from_cents`). Somar
+    milhares de saldos em float faz o total derivar do que a soma dos números exibidos diz.
+    """
+    return int(round(float(value or 0.0) * 100))
+
+
+def from_cents(cents: int) -> float:
+    """Centavos inteiros -> reais, arredondado a 2 casas (a borda do Pydantic)."""
+    return round(cents / 100.0, 2)

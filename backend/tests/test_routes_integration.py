@@ -106,7 +106,7 @@ def test_fixed_income_list_and_delete_entry(authed_client, _stub_cdi):
     assert len(left) == 1 and left[0]["kind"] == "balance"
 
 
-def _stub_plan_market(monkeypatch, assets=None, portfolio=None):
+def _stub_plan_market(monkeypatch, assets=None, portfolio=None, ipca_factor=None):
     """Isola o plano da rede: carteira e dados de mercado vêm de stubs."""
     from app.models.portfolio import Allocations, Portfolio
 
@@ -122,7 +122,7 @@ def _stub_plan_market(monkeypatch, assets=None, portfolio=None):
 
     monkeypatch.setattr("app.api.routes_plan.get_enriched_portfolio", _portfolio)
     monkeypatch.setattr("app.api.routes_plan.build_universe", _universe)
-    monkeypatch.setattr("app.api.routes_plan.get_sgs", lambda: _StubSgs())
+    monkeypatch.setattr("app.api.routes_plan.get_sgs", lambda: _StubSgs(ipca_factor))
 
 
 def _asset(ticker, asset_class, price, dividends=None):
@@ -135,24 +135,120 @@ def _asset(ticker, asset_class, price, dividends=None):
     )
 
 
-def test_plan_reserve_directs_aporte(authed_client, _stub_cdi, monkeypatch):
-    """Com reserve_target, parte do aporte é direcionada à reserva (sem depender de rede)."""
+def test_plan_floor_deficit_comes_before_any_purchase(authed_client, _stub_cdi, monkeypatch):
+    """O déficit do piso tem prioridade absoluta: o que sobra é que compra renda variável."""
     c = authed_client
-    c.put("/api/preferences", json={"class_targets": {"STOCK": {"AAA3": 1.0}}})
+    c.put("/api/preferences", json={
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "reserve_floor_amount": 30_000.0,
+    })
     _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
 
     r = c.post(
         "/api/plan",
-        json={"aporte": 1000.0, "classes": ["STOCK"], "reserve_target": 0.3,
-              "reserve_current": 0.0, "min_ticket": 10.0},
+        json={"aporte": 1000.0, "classes": ["STOCK"], "reserve_current": 29_700.0,
+              "min_ticket": 10.0},
     ).json()
     assert r["reserve"] is not None
-    # patrimônio resultante = 0 + 0 + 1000; alvo 30% = 300 -> direciona 300, sobra 700 p/ RV
+    assert r["reserve"]["target_amount"] == 30_000.0
+    assert r["reserve"]["current_amount"] == 29_700.0
+    assert r["reserve"]["gap"] == 300.0
     assert r["reserve"]["directed_now"] == 300.0
     assert r["reserve"]["benchmark_cdi_annual"] == 0.1415
     bought = next(x for x in r["ranking"] if x["ticker"] == "AAA3")
     assert bought["suggested"]["invested_exact"] == 700.0
     assert r["plan_id"] is not None  # o save é best-effort: erro de contrato seria silencioso
+
+
+def test_plan_without_floor_has_no_reserve_card(authed_client, monkeypatch):
+    """Default preserva o comportamento: sem piso configurado, nada é desviado."""
+    c = authed_client
+    c.put("/api/preferences", json={"class_targets": {"STOCK": {"AAA3": 1.0}}})
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+    r = c.post("/api/plan", json={"aporte": 1000.0, "classes": ["STOCK"], "min_ticket": 10.0}).json()
+    assert r["reserve"] is None
+    assert next(x for x in r["ranking"] if x["ticker"] == "AAA3")["suggested"]["invested_exact"] == 1000.0
+
+
+def test_plan_floor_only_counts_immediately_liquid_money(authed_client, _stub_cdi, monkeypatch):
+    """A LCI travada soma no patrimônio, mas não cobre o piso: dizer que a reserva está
+    cumprida enquanto o dinheiro está preso é a falha que a reserva existe para evitar."""
+    c = authed_client
+    lci = _conta(c, "LCI 2 anos", counts_in_portfolio=True, liquidity="locked").json()
+    selic = _conta(c, "Tesouro Selic", counts_in_portfolio=True).json()
+    _saldo(c, lci["id"], 25_000.0)
+    _saldo(c, selic["id"], 5_000.0)
+
+    c.put("/api/preferences", json={
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "reserve_floor_amount": 10_000.0,
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+    r = c.post("/api/plan", json={"aporte": 1000.0, "classes": ["STOCK"], "min_ticket": 10.0}).json()
+    # reserva líquida = 5.000 (só a Selic), então ainda faltam 5.000 para o piso
+    assert r["reserve"]["current_amount"] == 5_000.0
+    assert r["reserve"]["gap"] == 5_000.0
+    assert r["reserve"]["directed_now"] == 1000.0  # o aporte inteiro vai para o piso
+    assert not any(x["suggested"] for x in r["ranking"])
+
+
+def test_plan_floor_falls_back_to_nominal_when_ipca_fails(authed_client, _stub_cdi, monkeypatch):
+    """Falha do SGS nunca quebra a tela: vale o nominal, e o plano diz que a correção
+    está indisponível."""
+    c = authed_client
+    c.put("/api/preferences", json={
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "reserve_floor_amount": 30_000.0,
+        "reserve_floor_date": "2026-01-01",
+        "reserve_floor_index": "ipca",
+    })
+
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)], ipca_factor=None)
+    r = c.post(
+        "/api/plan",
+        json={"aporte": 100.0, "classes": ["STOCK"], "reserve_current": 30_000.0, "min_ticket": 10.0},
+    ).json()
+    assert r["reserve"]["target_amount"] == 30_000.0  # o nominal
+    assert r["reserve"]["floor_index"] == "ipca"
+    assert r["reserve"]["floor_index_available"] is False
+    assert any("IPCA" in w for w in r["warnings"])
+
+
+def test_plan_floor_is_corrected_by_ipca(authed_client, _stub_cdi, monkeypatch):
+    c = authed_client
+    c.put("/api/preferences", json={
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "reserve_floor_amount": 30_000.0,
+        "reserve_floor_date": "2026-01-01",
+        "reserve_floor_index": "ipca",
+    })
+
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)], ipca_factor=1.0325)
+    r = c.post(
+        "/api/plan",
+        json={"aporte": 100.0, "classes": ["STOCK"], "reserve_current": 30_000.0, "min_ticket": 10.0},
+    ).json()
+    assert r["reserve"]["floor_nominal"] == 30_000.0
+    assert r["reserve"]["target_amount"] == 30_975.0
+    assert r["reserve"]["gap"] == 975.0
+    assert r["reserve"]["directed_now"] == 100.0  # o aporte residual que a correção provoca
+
+
+def test_reserve_target_retirement_seeds_renda_fixa_weight(authed_client):
+    """O mecanismo aposentado vira PESO da classe, não piso: converter uma fração do
+    patrimônio em um valor em R$ não teria significado."""
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "FII": 0.3, "ETF": 0.15, "BDR": 0.05},
+        "reserve_target": 0.2,
+    })
+    p = c.get("/api/preferences").json()
+    assert p["targets"]["RENDA_FIXA"] == 0.2
+    assert p["targets"]["STOCK"] == 0.4  # 0.5 × (1 − 0.2)
+    assert sum(p["targets"].values()) == pytest.approx(1.0)
+    assert p["reserve_floor_amount"] == 0.0  # o piso nasce zerado e é pedido uma vez
+    # idempotente: a segunda leitura não renormaliza de novo
+    assert c.get("/api/preferences").json()["targets"]["STOCK"] == 0.4
 
 
 def test_plan_skips_class_without_composition(authed_client, monkeypatch):
@@ -269,8 +365,15 @@ def test_plan_latest_reads_a_plan_saved_by_the_old_format(authed_client):
 
 
 class _StubSgs:
+    def __init__(self, ipca_factor=None):
+        self._ipca = ipca_factor
+
     async def cdi_annual(self):
         return 0.1415
+
+    async def ipca_factor_since(self, start):
+        """None simula o SGS fora do ar — o piso tem de cair no nominal, não estourar."""
+        return self._ipca
 
 
 def test_orders_crud(authed_client):
