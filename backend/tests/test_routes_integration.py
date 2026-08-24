@@ -374,3 +374,88 @@ def test_zero_target_class_gets_no_missing_composition_warning(authed_client, mo
     assert r["classes_skipped"] == ["FII"]  # FII tem meta 40% e nenhuma cesta: avisa
     assert not any("BDR" in w for w in r["warnings"])
     assert not any("ETF" in w for w in r["warnings"])
+
+
+# --- rótulos por dimensão -----------------------------------------------------------
+
+def test_labels_require_auth(monkeypatch, tmp_path):
+    monkeypatch.setenv("APP_PASSWORD", "pw")
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
+    get_settings.cache_clear()
+    get_db.cache_clear()
+    c = TestClient(create_app(), base_url="http://testserver")
+    assert c.get("/api/labels").status_code == 401
+    get_settings.cache_clear()
+    get_db.cache_clear()
+
+
+def test_labels_seeded_on_first_get(authed_client):
+    indexers = authed_client.get("/api/labels?dimension=indexer").json()
+    codes = {i["code"] for i in indexers}
+    assert {"CDI", "SELIC", "IPCA", "PREFIXADO", "LCI", "LCA", "POUPANCA"} <= codes
+    assert all(i["builtin"] for i in indexers)
+
+
+def test_label_create_and_builtin_is_protected(authed_client):
+    c = authed_client
+    novo = c.post("/api/labels", json={"dimension": "indexer", "code": "cdb 110", "name": "CDB 110% CDI"})
+    assert novo.status_code == 200 and novo.json()["code"] == "CDB_110"
+    assert c.delete(f"/api/labels/{novo.json()['id']}").status_code == 200
+
+    cdi = next(i for i in c.get("/api/labels?dimension=indexer").json() if i["code"] == "CDI")
+    assert c.delete(f"/api/labels/{cdi['id']}").status_code == 422  # embutido não sai
+
+
+def test_assignment_roundtrip_and_weight_validation(authed_client):
+    c = authed_client
+    geo = {g["code"]: g["id"] for g in c.get("/api/labels?dimension=geography").json()}
+
+    ruim = c.put("/api/labels/assignments", json={
+        "subject_type": "ticker", "subject_id": "AAA11", "dimension": "geography",
+        "items": [{"label_id": geo["BR"], "weight": 0.6}, {"label_id": geo["INTL"], "weight": 0.6}],
+    })
+    assert ruim.status_code == 422
+
+    ok = c.put("/api/labels/assignments", json={
+        "subject_type": "ticker", "subject_id": "aaa11", "dimension": "geography",
+        "items": [{"label_id": geo["INTL"], "weight": 0.6}, {"label_id": geo["BR"], "weight": 0.4}],
+    })
+    assert ok.status_code == 200
+    assert {r["code"]: r["weight"] for r in ok.json()} == {"INTL": 0.6, "BR": 0.4}
+
+    lido = c.get("/api/labels/assignments?dimension=geography&subject_type=ticker&subject_id=AAA11")
+    assert {r["code"] for r in lido.json()} == {"BR", "INTL"}
+    assert all(r["source"] == "user" for r in lido.json())
+
+
+def test_assignments_include_defaults_distinguishes_inherited(authed_client):
+    """A UI precisa saber o que ela herdou do mapa curado e o que o usuário escolheu."""
+    c = authed_client
+    geo = {g["code"]: g["id"] for g in c.get("/api/labels?dimension=geography").json()}
+    c.put("/api/labels/assignments", json={
+        "subject_type": "ticker", "subject_id": "BOVA11", "dimension": "geography",
+        "items": [{"label_id": geo["INTL"]}],
+    })
+    r = c.get(
+        "/api/labels/assignments?dimension=geography&subject_type=ticker"
+        "&subjects=BOVA11,IVVB11,ZZZZ3&include_defaults=true"
+    ).json()
+    por_ticker = {x["subject_id"]: x for x in r}
+    assert por_ticker["BOVA11"]["code"] == "INTL" and por_ticker["BOVA11"]["source"] == "user"
+    assert por_ticker["IVVB11"]["code"] == "INTL" and por_ticker["IVVB11"]["source"] == "curated"
+    assert por_ticker["ZZZZ3"]["code"] == "BR" and por_ticker["ZZZZ3"]["source"] == "fallback"
+
+
+def test_clear_assignments_route(authed_client):
+    c = authed_client
+    geo = {g["code"]: g["id"] for g in c.get("/api/labels?dimension=geography").json()}
+    c.put("/api/labels/assignments", json={
+        "subject_type": "ticker", "subject_id": "AAA11", "dimension": "geography",
+        "items": [{"label_id": geo["BR"]}],
+    })
+    assert c.delete(
+        "/api/labels/assignments?subject_type=ticker&subject_id=AAA11&dimension=geography"
+    ).status_code == 200
+    assert c.get(
+        "/api/labels/assignments?subject_type=ticker&subject_id=AAA11"
+    ).json() == []
