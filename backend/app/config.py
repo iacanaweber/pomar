@@ -13,7 +13,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Conjuntos canônicos usados para validar a configuração (Enums de domínio chegam no
 # lift-and-shift da Fase 1; aqui validamos as chaves contra estes conjuntos).
-ASSET_CLASSES = {"STOCK", "FII", "ETF", "BDR", "FIXED_INCOME"}
+# `FIXED_INCOME` era o nome interno de quando a renda fixa vivia só na reserva; `RENDA_FIXA`
+# é o bucket de alocação de verdade (ver models/plan.ALLOCATION_CLASSES). Os dois seguem
+# aceitos porque a validação é aditiva e configuração antiga não deve derrubar o boot.
+ASSET_CLASSES = {"STOCK", "FII", "ETF", "BDR", "FIXED_INCOME", "RENDA_FIXA"}
 
 
 def _validate_weight_map(value: Dict[str, float], allowed: set, label: str) -> Dict[str, float]:

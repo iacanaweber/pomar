@@ -13,8 +13,16 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.models.market import Asset
 
-# Classes que recebem aporte de renda variável (FIXED_INCOME fica com a reserva).
+# Classes que o alocador sabe COMPRAR: têm cotação e lote, e a resposta é "quantas cotas".
 INVESTABLE_CLASSES = ("STOCK", "FII", "ETF", "BDR")
+
+# A carteira alvo inteira — o nível 1 da árvore de buckets. `RENDA_FIXA` é uma classe como
+# as outras para efeito de peso e de déficit, mas a compra é manual e feita fora do app, e
+# os itens da cesta dela são TAGS DE INDEXADOR (CDI, IPCA, LCI…), não tickers com preço.
+# Por isso ela fica de fora de INVESTABLE_CLASSES: pedir "quantas cotas de CDI comprar" não
+# é uma pergunta com resposta.
+RENDA_FIXA = "RENDA_FIXA"
+ALLOCATION_CLASSES = (*INVESTABLE_CLASSES, RENDA_FIXA)
 
 
 class SuggestedBuy(BaseModel):
@@ -223,8 +231,8 @@ class PlanRequest(BaseModel):
         out: List[str] = []
         for raw in v:
             c = (raw or "").strip().upper()
-            if c not in INVESTABLE_CLASSES:
-                raise ValueError(f"classe '{raw}' inválida; use {', '.join(INVESTABLE_CLASSES)}.")
+            if c not in ALLOCATION_CLASSES:
+                raise ValueError(f"classe '{raw}' inválida; use {', '.join(ALLOCATION_CLASSES)}.")
             if c not in out:
                 out.append(c)
         if not out:

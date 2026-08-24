@@ -638,3 +638,128 @@ def test_conta_pode_ser_desmarcada_da_carteira(authed_client, _stub_cdi):
     c.patch(f"/api/fixed-income/accounts/{aid}", json={"counts_in_portfolio": False})
     s = c.get("/api/fixed-income/summary").json()
     assert s["portfolio_balance"] == 0.0 and s["total_balance"] == 1_000.0
+
+
+# --- classe RENDA_FIXA e cesta de indexadores -----------------------------------------
+
+def _tag(c, code):
+    return next(i for i in c.get("/api/labels?dimension=indexer").json() if i["code"] == code)["id"]
+
+
+def _bucket(c, code):
+    return next(i for i in c.get("/api/labels?dimension=bucket").json() if i["code"] == code)["id"]
+
+
+def test_renda_fixa_e_classe_valida_na_carteira_alvo(authed_client):
+    """Os itens da cesta são tags de indexador, não tickers — mesma aritmética, outro item."""
+    c = authed_client
+    ok = c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.6, "FII": 0.2, "ETF": 0.0, "BDR": 0.0, "RENDA_FIXA": 0.2},
+        "class_targets": {"RENDA_FIXA": {"SELIC": 0.7, "IPCA": 0.3}},
+    })
+    assert ok.status_code == 200
+    assert c.get("/api/preferences").json()["class_targets"]["RENDA_FIXA"] == {
+        "SELIC": 0.7, "IPCA": 0.3
+    }
+
+
+def test_cesta_de_renda_fixa_ainda_precisa_fechar_100(authed_client):
+    ruim = authed_client.put(
+        "/api/preferences", json={"class_targets": {"RENDA_FIXA": {"SELIC": 0.5, "IPCA": 0.2}}}
+    )
+    assert ruim.status_code == 422
+
+
+def test_indexers_soma_contas_por_tag_e_expoe_o_gap(authed_client, _stub_cdi, monkeypatch):
+    c = authed_client
+    selic = _conta(c, "Tesouro Selic", counts_in_portfolio=True).json()
+    lci = _conta(c, "LCI", counts_in_portfolio=True, liquidity="locked").json()
+    _saldo(c, selic["id"], 30_000.0)
+    _saldo(c, lci["id"], 10_000.0)
+    c.put("/api/labels/assignments", json={
+        "subject_type": "fi_account", "subject_id": str(selic["id"]), "dimension": "indexer",
+        "items": [{"label_id": _tag(c, "SELIC")}],
+    })
+    c.put("/api/labels/assignments", json={
+        "subject_type": "fi_account", "subject_id": str(lci["id"]), "dimension": "indexer",
+        "items": [{"label_id": _tag(c, "LCI")}],
+    })
+    c.put("/api/preferences", json={"class_targets": {"RENDA_FIXA": {"SELIC": 0.5, "LCI": 0.5}}})
+
+    r = c.get("/api/fixed-income/indexers").json()
+    por_code = {i["code"]: i for i in r["items"]}
+    assert r["total"] == 40_000.0
+    assert por_code["SELIC"]["value"] == 30_000.0 and por_code["SELIC"]["gap"] == -10_000.0
+    assert por_code["LCI"]["value"] == 10_000.0 and por_code["LCI"]["gap"] == 10_000.0
+    # Ghostfolio indisponível no teste: a resposta continua útil e diz o que faltou
+    assert any("carteira" in w for w in r["warnings"])
+
+
+def test_indexers_mostra_a_conta_sem_tag_em_vez_de_esconde_la(authed_client, _stub_cdi):
+    c = authed_client
+    acc = _conta(c, "CDB sem tag", counts_in_portfolio=True).json()
+    _saldo(c, acc["id"], 7_000.0)
+    r = c.get("/api/fixed-income/indexers").json()
+    residual = next(i for i in r["items"] if i["code"] == "SEM_INDEXADOR")
+    assert residual["value"] == 7_000.0
+    assert any("indexador" in w for w in r["warnings"])
+
+
+def test_indexers_ignora_conta_nao_marcada_e_earmarked(authed_client, _stub_cdi):
+    c = authed_client
+    fora = _conta(c, "Conta corrente").json()          # não marcada
+    ir = _conta(c, "Provisão IR", purpose="earmarked").json()
+    _saldo(c, fora["id"], 1_000.0)
+    _saldo(c, ir["id"], 2_000.0)
+    assert c.get("/api/fixed-income/indexers").json()["total"] == 0.0
+
+
+def test_indexers_inclui_etf_atribuido_ao_bucket_renda_fixa(authed_client, _stub_cdi, monkeypatch):
+    """Um ETF de renda fixa vira item da cesta ao lado de um CDB — é a precedência do
+    override de bucket sobre a classificação automática."""
+    from app.models.portfolio import Allocations, Portfolio, Position
+
+    c = authed_client
+    cdb = _conta(c, "CDB", counts_in_portfolio=True).json()
+    _saldo(c, cdb["id"], 20_000.0)
+    c.put("/api/labels/assignments", json={
+        "subject_type": "fi_account", "subject_id": str(cdb["id"]), "dimension": "indexer",
+        "items": [{"label_id": _tag(c, "CDI")}],
+    })
+    c.put("/api/labels/assignments", json={
+        "subject_type": "ticker", "subject_id": "ZZZZ11", "dimension": "bucket",
+        "items": [{"label_id": _bucket(c, "RENDA_FIXA")}],
+    })
+    c.put("/api/labels/assignments", json={
+        "subject_type": "ticker", "subject_id": "ZZZZ11", "dimension": "indexer",
+        "items": [{"label_id": _tag(c, "IPCA")}],
+    })
+
+    async def carteira(gf, cache, overrides=None):
+        assert overrides == {"ZZZZ11": "RENDA_FIXA"}  # o override chega até a classificação
+        return Portfolio(
+            total_value=8_000.0, as_of="2026-06-01T00:00:00Z", allocations=Allocations(),
+            positions=[Position(
+                ticker="ZZZZ11", asset_class="RENDA_FIXA", value=8_000.0, weight=1.0,
+            )],
+        )
+
+    monkeypatch.setattr("app.api.routes_fixed_income.get_enriched_portfolio", carteira)
+    r = c.get("/api/fixed-income/indexers").json()
+    por_code = {i["code"]: i["value"] for i in r["items"]}
+    assert por_code == {"CDI": 20_000.0, "IPCA": 8_000.0}
+    assert r["total"] == 28_000.0
+    assert r["warnings"] == []
+
+
+def test_plan_avisa_renda_fixa_com_meta_e_sem_indexador(authed_client, monkeypatch):
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.8, "RENDA_FIXA": 0.2},
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+    r = c.post("/api/plan", json={"aporte": 1000.0, "min_ticket": 10.0}).json()
+    assert any("indexador" in w for w in r["warnings"])
+    # e a renda fixa não entra no alocador de cotas
+    assert r["classes_applied"] == ["STOCK"]

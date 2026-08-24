@@ -150,3 +150,21 @@ class FixedIncomeSummary(BaseModel):
     )
     cdi_annual: Optional[float] = Field(None, description="CDI anualizado (fração), benchmark.")
     currency: str = "BRL"
+
+
+class IndexerSlice(BaseModel):
+    """Uma tag de indexador como item da cesta de RENDA_FIXA — o análogo de um ticker."""
+
+    code: str
+    name: str
+    value: float = Field(0.0, description="Saldos das contas com a tag + posições de RV atribuídas.")
+    current_pct: float = Field(0.0, description="Fatia da classe RENDA_FIXA hoje (0..1).")
+    target_pct: float = Field(0.0, description="Peso-alvo dentro da classe (0..1).")
+    gap: float = Field(0.0, description="Quanto falta em R$ para o peso-alvo (negativo = acima).")
+
+
+class IndexersResponse(BaseModel):
+    items: List[IndexerSlice] = Field(default_factory=list)
+    total: float = Field(0.0, description="Valor total da classe RENDA_FIXA (BRL).")
+    warnings: List[str] = Field(default_factory=list)
+    currency: str = "BRL"

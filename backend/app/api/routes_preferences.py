@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.config import get_settings
 from app.deps import get_db
-from app.models.plan import INVESTABLE_CLASSES
+from app.models.plan import ALLOCATION_CLASSES
 from app.repositories import preferences_repo
 
 router = APIRouter()
@@ -69,15 +69,21 @@ class PreferencesBody(BaseModel):
         cls, v: Optional[Dict[str, Dict[str, float]]]
     ) -> Optional[Dict[str, Dict[str, float]]]:
         """Carteira alvo por classe: {"FII": {"AAA11": 0.4, ...}}. Pesos somam 1 por classe;
-        classe com dict vazio remove a cesta daquela classe."""
+        classe com dict vazio remove a cesta daquela classe.
+
+        Os itens de `RENDA_FIXA` são TAGS DE INDEXADOR (CDI, IPCA, LCI…) e não tickers —
+        mesma aritmética, outro tipo de item. A existência da tag não é validada aqui: uma
+        tag com peso e nenhuma conta é um estado legítimo (alvo definido, ainda não
+        aplicado), e a tela o mostra como déficit em vez de recusar o salvamento.
+        """
         if v is None:
             return None
         out: Dict[str, Dict[str, float]] = {}
         for raw_cls, weights in v.items():
             c = raw_cls.strip().upper()
-            if c not in INVESTABLE_CLASSES:
+            if c not in ALLOCATION_CLASSES:
                 raise ValueError(
-                    f"classe '{raw_cls}' inválida na carteira alvo; use {', '.join(INVESTABLE_CLASSES)}."
+                    f"classe '{raw_cls}' inválida na carteira alvo; use {', '.join(ALLOCATION_CLASSES)}."
                 )
             if not weights:
                 continue  # cesta removida

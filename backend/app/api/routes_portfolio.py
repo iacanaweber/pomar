@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
 
-from app.deps import get_cache, get_ghostfolio
+from app.deps import get_cache, get_db, get_ghostfolio
 from app.models.portfolio import Portfolio
+from app.repositories import labels_repo
 from app.services.portfolio_service import get_enriched_portfolio
 
 router = APIRouter()
@@ -13,7 +14,8 @@ router = APIRouter()
 @router.get("/portfolio", response_model=Portfolio)
 async def portfolio() -> Portfolio:
     try:
-        return await get_enriched_portfolio(get_ghostfolio(), get_cache())
+        overrides = await labels_repo.bucket_overrides(get_db())
+        return await get_enriched_portfolio(get_ghostfolio(), get_cache(), overrides)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(
             status_code=502,

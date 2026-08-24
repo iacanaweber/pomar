@@ -14,7 +14,9 @@ from fastapi import APIRouter, HTTPException
 from app.config import get_settings
 from app.deps import get_brapi, get_cache, get_db, get_ghostfolio, get_sgs
 from app.models.plan import (
+    ALLOCATION_CLASSES,
     INVESTABLE_CLASSES,
+    RENDA_FIXA,
     PlanAsset,
     PlanRequest,
     PlanResponse,
@@ -22,7 +24,7 @@ from app.models.plan import (
     ReserveSuggestion,
 )
 from app.models.portfolio import Allocations, Portfolio
-from app.repositories import fixed_income_repo, plans_repo, preferences_repo
+from app.repositories import fixed_income_repo, labels_repo, plans_repo, preferences_repo
 from app.services import reserve as reserve_svc
 from app.services.allocation import allocate
 from app.services.analysis import analyze_asset, resolve_bazin_target_yield
@@ -31,7 +33,9 @@ from app.services.universe import build_universe
 
 router = APIRouter()
 
-CLASS_LABEL = {"STOCK": "Ações", "FII": "FIIs", "ETF": "ETFs", "BDR": "BDRs"}
+CLASS_LABEL = {
+    "STOCK": "Ações", "FII": "FIIs", "ETF": "ETFs", "BDR": "BDRs", RENDA_FIXA: "Renda fixa",
+}
 
 # Diferença mínima (em pontos percentuais) para dizer que o ativo está "abaixo do alvo".
 GAP_PP_MIN = 0.5
@@ -78,7 +82,8 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # ignoraria as posições existentes e miraria os alvos do zero — sugestão materialmente
     # errada para dinheiro de verdade. Só degrada com opt-in explícito do usuário.
     try:
-        portfolio = await get_enriched_portfolio(get_ghostfolio(), get_cache())
+        overrides = await labels_repo.bucket_overrides(get_db())
+        portfolio = await get_enriched_portfolio(get_ghostfolio(), get_cache(), overrides)
         warnings.extend(portfolio.warnings)
     except Exception as exc:  # noqa: BLE001
         if not req.allow_empty_portfolio:
@@ -109,10 +114,27 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # que rebalancear: a classe é pulada com aviso (e o aporte vai para as demais).
     # Classe com meta 0% não conta como "faltando composição" — ela simplesmente não faz
     # parte da carteira alvo, e cobrar uma cesta dela seria ruído.
-    selected = list(req.classes or INVESTABLE_CLASSES)
+    selected = list(req.classes or ALLOCATION_CLASSES)
     all_baskets = prefs.get("class_targets") or {}
-    baskets = {c: b for c, b in all_baskets.items() if b and c in selected}
-    skipped = [c for c in selected if c not in baskets and targets.get(c, 0.0) > 0]
+    # A cesta de RENDA_FIXA é de tags de indexador, não de tickers com preço: ela não passa
+    # pelo alocador de cotas e tem o próprio degrau na cascata do aporte.
+    baskets = {
+        c: b for c, b in all_baskets.items()
+        if b and c in selected and c in INVESTABLE_CLASSES
+    }
+    skipped = [
+        c for c in selected
+        if c in INVESTABLE_CLASSES and c not in baskets and targets.get(c, 0.0) > 0
+    ]
+    if (
+        RENDA_FIXA in selected
+        and targets.get(RENDA_FIXA, 0.0) > 0
+        and not all_baskets.get(RENDA_FIXA)
+    ):
+        warnings.append(
+            "Renda fixa tem meta de alocação mas nenhum indexador na cesta — marque as "
+            "contas que contam na carteira e dê a elas uma tag (CDI, IPCA, LCI…)."
+        )
     if not baskets:
         raise HTTPException(
             status_code=422,

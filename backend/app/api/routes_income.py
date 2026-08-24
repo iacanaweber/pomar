@@ -5,7 +5,7 @@ from fastapi import APIRouter
 
 from app.deps import get_brapi, get_cache, get_db, get_ghostfolio
 from app.models.analytics import IncomeResponse, YocPoint
-from app.repositories import snapshots_repo
+from app.repositories import labels_repo, snapshots_repo
 from app.services import analytics, market_data
 from app.services.portfolio_service import get_enriched_portfolio
 
@@ -19,7 +19,8 @@ async def _portfolio_income_now() -> dict:
     histórico não distingue o tipo) — é o que cai na conta. O bruto vem junto
     (campos *_gross) para exibição lado a lado.
     """
-    pf = await get_enriched_portfolio(get_ghostfolio(), get_cache())
+    overrides = await labels_repo.bucket_overrides(get_db())
+    pf = await get_enriched_portfolio(get_ghostfolio(), get_cache(), overrides)
     tickers = [p.ticker for p in pf.positions]
     dy_net: dict[str, float | None] = {}
     dy_gross: dict[str, float | None] = {}

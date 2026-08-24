@@ -28,13 +28,15 @@ async def build_assets(
     cache: Cache,
     brapi: Optional[BrapiClient] = None,
     class_hints: Optional[Dict[str, str]] = None,
+    bucket_overrides: Optional[Dict[str, str]] = None,
 ) -> List[Asset]:
     tickers = [t for t in dict.fromkeys(normalize_ticker(t) for t in tickers) if t]
     hints = class_hints or {}
 
     async def one(t: str) -> Asset:
-        # mesma cascata da carteira: StatusInvest -> watchlist -> dica GF (filtrada) -> heurística
-        cls = await classify_ticker(t, cache, hints.get(t))
+        # mesma cascata da carteira: override do usuário -> StatusInvest -> watchlist ->
+        # dica GF (filtrada) -> heurística
+        cls = await classify_ticker(t, cache, hints.get(t), bucket_overrides)
         async with _sem:
             fund = await fundamentus.fetch(t, cache)
             si = await statusinvest.fetch(t, cache, cls)

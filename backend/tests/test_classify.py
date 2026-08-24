@@ -34,3 +34,36 @@ def test_curated_sectors_are_specific():
     for ticker in ("BBAS3", "TAEE11", "SBSP3", "BBSE3", "VIVT3"):
         sector = resolve_sector(ticker, "STOCK", None)
         assert sector and sector.lower() not in ("outros", "desconhecido")
+
+
+# --- passo zero: override do usuário ---
+
+async def test_override_de_bucket_vence_o_provedor(monkeypatch):
+    """A atribuição manual responde outra pergunta: o StatusInvest diz o que o ativo É, e o
+    bucket diz em que cesta o usuário decidiu comprá-lo. Quem dirige a compra manda."""
+    from app.cache.store import Cache
+    from app.services.classify import classify_ticker
+
+    consultou = False
+
+    async def nunca_deveria_ser_chamado(ticker, cache):
+        nonlocal consultou
+        consultou = True
+        return "ETF"
+
+    monkeypatch.setattr("app.services.classify.statusinvest.classify", nunca_deveria_ser_chamado)
+    cls = await classify_ticker("zzzz11.sa", Cache(), "ETF", {"ZZZZ11": "RENDA_FIXA"})
+    assert cls == "RENDA_FIXA"
+    assert consultou is False  # o passo zero corta antes de qualquer rede
+
+
+async def test_sem_override_a_cascata_antiga_continua(monkeypatch):
+    from app.cache.store import Cache
+    from app.services.classify import classify_ticker
+
+    async def sem_resposta(ticker, cache):
+        return None
+
+    monkeypatch.setattr("app.services.classify.statusinvest.classify", sem_resposta)
+    assert await classify_ticker("ZZZZ11", Cache(), "ETF", {"OUTRO11": "RENDA_FIXA"}) == "ETF"
+    assert await classify_ticker("FOOB34", Cache(), None, None) == "BDR"
