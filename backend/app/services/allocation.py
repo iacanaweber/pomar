@@ -170,19 +170,29 @@ def allocate(
     class_baskets: Dict[str, Dict[str, float]],
     min_ticket: float = 100.0,
     legacy_in_total: bool = True,
-    extra_base: float = 0.0,
+    total_after: Optional[float] = None,
 ) -> float:
     """Preenche `suggested` e os campos `basket_*` do ranking. Retorna a sobra não alocada.
 
-    `legacy_in_total` decide a BASE dos alvos em R$: com `True` (default), o valor das
-    posições fora da carteira alvo entra no patrimônio sobre o qual as metas são
-    aplicadas. Isso aumenta o `need` das classes-alvo e mantém a carteira subalocada até a
-    venda — o retrato aritmeticamente honesto de quem ainda tem capital fora da
-    estratégia. Com `False`, as metas incidem só sobre o capital alinhado.
+    `total_after` é o PATRIMÔNIO RESULTANTE — quanto a carteira inteira vale depois deste
+    aporte — e é a base contra a qual as metas por classe viram reais. Quando o chamador
+    informa, ele MANDA: aqui nada é recomposto. Só o chamador conhece o patrimônio completo
+    (a renda fixa que vive fora da corretora, o aporte ANTES do pré-corte da cascata), e
+    refazer a conta aqui com os pedaços que chegam garantia que um dia a explicação e o
+    motor divergissem — e divergiam: a rota somava o aporte inteiro e esta função só a
+    parte que sobrava para a bolsa, chegando a um patrimônio menor exatamente pelo que
+    tinha ido para a renda fixa.
 
-    `extra_base` é o patrimônio que existe FORA das posições de renda variável — hoje, a
-    renda fixa que conta na carteira. Sem ele, uma carteira 30% em Tesouro Selic miraria
-    alvos calculados como se aquele dinheiro não existisse, e a bolsa pediria aporte a mais.
+    Vale porque a cascata conserva (`floor_directed + rf_directed + aporte_rv == aporte`) e
+    os três terminam DENTRO do patrimônio. Um degrau que mandasse dinheiro para fora (saque,
+    taxa) quebraria a igualdade e o número teria que passar a ser outro.
+
+    `legacy_in_total` só vale no FALLBACK (`total_after=None`), que enxerga a bolsa
+    sozinha: com `True` (default), o valor das posições fora da carteira alvo entra no
+    patrimônio sobre o qual as metas são aplicadas. Isso aumenta o `need` das classes-alvo
+    e mantém a carteira subalocada até a venda — o retrato aritmeticamente honesto de quem
+    ainda tem capital fora da estratégia. Com `False`, as metas incidem só sobre o capital
+    alinhado.
     """
     by_ticker = {r.ticker: r for r in ranking}
     baskets = {
@@ -202,18 +212,22 @@ def allocate(
     if aporte > 0:
         # 1) orçamento por classe, NEED-BASED sobre a carteira resultante
         cur_value = aligned_value_by_class(held, class_baskets, targets)
-        base = portfolio.total_value if legacy_in_total else sum(cur_value.values())
-        total_after = base + max(0.0, extra_base) + aporte
+        if total_after is None:
+            base = portfolio.total_value if legacy_in_total else sum(cur_value.values())
+            total_after = base + aporte
         needs = class_needs(cur_value, targets, total_after, baskets)
         total_need = sum(needs.values())
         if total_need > 0:
             class_budget = {c: aporte * (needs[c] / total_need) for c in baskets}
         else:
-            # já no/acima do alvo em todas as classes marcadas: rateia pelos próprios alvos
-            base = {c: targets.get(c, 0.0) for c in baskets}
-            s = sum(base.values())
+            # já no/acima do alvo em todas as classes marcadas: rateia pelos próprios alvos.
+            # `pesos`, e não `base`: a palavra já significa "patrimônio antes do aporte"
+            # nove linhas acima, e reusá-la aqui é a mesma colisão de nome que produziu a
+            # divergência que este parâmetro veio consertar.
+            pesos = {c: targets.get(c, 0.0) for c in baskets}
+            s = sum(pesos.values())
             class_budget = (
-                {c: aporte * (base[c] / s) for c in baskets}
+                {c: aporte * (pesos[c] / s) for c in baskets}
                 if s > 0
                 else {c: 0.0 for c in baskets}
             )

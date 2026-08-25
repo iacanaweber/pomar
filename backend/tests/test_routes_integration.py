@@ -1276,3 +1276,48 @@ def test_plan_sem_teto_configurado_mantem_a_prioridade_absoluta(
     assert r["reserve"]["directed_now"] == 1_000.0
     # sem corte, a nota não ganha parêntese nenhum
     assert "máximo de" not in r["fixed_income"]["note"]
+
+
+def test_plan_o_patrimonio_do_alocador_e_o_da_rota_sao_o_mesmo(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """DUAS classes de bolsa disputando E renda fixa levando parte do aporte.
+
+    É o único cenário em que a divergência morde, e o que nenhum teste cobria: enquanto o
+    alocador refazia a base, ele somava só o `aporte_rv` e chegava a um patrimônio menor
+    EXATAMENTE pelo que a cascata tinha mandado para a renda fixa. Com dois pretendentes,
+    orçamento contra alvo encolhido é orçamento errado para os dois.
+    """
+    c = authed_client
+    acc = _conta(c, "Tesouro Selic", counts_in_portfolio=True).json()
+    _saldo(c, acc["id"], 28_000.0)
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "FII": 0.2, "RENDA_FIXA": 0.3, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "FII": {"CCC11": 1.0},
+                          "RENDA_FIXA": {"CDI": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch,
+        [_asset("AAA3", "STOCK", 10.0), _asset("CCC11", "FII", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 45_000.0),
+                                          ("CCC11", "FII", 17_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 10_000.0, "min_ticket": 10.0}).json()
+
+    # patrimônio = 45.000 + 17.000 + 28.000 = 90.000; resultante = 100.000.
+    # Metas fechando 100% e ninguém acima do alvo => os déficits somam o aporte:
+    # 5.000 (STOCK) + 3.000 (FII) + 2.000 (RENDA_FIXA) = 10.000. Os números ficam presos.
+    fi_card = r["fixed_income"]
+    assert fi_card["target_amount"] == 30_000.0        # 30% de 100.000 — o que a ROTA usou
+    assert fi_card["directed_now"] == 2_000.0
+
+    aaa = next(x for x in r["ranking"] if x["ticker"] == "AAA3")["suggested"]
+    ccc = next(x for x in r["ranking"] if x["ticker"] == "CCC11")["suggested"]
+    assert aaa["invested_exact"] == 5_000.0            # 50% de 100.000 — o que o ALOCADOR usou
+    assert ccc["invested_exact"] == 3_000.0            # 20% de 100.000
+    assert r["unallocated"] == 0.0
+    # o par acima é a prova: os dois motores chegaram ao mesmo patrimônio resultante
+    assert abs(
+        fi_card["directed_now"] + aaa["invested_exact"] + ccc["invested_exact"]
+        + r["unallocated"] - 10_000.0
+    ) < 0.01

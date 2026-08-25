@@ -319,3 +319,35 @@ def test_class_needs_soma_o_aporte_quando_nada_esta_acima_do_alvo():
 def test_class_needs_classe_sem_meta_nao_pede_nada():
     needs = allocation.class_needs({"BDR": 500.0}, {"BDR": 0.0}, 10_000.0, ["BDR"])
     assert needs["BDR"] == 0.0
+
+
+def test_total_after_do_chamador_manda_e_o_default_reproduz_a_conta_de_sempre():
+    """Sem o parâmetro, a base é a de sempre (carteira + aporte). Com ele, quem chama manda.
+
+    É assim que a rota impede o motor de chegar a um patrimônio diferente do dela: só o
+    chamador conhece a renda fixa que vive fora da corretora e o aporte ANTES do pré-corte
+    da cascata.
+    """
+    pf = _pf({"SXXX3": ("STOCK", 900.0), "FXXX11": ("FII", 100.0)}, {"STOCK": 0.9, "FII": 0.1})
+    prices = {"SXXX3": 10.0, "FXXX11": 10.0}
+    lots = {t: 1 for t in prices}
+    targets = {"STOCK": 0.5, "FII": 0.5}
+    cestas = {"STOCK": {"SXXX3": 1.0}, "FII": {"FXXX11": 1.0}}
+
+    padrao = _ranking(("SXXX3", "STOCK"), ("FXXX11", "FII"))
+    allocate(1000.0, padrao, pf, prices, lots, targets, cestas, min_ticket=10.0)
+
+    # 1.000 (carteira) + 1.000 (aporte) — exatamente o que o fallback calcularia
+    igual = _ranking(("SXXX3", "STOCK"), ("FXXX11", "FII"))
+    allocate(1000.0, igual, pf, prices, lots, targets, cestas, min_ticket=10.0,
+             total_after=2000.0)
+    assert [r.suggested.shares for r in padrao] == [r.suggested.shares for r in igual]
+
+    # e o parâmetro está VIVO: com um patrimônio maior, os déficits mudam e a divisão junto
+    maior = _ranking(("SXXX3", "STOCK"), ("FXXX11", "FII"))
+    allocate(1000.0, maior, pf, prices, lots, targets, cestas, min_ticket=10.0,
+             total_after=3000.0)
+    stock_padrao = next(r for r in padrao if r.ticker == "SXXX3").suggested.invested_exact
+    stock_maior = next(r for r in maior if r.ticker == "SXXX3").suggested.invested_exact
+    assert stock_maior > stock_padrao
+    assert _spent(maior) <= 1000.0

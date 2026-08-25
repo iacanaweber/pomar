@@ -303,11 +303,14 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # o lote real da B3 (ações = 100; FII/ETF/BDR = 1).
     lot_mode = prefs.get("lot_mode") or "integral"
     lots = {a.ticker: (1 if lot_mode == "fracionario" else a.lot_size) for a in assets}
-    # A renda fixa entra na base pelo `rf_base`: o alvo em R$ de cada classe de renda
-    # variável é calculado sobre o patrimônio INTEIRO, não só sobre a bolsa.
+    # O alocador NÃO recompõe a base: recebe o patrimônio resultante já calculado acima.
+    # Enquanto ele refazia a conta com os pedaços que chegavam, somava só o `aporte_rv` e
+    # chegava a um patrimônio menor exatamente pelo que a cascata tinha desviado para a
+    # renda fixa — o dinheiro sumia da carteira resultante no caminho entre a rota e o
+    # motor, e as classes recebiam orçamento contra alvos encolhidos.
     unallocated = allocate(
         aporte_rv, ranking, portfolio, prices, lots, targets, baskets,
-        min_ticket=req.min_ticket, legacy_in_total=legacy_in_total, extra_base=rf_value,
+        min_ticket=req.min_ticket, total_after=total_after,
     )
 
     # mesma conta de necessidade do alocador — a explicação não pode divergir do motor
