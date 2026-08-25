@@ -1353,3 +1353,66 @@ def test_plan_posicao_de_renda_fixa_do_ghostfolio_nao_conta_duas_vezes(
     # Antes o ETF entrava duas vezes: 61.000, e o alvo de 50% saía 30.500.
     assert fi_card["target_amount"] == 25_500.0
     assert fi_card["gap_brl"] == 5_500.0
+
+
+def test_current_by_class_usa_o_denominador_do_patrimonio_inteiro(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """O card compara com `targets_by_class`, que são frações do PATRIMÔNIO.
+
+    Publicar os pesos do Ghostfolio — frações só da renda variável — dizia "Ações 82% /
+    alvo 0%" para quem tem 32%, e escondia a renda fixa atrás de um "alvo 50%" sem barra
+    nenhuma. Não era só a renda fixa sumindo: toda linha estava errada.
+    """
+    c = authed_client
+    acc = _conta(c, "Tesouro Selic", counts_in_portfolio=True).json()
+    _saldo(c, acc["id"], 20_000.0)
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.3, "FII": 0.2, "RENDA_FIXA": 0.5, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "FII": {"CCC11": 1.0},
+                          "RENDA_FIXA": {"CDI": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch,
+        [_asset("AAA3", "STOCK", 10.0), _asset("CCC11", "FII", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 24_000.0),
+                                          ("CCC11", "FII", 6_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 1_000.0, "min_ticket": 10.0}).json()
+
+    cur = r["current_by_class"]
+    # patrimônio = 24.000 + 6.000 + 20.000 = 50.000
+    assert cur["STOCK"] == pytest.approx(0.48)       # e não 0,80 (peso só da bolsa)
+    assert cur["FII"] == pytest.approx(0.12)         # e não 0,20
+    assert cur["RENDA_FIXA"] == pytest.approx(0.40)  # existia e não aparecia
+    assert sum(cur.values()) == pytest.approx(1.0)   # o patrimônio é UM
+
+
+def test_current_by_class_nao_depende_de_legacy_in_total(authed_client, monkeypatch):
+    """`legacy_in_total` escolhe a base dos ALVOS EM R$, não o retrato da carteira.
+
+    Se o card mudasse de forma com ela, a mesma carteira teria dois retratos e não daria
+    para saber qual é o real — e o legado sumiria justo do lugar onde precisa ser visto.
+    """
+    posicoes = [("AAA3", "STOCK", 700.0), ("CCC11", "FII", 300.0)]
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.0, "FII": 1.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "FII": {"CCC11": 1.0}},
+        "legacy_in_total": True,
+    })
+    _stub_plan_market(monkeypatch, [_asset("CCC11", "FII", 10.0)],
+                      portfolio=_carteira(monkeypatch, posicoes))
+    com = c.post("/api/plan", json={"aporte": 100.0, "classes": ["FII"],
+                                    "min_ticket": 10.0}).json()
+
+    c.put("/api/preferences", json={"legacy_in_total": False})
+    _stub_plan_market(monkeypatch, [_asset("CCC11", "FII", 10.0)],
+                      portfolio=_carteira(monkeypatch, posicoes))
+    sem = c.post("/api/plan", json={"aporte": 100.0, "classes": ["FII"],
+                                    "min_ticket": 10.0}).json()
+
+    assert com["current_by_class"] == sem["current_by_class"]
+    # a classe legado continua no card, com meta 0% — é o que precisa ser desinvestido
+    assert com["current_by_class"]["STOCK"] == pytest.approx(0.7)
+    assert com["targets_by_class"]["STOCK"] == 0.0

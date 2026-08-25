@@ -55,6 +55,13 @@ def _brl(value: float) -> str:
     return f"R$ {value:,.2f}".replace(",", " ").replace(".", ",").replace(" ", ".")
 
 
+def _fracoes(valores: dict[str, float], total: float) -> dict[str, float]:
+    """{classe: fração do patrimônio}. Sem patrimônio, dicionário vazio — nunca Infinity."""
+    if total <= 0:
+        return {}
+    return {c: round(v / total, 6) for c, v in valores.items()}
+
+
 def _plan_reasons(item: PlanAsset, classes_at_target: set[str]) -> list[str]:
     """Frases factuais: por que este ativo recebeu (ou não) compra neste plano.
 
@@ -478,7 +485,11 @@ async def plan(req: PlanRequest) -> PlanResponse:
         aporte=req.aporte,
         as_of=datetime.now(timezone.utc).isoformat(),
         targets_by_class=targets,
-        current_by_class=portfolio.allocations.by_class,
+        # Frações do PATRIMÔNIO INTEIRO — o mesmo denominador de `targets_by_class`, e o
+        # mesmo da aba Carteira. `portfolio.allocations.by_class` são frações só da renda
+        # variável (a soma dos pesos que o Ghostfolio dá a cada posição): publicá-las aqui
+        # fazia o card comparar 82% de uma coisa com 0% de outra, e sumir com a renda fixa.
+        current_by_class=_fracoes(composicao["by_class"], composicao["total"]),
         ranking=suggested + others,
         unallocated=unallocated,
         reserve=reserve,

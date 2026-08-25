@@ -23,6 +23,11 @@ class Position(BaseModel):
 
 
 class Allocations(BaseModel):
+    # Frações da RENDA VARIÁVEL, não do patrimônio: é a soma dos pesos que o Ghostfolio dá
+    # a cada posição. Comparar isto com uma meta por classe — que é fração do patrimônio
+    # inteiro, renda fixa incluída — é comparar denominadores diferentes, e foi o que fazia
+    # o card do plano dizer "Renda fixa 0%" para quem tinha 61% dela. Para essa pergunta
+    # existe `services.exposure.compose`.
     by_class: Dict[str, float] = Field(default_factory=dict, description="Peso por classe (0..1).")
     by_sector: Dict[str, float] = Field(default_factory=dict, description="Peso por setor (0..1).")
 
