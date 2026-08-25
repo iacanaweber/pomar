@@ -295,7 +295,6 @@ export function AssetPage() {
         </p>
       </div>
 
-      <p className="disclaimer">Conteúdo educativo. Não é recomendação de investimento.</p>
     </main>
   );
 }

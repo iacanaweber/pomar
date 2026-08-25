@@ -1,7 +1,8 @@
 """Glossário: a FONTE ÚNICA das explicações de cada número exibido.
 
 O frontend busca isto uma vez (GET /api/glossary) e resolve os tooltips pela `key`.
-Linguagem acessível de propósito — o usuário não é especialista.
+Define o CÁLCULO e a FONTE de cada número, não o conceito de mercado. O campo `source` é o
+coração do verbete: a pergunta real é como ESTE app chegou neste número.
 """
 from __future__ import annotations
 
@@ -11,16 +12,14 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     "pvp": {
         "label": "P/VP",
         "definition": "Preço sobre Valor Patrimonial. Compara o preço do ativo com o valor "
-        "contábil do patrimônio dele. Abaixo de 1 sugere que o mercado paga menos do que o "
-        "patrimônio 'vale no papel' — possível desconto.",
+        "contábil do patrimônio dele. Abaixo de 1: preço abaixo do valor contábil do patrimônio."
+        "",
         "source": "Fundamentus (indicador P/VP)",
-        "interpretation": "Quanto menor, mais 'barato' em relação ao patrimônio. Compare sempre "
-        "com pares do mesmo setor.",
+        "interpretation": "Comparável só entre pares do mesmo setor.",
     },
     "pl": {
         "label": "P/L",
-        "definition": "Preço sobre Lucro. Quantos anos de lucro atual seriam necessários para "
-        "'pagar' o preço da ação. Não faz sentido para FIIs.",
+        "definition": "Preço sobre Lucro. Anos de lucro atual para amortizar o preço da ação. Não se aplica a FIIs.",
         "source": "Fundamentus (indicador P/L)",
         "interpretation": "Menor costuma indicar ação mais barata frente ao lucro — mas lucro "
         "baixo/negativo distorce o número.",
@@ -28,23 +27,22 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
     "div_yield": {
         "label": "Dividend Yield",
         "definition": "Soma dos proventos pagos nos últimos 365 dias (por data de pagamento) "
-        "dividido pelo preço atual. É a 'renda' BRUTA que o ativo gera por reais investidos.",
+        "dividido pelo preço atual. Renda bruta por real investido.",
         "source": "calculado: proventos dos últimos 365 dias (StatusInvest) ÷ preço",
         "interpretation": "Maior é melhor para renda, mas yields muito altos podem ser "
-        "pontuais (não se repetem) — por isso penalizamos os que parecem não recorrentes.",
+        "pontuais, e yields não recorrentes são penalizados no score.",
     },
     "net_yield": {
         "label": "Dividend Yield líquido",
         "definition": "Como o Dividend Yield, mas após o imposto: JCP sofre 15% de IR na fonte "
-        "(×0,85); dividendos de ações e rendimentos de FII são isentos para pessoa física. "
-        "Mostra a renda que efetivamente cai na sua conta.",
+        "(×0,85); dividendos de ações e rendimentos de FII são isentos para pessoa física.",
         "source": "calculado: (dividendos + 0,85×JCP) dos últimos 365 dias ÷ preço",
         "interpretation": "Para bancos que pagam muito via JCP (ITUB4, BBAS4), o líquido fica "
         "abaixo do bruto. Use o líquido para planejar quanto vai realmente receber.",
     },
     "bazin_ceiling": {
         "label": "Margem Bazin (preço-teto)",
-        "definition": "Método de Décio Bazin: o 'preço-teto' justo é o dividendo médio anual "
+        "definition": "Método de Décio Bazin: o preço-teto é o dividendo médio anual "
         "dividido pelo DY-alvo (6% por padrão). Comprar abaixo desse teto garante um yield "
         "mínimo. A margem mostra o quanto o preço atual está abaixo (positivo) ou acima do teto.",
         "source": "calculado: preço-teto = média de proventos da janela de 5 anos (ano sem pagar "
@@ -60,14 +58,13 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "contam como zero, então pagadora irregular tem teto menor. Comprar abaixo dele dá "
         "margem de segurança de renda.",
         "source": "calculado: média de proventos (janela de 5 anos, zeros incluídos) ÷ DY-alvo",
-        "interpretation": "Se o preço atual está ABAIXO do teto, é zona de compra pelo método "
-        "Bazin. Acima do teto, o yield esperado fica abaixo da sua meta.",
+        "interpretation": "Abaixo do teto: zona de compra pelo método Bazin. Acima: yield esperado "
+        "abaixo da meta.",
     },
     "yield_on_cost": {
         "label": "Yield on Cost (YoC)",
-        "definition": "Quanto a posição rende em proventos sobre o PREÇO QUE VOCÊ PAGOU (preço "
-        "médio), não sobre o preço de mercado atual. Para quem acumula por décadas, o YoC tende "
-        "a crescer e mostra o 'rendimento do que você plantou'.",
+        "definition": "Quanto a posição rende em proventos sobre o preço médio de compra, não sobre o preço de "
+        "mercado atual. Em acumulação longa sobe conforme o provento cresce.",
         "source": "calculado: provento anual por cota ÷ preço médio de compra (Ghostfolio)",
         "interpretation": "YoC acima do yield de mercado significa que o preço subiu desde a sua "
         "compra — sua renda sobre o custo é maior que a de quem compra hoje.",
@@ -86,7 +83,9 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "definition": "O quanto este ativo/classe está abaixo do alvo que você definiu para a "
         "carteira. Comprar o que está sub-alocado aproxima a carteira da meta.",
         "source": "calculado: peso-alvo − peso-atual (carteira do Ghostfolio vs seus alvos)",
-        "interpretation": "Quanto mais abaixo do alvo, maior a prioridade de aporte.",
+        "interpretation": "Quanto mais abaixo do alvo, maior a prioridade de aporte. A % de cada "
+        "item é sobre a carteira inteira: meta da classe × peso dentro da classe. Em renda "
+        "fixa o item é o indexador, não um ticker.",
     },
     "suggested_amount": {
         "label": "Valor sugerido",
@@ -94,17 +93,26 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "arredondado para um número inteiro de cotas pelo preço atual.",
         "source": "calculado: aporte dividido entre as classes pelo que falta para a meta e, "
         "dentro da classe, pelo déficit de cada ativo até o peso-alvo — ajustado por lote",
-        "interpretation": "Zero significa que o ativo já está no peso-alvo (ou acima) — não que "
-        "ele seja ruim. A sobra de arredondamento aparece em 'não alocado'.",
+        "interpretation": "Zero: o ativo já está no peso-alvo ou acima. A sobra de "
+        "arredondamento aparece em \"não alocado\".",
     },
-    "reserve_target": {
-        "label": "Reserva-alvo (aposentada)",
-        "definition": "Era a fração do patrimônio que deveria ficar em renda fixa. Foi "
-        "substituída por duas coisas independentes: o PESO da classe Renda fixa na carteira "
-        "alvo e o PISO da reserva em reais.",
-        "source": "—",
-        "interpretation": "Mantida no glossário só para quem encontrar o termo em planos "
-        "antigos. O que vale hoje é 'Piso da reserva'.",
+    "twr": {
+        "label": "TWR",
+        "definition": "Retorno ponderado pelo tempo. Neutraliza aportes e resgates, isolando "
+        "o efeito das escolhas de alocação do efeito de quanto dinheiro entrou e quando.",
+        "source": "calculado: retorno de cada semana encadeado multiplicativamente "
+        "(Modified Dietz para ponderar o fluxo dentro da semana)",
+        "interpretation": "É a única série da curva comparável a um índice, porque índice não "
+        "tem aporte. O XIRR ao lado responde outra pergunta: quanto o SEU dinheiro rendeu.",
+    },
+    "min_ticket": {
+        "label": "Ticket mínimo",
+        "definition": "Valor mínimo para ABRIR uma posição nova. Reforço de posição que já "
+        "existe não depende dele.",
+        "source": "configuração (preferências)",
+        "interpretation": "Serve para não pulverizar o aporte em posições pequenas demais para "
+        "justificar a corretagem e o acompanhamento. Não confundir com o piso da reserva, que "
+        "é outra coisa e fica na aba Reserva.",
     },
     "reserve_floor": {
         "label": "Piso da reserva",
@@ -115,12 +123,12 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "contam na carteira",
         "interpretation": "Aplicação com carência soma no peso da classe, mas não conta para "
         "o piso — o piso mede o dinheiro disponível hoje. Com a correção pelo IPCA ligada, "
-        "ele sobe alguns reais por mês para não encolher em poder de compra.",
+        "o piso sobe mensalmente para não encolher em poder de compra.",
     },
     "liquid_reserve": {
         "label": "Reserva líquida",
         "definition": "Soma das contas que contam na carteira, com propósito de investimento "
-        "e resgate imediato (D+0/D+1). É o número que responde 'quanto eu tiro hoje'.",
+        "e resgate imediato (D+0/D+1). É o disponível para saque hoje.",
         "source": "calculado: saldos do rastreador de renda fixa filtrados por liquidez",
         "interpretation": "Menor que o total de renda fixa sempre que houver CDB com carência, "
         "LCI/LCA travadas ou dinheiro reservado para outro fim (como a provisão de imposto).",
@@ -141,8 +149,7 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "definition": "Rentabilidade total líquida da posição desde a compra (valorização + "
         "proventos, conforme o Ghostfolio calcula), em percentual.",
         "source": "Ghostfolio (netPerformancePercent)",
-        "interpretation": "Compare com o CDI acumulado do mesmo período antes de concluir se "
-        "valeu a pena — anos ruins de bolsa fazem parte do método de décadas.",
+        "interpretation": "Comparável ao CDI acumulado do mesmo período.",
     },
 }
 

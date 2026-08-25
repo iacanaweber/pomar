@@ -51,7 +51,7 @@ async def get_enriched_portfolio(
         pf.source = "ghostfolio (cache defasado)"
         pf.warnings = [
             *pf.warnings,
-            f"Ghostfolio indisponível — usando a última carteira conhecida (de {pf.as_of}).",
+            f"Ghostfolio indisponível. Usando a última carteira conhecida, de {pf.as_of}.",
         ]
         return pf
 

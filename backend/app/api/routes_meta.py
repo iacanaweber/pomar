@@ -30,5 +30,5 @@ async def debug_brapi(ticker: str = "BBAS3") -> dict:
     para não vazar configuração em produção.
     """
     if not get_settings().debug:
-        raise HTTPException(status_code=404, detail="Not found")
+        raise HTTPException(status_code=404, detail="Não encontrado")
     return await get_brapi().diagnose(ticker)

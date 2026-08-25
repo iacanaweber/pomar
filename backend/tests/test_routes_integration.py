@@ -324,7 +324,7 @@ def test_plan_marks_discount_even_without_purchase(authed_client, monkeypatch):
     assert aaa["bazin_below_ceiling"] is True
     assert bbb["bazin_below_ceiling"] is False
     assert bbb["suggested"] is None
-    assert any("sem compra sugerida" in x for x in bbb["reasons"])
+    assert any("No peso-alvo ou acima" in x for x in bbb["reasons"])
     # a barra da cesta chega pronta na UI
     assert aaa["basket_target_pct"] == 0.5 and aaa["basket_current_pct"] == 0.5
 
@@ -427,9 +427,9 @@ def test_asset_starved_by_class_says_so(authed_client, monkeypatch):
     r = c.post("/api/plan", json={"aporte": 500.0, "min_ticket": 10.0}).json()
     bbb = next(x for x in r["ranking"] if x["ticker"] == "BBB3")
     assert bbb["suggested"] is None
-    assert any("abaixo do alvo na cesta" in x for x in bbb["reasons"])
+    assert any("abaixo do alvo em" in x for x in bbb["reasons"])
     assert any("já está no peso-alvo da carteira" in x for x in bbb["reasons"])
-    assert not any("No alvo ou acima" in x for x in bbb["reasons"])
+    assert not any("No peso-alvo ou acima" in x for x in bbb["reasons"])
     ccc = next(x for x in r["ranking"] if x["ticker"] == "CCC11")
     assert ccc["suggested"]["invested_exact"] == 500.0
 
@@ -692,7 +692,7 @@ def test_indexers_soma_contas_por_tag_e_expoe_o_gap(authed_client, _stub_cdi, mo
     assert por_code["SELIC"]["value"] == 30_000.0 and por_code["SELIC"]["gap"] == -10_000.0
     assert por_code["LCI"]["value"] == 10_000.0 and por_code["LCI"]["gap"] == 10_000.0
     # Ghostfolio indisponível no teste: a resposta continua útil e diz o que faltou
-    assert any("carteira" in w for w in r["warnings"])
+    assert any("carteira" in w.lower() for w in r["warnings"])
 
 
 def test_indexers_mostra_a_conta_sem_tag_em_vez_de_esconde_la(authed_client, _stub_cdi):
@@ -857,7 +857,7 @@ def test_exposure_degrada_sem_ghostfolio(authed_client, _stub_cdi):
     _saldo(c, conta["id"], 10_000.0)
     r = c.get("/api/portfolio/exposure").json()
     assert r["total"] == 10_000.0 and r["rv_total"] == 0.0
-    assert any("carteira" in w for w in r["warnings"])
+    assert any("carteira" in w.lower() for w in r["warnings"])
 
 
 # --- ativos fora do alvo no plano -----------------------------------------------------
@@ -1102,7 +1102,7 @@ def test_performance_sem_serie_explica_em_vez_de_erro(authed_client):
     assert r.status_code == 200
     d = r.json()
     assert d["points"] == []
-    assert any("primeiro é gravado" in w for w in d["warnings"])
+    assert any("primeiro ponto é gravado" in w for w in d["warnings"])
 
 
 def _semear_serie(client, monkeypatch, pontos):

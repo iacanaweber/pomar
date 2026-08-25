@@ -203,10 +203,6 @@ class PlanResponse(BaseModel):
     warnings: List[str] = Field(default_factory=list)
     plan_id: Optional[int] = Field(None, description="Id do plano persistido (plan_history).")
     created_at: Optional[str] = Field(None, description="Quando o plano foi gerado (planos salvos).")
-    disclaimer: str = Field(
-        "Conteúdo educativo. Não é recomendação de investimento. "
-        "Os dados podem estar defasados; confira antes de operar.",
-    )
 
 
 class PlanSummary(BaseModel):

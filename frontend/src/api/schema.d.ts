@@ -1912,11 +1912,6 @@ export interface components {
              * @description Quando o plano foi gerado (planos salvos).
              */
             created_at?: string | null;
-            /**
-             * Disclaimer
-             * @default Conteúdo educativo. Não é recomendação de investimento. Os dados podem estar defasados; confira antes de operar.
-             */
-            disclaimer: string;
         };
         /**
          * PlanSummary

@@ -103,7 +103,7 @@ async def indexers() -> IndexersResponse:
         ]
     except Exception as exc:  # noqa: BLE001
         warnings.append(
-            f"Não consegui ler a carteira ({exc}); a composição mostra só as contas de renda fixa."
+            f"Carteira ilegível ({exc}). A composição mostra só as contas de renda fixa."
         )
 
     valores = indexers_svc.value_by_indexer(contas, rotulos_conta, posicoes, rotulos_ticker)
@@ -129,8 +129,8 @@ async def indexers() -> IndexersResponse:
     ]
     if NO_INDEXER_CODE in valores:
         warnings.append(
-            "Há saldo em contas que contam na carteira e não têm indexador — sem a tag, "
-            "esse dinheiro não entra em nenhum item da cesta de renda fixa."
+            "Saldo sem indexador em conta que entra na carteira. Sem a tag, esse "
+            "dinheiro fica fora da cesta de renda fixa."
         )
     return IndexersResponse(items=items, total=total, warnings=warnings)
 

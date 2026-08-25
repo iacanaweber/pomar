@@ -80,8 +80,8 @@ async def _all_flows(ghostfolio, db: Database) -> tuple[List[Dict[str, Any]], Li
         fluxos += twr.normalize_flows(await ghostfolio.get_activities())
     except Exception as exc:  # noqa: BLE001
         avisos.append(
-            f"Não consegui ler as transações do Ghostfolio ({exc}); os aportes em renda "
-            "variável do período não foram neutralizados e o retorno sai superestimado."
+            f"Transações do Ghostfolio ilegíveis ({exc}). Os aportes do período não foram "
+            "neutralizados e o retorno sai superestimado."
         )
     try:
         contas = await fixed_income_repo.list_accounts(db, include_archived=True)
@@ -91,7 +91,7 @@ async def _all_flows(ghostfolio, db: Database) -> tuple[List[Dict[str, Any]], Li
             entries = await fixed_income_repo.list_entries(db, acc["id"])
             fluxos += twr.fixed_income_flows(entries)
     except Exception as exc:  # noqa: BLE001
-        avisos.append(f"Não consegui ler os lançamentos da renda fixa ({exc}).")
+        avisos.append(f"Lançamentos da renda fixa ilegíveis ({exc}).")
     return fluxos, avisos
 
 

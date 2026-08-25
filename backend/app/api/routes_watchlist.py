@@ -102,7 +102,7 @@ async def watchlist_radar() -> RadarResponse:
         pf = await get_enriched_portfolio(get_ghostfolio(), get_cache())
         in_pf = {p.ticker for p in pf.positions}
     except Exception:  # noqa: BLE001
-        warnings.append("Carteira indisponível — sem marcação 'já tenho'.")
+        warnings.append("Carteira indisponível: sem marcação 'já tenho'.")
 
     tickers = [r["ticker"] for r in rows]
     hints = {r["ticker"]: r.get("asset_class") or "STOCK" for r in rows}

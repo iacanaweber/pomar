@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { PerformanceResponse } from "../types";
 import { money } from "../lib/format";
+import { Tooltip } from "./Tooltip";
 
 /** Quatro comparações por vez, no máximo.
  *
@@ -175,7 +176,9 @@ export function PerformanceChart({
           rótulo curto e distinto — não são duas versões do mesmo. */}
       <div className="perf-stats">
         <div className="perf-stat">
-          <span className="muted">TWR · quão boas foram as escolhas</span>
+          <Tooltip metricKey="twr">
+            <span className="muted">TWR</span>
+          </Tooltip>
           <strong className={(data.twr ?? 0) >= 0 ? "perf-up" : "perf-down"}>
             {fmtPct(data.twr)}
           </strong>

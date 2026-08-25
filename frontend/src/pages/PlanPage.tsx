@@ -94,7 +94,6 @@ export function PlanPage() {
           )}
           <AllocationSummary plan={result} />
           <RankedList plan={result} />
-          <p className="disclaimer">{result.disclaimer}</p>
         </>
       )}
 

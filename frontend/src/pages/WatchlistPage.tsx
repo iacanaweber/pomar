@@ -167,7 +167,6 @@ export function WatchlistPage() {
         </ul>
       )}
 
-      <p className="disclaimer">Conteúdo educativo. Não é recomendação de investimento.</p>
     </main>
   );
 }

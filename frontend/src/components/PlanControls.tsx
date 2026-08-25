@@ -181,7 +181,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
         <div className="advanced">
           <div className="adv-row">
             <label className="field">
-              <Tooltip metricKey="suggested_amount">
+              <Tooltip metricKey="min_ticket">
                 <span>Ticket mínimo (R$)</span>
               </Tooltip>
               <input

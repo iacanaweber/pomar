@@ -31,7 +31,7 @@ async def portfolio() -> Portfolio:
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(
             status_code=502,
-            detail=f"Não consegui ler o Ghostfolio: {exc}. Verifique GHOSTFOLIO_URL e o token.",
+            detail=f"Ghostfolio ilegível: {exc}. Verifique GHOSTFOLIO_URL e o token.",
         )
 
 
@@ -64,7 +64,7 @@ async def exposure() -> ExposureResponse:
         ]
     except Exception as exc:  # noqa: BLE001
         warnings.append(
-            f"Não consegui ler a carteira ({exc}); a composição mostra só a renda fixa."
+            f"Carteira ilegível ({exc}). A composição mostra só a renda fixa."
         )
 
     contas = [a for a in await fixed_income_repo.balances(db) if fi.counts_in_portfolio(a)]

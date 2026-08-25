@@ -43,7 +43,7 @@ async def income() -> IncomeResponse:
     try:
         data = await _portfolio_income_now()
     except Exception as exc:  # noqa: BLE001
-        return IncomeResponse(warnings=[f"Não consegui calcular a renda: {exc}"])
+        return IncomeResponse(warnings=[f"Renda indisponível: {exc}"])
     currency = data.pop("_currency", "BRL")
     # snapshot mensal oportunista — alimenta a série "bola de neve real" sem cron
     try:

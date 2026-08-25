@@ -67,7 +67,7 @@ def _plan_reasons(item: PlanAsset, classes_at_target: set[str]) -> list[str]:
     if item.basket_target_pct is not None and item.basket_current_pct is not None:
         gap_pp = (item.basket_target_pct - item.basket_current_pct) * 100
         if gap_pp >= GAP_PP_MIN:
-            out.append(f"Está {gap_pp:.1f} p.p. abaixo do alvo na cesta de {label}")
+            out.append(f"{gap_pp:.1f} p.p. abaixo do alvo em {label}")
     if item.bazin_below_ceiling and item.bazin_margin:
         out.append(f"Desconto de {item.bazin_margin * 100:.0f}% sobre o preço-teto de Bazin")
     if item.suggested is None:
@@ -82,7 +82,7 @@ def _plan_reasons(item: PlanAsset, classes_at_target: set[str]) -> list[str]:
                 "levou primeiro"
             )
         else:
-            out.append("No alvo ou acima do peso-alvo — sem compra sugerida")
+            out.append("No peso-alvo ou acima.")
     return out
 
 
@@ -103,14 +103,12 @@ async def plan(req: PlanRequest) -> PlanResponse:
             raise HTTPException(
                 status_code=503,
                 detail=(
-                    f"Não consegui ler sua carteira no Ghostfolio ({exc}) e não há cópia em "
-                    "cache. Plano abortado para não sugerir compras erradas — tente de novo "
-                    "ou, se quiser mesmo planejar do zero, use 'planejar sem a carteira'."
+                    f"Ghostfolio ilegível ({exc}) e sem cache. Plano cancelado. Use "
+                    "'planejar sem a carteira' para mirar só os alvos."
                 ),
             )
         warnings.append(
-            f"Não consegui ler o Ghostfolio ({exc}); seguindo com carteira VAZIA a seu pedido. "
-            "O rebalanceamento vai mirar diretamente os alvos e ignora posições existentes."
+            f"Ghostfolio ilegível ({exc}). Planejando sem carteira: mira os alvos direto."
         )
         portfolio = Portfolio(
             total_value=0.0, as_of=datetime.now(timezone.utc).isoformat(),
@@ -145,27 +143,24 @@ async def plan(req: PlanRequest) -> PlanResponse:
         and not all_baskets.get(RENDA_FIXA)
     ):
         warnings.append(
-            "Renda fixa tem meta de alocação mas nenhum indexador na cesta — marque as "
-            "contas que contam na carteira e dê a elas uma tag (CDI, IPCA, LCI…)."
+            "Renda fixa com meta e sem indexador na cesta. Marque as contas que contam "
+            "na carteira e dê a elas uma tag (CDI, IPCA, LCI)."
         )
     if not baskets:
         raise HTTPException(
             status_code=422,
             detail=(
-                "Nenhuma classe selecionada tem composição definida. "
-                "Monte sua carteira alvo primeiro."
+                "Nenhuma classe selecionada tem composição. Defina a carteira alvo."
             ),
         )
     for c in skipped:
         warnings.append(
-            f"{CLASS_LABEL.get(c, c)}: classe selecionada sem composição — pulada neste plano. "
-            "Defina a carteira alvo para incluí-la."
+            f"{CLASS_LABEL.get(c, c)}: sem composição. Fora deste plano."
         )
     for c in sorted(baskets):
         if targets.get(c, 0.0) <= 0:
             warnings.append(
-                f"{CLASS_LABEL.get(c, c)}: a meta de alocação da classe está em 0% — "
-                "sem orçamento para comprar. Ajuste a meta na Carteira alvo."
+                f"{CLASS_LABEL.get(c, c)}: meta em 0%. Sem orçamento para comprar."
             )
 
     # 3) universo: só os tickers das cestas selecionadas. O fetch de mercado domina o
@@ -173,7 +168,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
     try:
         assets = await build_universe(portfolio, get_cache(), get_brapi(), class_baskets=baskets)
     except Exception as exc:  # noqa: BLE001
-        warnings.append(f"Falha ao buscar dados de mercado na brapi ({exc}).")
+        warnings.append(f"brapi indisponível ({exc}).")
         assets = []
 
     stale = [a.ticker for a in assets if a.stale]
@@ -218,8 +213,8 @@ async def plan(req: PlanRequest) -> PlanResponse:
         no_price = [t for t in basket if (prices.get(t) or 0.0) <= 0]
         if no_price:
             warnings.append(
-                f"Sem cotação para {', '.join(sorted(no_price))} — pesos da carteira "
-                f"alvo de {CLASS_LABEL.get(c, c)} renormalizados entre os demais."
+                f"Sem cotação para {', '.join(sorted(no_price))}. Pesos de "
+                f"{CLASS_LABEL.get(c, c)} renormalizados."
             )
 
     # posições fora da carteira alvo: não recebem compra e não somem em silêncio — é
@@ -231,9 +226,8 @@ async def plan(req: PlanRequest) -> PlanResponse:
     if legacy_items:
         nomes = [p["ticker"] for p in legacy_items]
         warnings.append(
-            f"Fora da carteira alvo: {', '.join(nomes[:8])}"
-            f"{f' (e mais {len(nomes) - 8})' if len(nomes) > 8 else ''}. "
-            "Continuam na carteira, mas não recebem aporte."
+            f"Fora do alvo: {', '.join(nomes[:8])}"
+            f"{f' (+{len(nomes) - 8})' if len(nomes) > 8 else ''}. Não recebem aporte."
         )
 
     # 6) piso da reserva: prioridade ABSOLUTA sobre qualquer compra. Só a renda fixa
@@ -250,15 +244,14 @@ async def plan(req: PlanRequest) -> PlanResponse:
             liquid_reserve = await fixed_income_repo.liquid_reserve(get_db())
         except Exception as exc:  # noqa: BLE001
             warnings.append(
-                f"Não consegui ler a renda fixa ({exc}); assumindo reserva líquida = 0."
+                f"Renda fixa ilegível ({exc}). Reserva líquida = 0."
             )
             liquid_reserve = 0.0
 
     floor = await resolve_floor(prefs, liquid_reserve, get_sgs(), floor_nominal)
     if floor_nominal > 0 and not floor["index_available"]:
         warnings.append(
-            "Não consegui buscar o IPCA para corrigir o piso da reserva; usando o valor "
-            "nominal por enquanto."
+            "IPCA indisponível. Piso da reserva no valor nominal."
         )
     # 6b) CASCATA: piso → peso da classe RENDA_FIXA → renda variável.
     # A base dos alvos em R$ passa a incluir a renda fixa que conta na carteira: enquanto
@@ -269,7 +262,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
             a for a in await fixed_income_repo.balances(get_db()) if fi.counts_in_portfolio(a)
         ]
     except Exception as exc:  # noqa: BLE001
-        warnings.append(f"Não consegui ler as contas de renda fixa ({exc}).")
+        warnings.append(f"Contas de renda fixa ilegíveis ({exc}).")
         contas_rf = []
     rf_value = from_cents(
         sum(to_cents(a["balance"]) for a in contas_rf)

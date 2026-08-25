@@ -33,9 +33,7 @@ async def performance(
         return PerformanceResponse(
             window=window,
             warnings=[
-                "A série semanal ainda não tem pontos. O primeiro é gravado no próximo "
-                "fechamento de domingo — semanas anteriores ficam de fora porque "
-                "reconstruí-las com o preço de hoje inventaria o passado."
+                "Série semanal vazia. O primeiro ponto é gravado no fechamento de domingo."
             ],
         )
 
@@ -129,18 +127,16 @@ async def performance(
     dias = (datas[-1] - datas[0]).days
     if any(p.late for p in saida_pontos):
         warnings.append(
-            "Alguns pontos foram capturados fora da janela do domingo (marcados na tabela)."
+            "Alguns pontos foram capturados fora da janela do domingo."
         )
     buracos = weekly.gaps(pontos)
     if buracos:
         warnings.append(
-            f"{len(buracos)} semana(s) sem captura — a série mostra a lacuna em vez de "
-            "preencher com valor inventado."
+            f"{len(buracos)} semana(s) sem captura. A série mostra a lacuna."
         )
     if len(saida_pontos) < 4:
         warnings.append(
-            "Menos de quatro pontos: a tabela vale mais que um gráfico, que sugeriria uma "
-            "tendência que ainda não existe."
+            "Menos de quatro pontos: use a tabela."
         )
 
     return PerformanceResponse(
