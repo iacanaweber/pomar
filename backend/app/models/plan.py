@@ -127,6 +127,23 @@ class ReserveSuggestion(BaseModel):
     note: str = Field("O piso da reserva é coberto antes de qualquer compra.")
 
 
+class LegacySummary(BaseModel):
+    """Quanto está parado em ativos fora da carteira alvo, e o que isso cobriria.
+
+    É ARITMÉTICA, não sugestão de venda: o app não recomenda vender nada. O que ele
+    responde é quanto do gap atual está em capital que já não segue a estratégia — número
+    que o usuário não consegue estimar de cabeça.
+    """
+
+    value: float = Field(0.0, description="Valor em ativos fora do alvo (BRL).")
+    tickers: List[str] = Field(default_factory=list)
+    gap: float = Field(0.0, description="Quanto falta comprar para atingir os alvos (BRL).")
+    gap_coverage: Optional[float] = Field(
+        None,
+        description="Fração do gap que o legado cobriria (0..1+). None quando não há gap.",
+    )
+
+
 class PlanResponse(BaseModel):
     aporte: float
     currency: str = "BRL"
@@ -136,7 +153,10 @@ class PlanResponse(BaseModel):
     ranking: List[PlanAsset] = Field(default_factory=list)
     unallocated: float = Field(0.0, description="Sobra do aporte não alocada (BRL).")
     reserve: Optional[ReserveSuggestion] = Field(
-        None, description="Sugestão de reserva/renda fixa (quando há reserve_target)."
+        None, description="Status do piso da reserva (quando há um piso configurado)."
+    )
+    legacy: Optional[LegacySummary] = Field(
+        None, description="Ativos fora da carteira alvo (quando existem)."
     )
     classes_applied: List[str] = Field(
         default_factory=list, description="Classes marcadas que tinham composição e entraram no plano."

@@ -858,3 +858,117 @@ def test_exposure_degrada_sem_ghostfolio(authed_client, _stub_cdi):
     r = c.get("/api/portfolio/exposure").json()
     assert r["total"] == 10_000.0 and r["rv_total"] == 0.0
     assert any("carteira" in w for w in r["warnings"])
+
+
+# --- ativos fora do alvo no plano -----------------------------------------------------
+
+def _carteira(monkeypatch, posicoes, total=None):
+    from app.models.portfolio import Allocations, Portfolio, Position
+
+    pos = [Position(ticker=t, asset_class=c, value=v, weight=0.0) for t, c, v in posicoes]
+    soma = total if total is not None else sum(p.value for p in pos)
+    by_class: dict[str, float] = {}
+    for p in pos:
+        p.weight = p.value / soma if soma else 0.0
+        by_class[p.asset_class] = by_class.get(p.asset_class, 0.0) + p.weight
+    return Portfolio(
+        total_value=soma, as_of="2026-06-01T00:00:00Z",
+        allocations=Allocations(by_class=by_class), positions=pos,
+    )
+
+
+def test_plan_reports_legacy_value_and_gap_coverage(authed_client, monkeypatch):
+    """Aritmética, não sugestão de venda: quanto do gap está parado fora da estratégia."""
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 1.0, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 1_000.0), ("VELHO4", "STOCK", 500.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 100.0, "min_ticket": 10.0}).json()
+    assert r["legacy"] is not None
+    assert r["legacy"]["value"] == 500.0
+    assert r["legacy"]["tickers"] == ["VELHO4"]
+    # gap = 100% de (1500 + 100) − (1000 comprados + 100 do aporte) = 500
+    assert r["legacy"]["gap"] == 500.0
+    assert r["legacy"]["gap_coverage"] == 1.0
+
+
+def test_plan_without_legacy_has_no_summary(authed_client, monkeypatch):
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 1.0}, "class_targets": {"STOCK": {"AAA3": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 1_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 100.0, "min_ticket": 10.0}).json()
+    assert r["legacy"] is None
+
+
+def test_plan_class_with_zero_target_becomes_legacy(authed_client, monkeypatch):
+    """A situação real: a carteira alvo mudou, STOCK foi a 0% e as ações seguem compradas."""
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.0, "FII": 1.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "FII": {"CCC11": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("CCC11", "FII", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 700.0), ("CCC11", "FII", 300.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 100.0, "classes": ["FII"], "min_ticket": 10.0}).json()
+    assert r["legacy"]["tickers"] == ["AAA3"]
+    assert r["legacy"]["value"] == 700.0
+    # e nada de Infinity/NaN por causa do alvo zero
+    import math
+    assert all(math.isfinite(v) for v in (r["legacy"]["value"], r["legacy"]["gap"],
+                                          r["legacy"]["gap_coverage"]))
+
+
+def test_plan_legacy_without_gap_has_no_coverage(authed_client, monkeypatch):
+    """Sem gap, 'cobriria 0%' se leria como 'não adiantaria nada' — daí o None.
+
+    Com `legacy_in_total=false` os alvos incidem só sobre o capital alinhado, então uma
+    carteira alinhada e no alvo não tem buraco a cobrir, por mais legado que exista.
+    """
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 1.0}, "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "legacy_in_total": False,
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 100_000.0), ("VELHO4", "STOCK", 500.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 10.0, "min_ticket": 10.0}).json()
+    assert r["legacy"]["value"] == 500.0
+    assert r["legacy"]["gap"] == 0.0
+    assert r["legacy"]["gap_coverage"] is None
+
+
+def test_legacy_in_total_muda_a_base_dos_alvos(authed_client, monkeypatch):
+    """O default mantém a carteira subalocada até a venda; o opt-out mira só o alinhado."""
+    posicoes = [("AAA3", "STOCK", 1_000.0), ("VELHO4", "STOCK", 500.0)]
+    c = authed_client
+
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 1.0}, "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "legacy_in_total": True,
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+                      portfolio=_carteira(monkeypatch, posicoes))
+    com = c.post("/api/plan", json={"aporte": 100.0, "min_ticket": 10.0}).json()
+    # base 1500 + 100 = 1600; alinhado após a compra = 1100 => sobra buraco de 500
+    assert com["legacy"]["gap"] == 500.0
+
+    c.put("/api/preferences", json={"legacy_in_total": False})
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+                      portfolio=_carteira(monkeypatch, posicoes))
+    sem = c.post("/api/plan", json={"aporte": 100.0, "min_ticket": 10.0}).json()
+    # base 1000 + 100 = 1100; alinhado após a compra = 1100 => sem buraco
+    assert sem["legacy"]["gap"] == 0.0

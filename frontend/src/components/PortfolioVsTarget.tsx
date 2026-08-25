@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { usePreferences, useSavePreferences } from "../api/queries";
 import { AssetLink } from "./AssetLink";
 import { AT_TARGET_PP, type Comparison, type ComparisonRow } from "../lib/comparison";
-import { CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
+import { ALLOCATION_CLASSES, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
 import { money } from "../lib/format";
 
 /** Mesma matiz por classe do gráfico da Carteira alvo — a cor segue a entidade, e aqui ela
@@ -21,16 +22,8 @@ const CLASS_HUE: Record<string, string> = {
 const fmt = (n: number) => `${n.toFixed(2).replace(".", ",")}%`;
 const signed = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(2).replace(".", ",")}`;
 
-const STATUS_LABEL: Record<ComparisonRow["status"], string> = {
-  ok: "no alvo",
-  below: "falta comprar",
-  above: "acima do alvo",
-  off_target: "fora da carteira alvo",
-  not_bought: "ainda não comprado",
-};
-
 /** Barra 100% da carteira, segmentada por ativo e agrupada por classe (a mesma linguagem
- *  do gráfico da Carteira alvo). `weights` são % sobre o total. */
+ *  do gráfico da Carteira alvo). `pct` são % sobre o mesmo denominador da barra. */
 function StackedBar({
   label,
   groups,
@@ -62,7 +55,7 @@ function StackedBar({
                       ? CLASS_HUE[g.cls]
                       : `color-mix(in oklab, ${CLASS_HUE[g.cls]} ${100 - Math.round((i / (g.items.length - 1)) * 42)}%, var(--card))`,
                 }}
-                title={`${it.ticker} · ${CLASS_LABEL[g.cls] ?? g.cls}: ${fmt(it.pct)} do total`}
+                title={`${it.ticker} · ${CLASS_LABEL[g.cls] ?? g.cls}: ${fmt(it.pct)}`}
               />
             )),
           )}
@@ -74,12 +67,14 @@ function StackedBar({
 }
 
 /** Uma linha do desvio: barra divergente ancorada no zero. À esquerda falta comprar, à
- *  direita está acima do alvo. A régua é comum a todas as linhas. */
+ *  direita está acima do alvo. Só entram aqui linhas COM alvo — o legado tem seção própria,
+ *  porque medir desvio contra alvo zero não é um número pequeno, é um número que não existe. */
 function DeviationRow({ row, scale }: { row: ComparisonRow; scale: number }) {
-  const width = scale > 0 ? (Math.abs(row.deltaPp) / scale) * 50 : 0; // 50% = meia régua
-  const below = row.deltaPp > 0; // alvo maior que o atual => falta comprar
+  const deltaPp = row.deltaPp ?? 0;
+  const width = scale > 0 ? (Math.abs(deltaPp) / scale) * 50 : 0; // 50% = meia régua
+  const below = deltaPp > 0; // alvo maior que o atual => falta comprar
   return (
-    <li className={`cmp-row cmp-row-${row.status}`}>
+    <li className={`cmp-row cmp-row-${row.state.toLowerCase()}`}>
       <span className="cmp-ticker">
         <AssetLink ticker={row.ticker} />
       </span>
@@ -94,9 +89,9 @@ function DeviationRow({ row, scale }: { row: ComparisonRow; scale: number }) {
         />
       </span>
       <span className="cmp-nums">
-        <span className="cmp-delta">{signed(row.deltaPp)} p.p.</span>
+        <span className="cmp-delta">{signed(deltaPp)} p.p.</span>
         <span className="muted cmp-detail">
-          {fmt(row.currentPct)} → {fmt(row.targetPct)}
+          {fmt(row.currentPct)} → {fmt(row.targetPct ?? 0)}
         </span>
       </span>
       <span className="cmp-brl">
@@ -104,38 +99,148 @@ function DeviationRow({ row, scale }: { row: ComparisonRow; scale: number }) {
           {row.status === "ok"
             ? "no alvo"
             : below
-              ? `faltam ${money(row.deltaBrl)}`
-              : `sobram ${money(Math.abs(row.deltaBrl))}`}
+              ? `faltam ${money(row.deltaBrl ?? 0)}`
+              : `sobram ${money(Math.abs(row.deltaBrl ?? 0))}`}
         </span>
-        {row.status !== "ok" && row.status !== "below" && row.status !== "above" && (
-          <span className="muted cmp-tag">{STATUS_LABEL[row.status]}</span>
-        )}
+        {row.state === "NEW" && <span className="muted cmp-tag">ainda não comprado</span>}
       </span>
     </li>
   );
 }
 
-export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
-  const [showAll, setShowAll] = useState(false);
-  const { rows, byClass, targetSumPct, offTargetPct, hasTarget, totalValue } = comparison;
+/** Acesso à Carteira alvo a partir da Carteira. Quando ela está vazia ou não soma 100%,
+ *  este bloco vira o call-to-action principal da página: sem destino não há comparação, e
+ *  esconder isso atrás de um link pequeno na aba Plantar era o que fazia o problema
+ *  sobreviver. */
+function TargetAccess({ comparison }: { comparison: Comparison }) {
+  const { hasTarget, targetSumPct } = comparison;
+  const desbalanceado = Math.abs(targetSumPct - 100) > 0.5;
+  const problema = !hasTarget
+    ? "Nenhuma classe tem composição definida."
+    : desbalanceado
+      ? `As metas por classe somam ${fmt(targetSumPct)}, não 100%.`
+      : null;
 
-  if (!hasTarget) {
+  if (problema) {
     return (
       <div className="card empty-target">
-        <h3>🎯 Defina sua carteira alvo</h3>
-        <p className="muted">
-          A comparação precisa de um destino: as metas por classe e a composição de cada uma.
-          É a mesma configuração que orienta os aportes na aba Plantar.
-        </p>
+        <h3>🎯 Ajuste sua carteira alvo</h3>
+        <p className="muted">{problema}</p>
         <Link className="primary" to="/alvo">
-          Montar carteira alvo →
+          Abrir carteira alvo →
         </Link>
       </div>
     );
   }
 
+  return (
+    <div className="cmp-access">
+      <Link className="primary cmp-access-btn" to="/alvo">
+        🎯 Editar carteira alvo
+      </Link>
+    </div>
+  );
+}
+
+/** Controle do que entra na base dos alvos em R$. Fica VISÍVEL, e não escondido em
+ *  "ajustes avançados", porque ele muda o que a tela responde: com o legado na base, a
+ *  carteira segue subalocada até a venda — que é o retrato aritmeticamente honesto. */
+function LegacyBaseToggle({ comparison }: { comparison: Comparison }) {
+  const prefs = usePreferences();
+  const savePrefs = useSavePreferences();
+  const { legacyValue, legacyInTotal } = comparison;
+  if (legacyValue <= 0) return null;
+
+  return (
+    <label className="class-chip class-chip-wide cmp-legacy-toggle">
+      <input
+        type="checkbox"
+        checked={prefs.data?.legacy_in_total ?? legacyInTotal}
+        disabled={savePrefs.isPending}
+        onChange={(e) => savePrefs.mutate({ legacy_in_total: e.target.checked })}
+      />
+      <span>
+        <span className="class-chip-name">Contar o que está fora do alvo no patrimônio</span>
+        <span className="class-chip-meta">
+          {legacyInTotal
+            ? `Os alvos em R$ saem sobre ${money(comparison.targetBase)} e a carteira fica subalocada até a venda.`
+            : `Os alvos em R$ saem só sobre os ${money(comparison.alignedValue)} alinhados.`}
+        </span>
+      </span>
+    </label>
+  );
+}
+
+/** Seção própria das posições fora do alvo. Sem razão ao alvo, sem barra de progresso:
+ *  o que existe é valor em R$, participação no patrimônio e o rótulo do estado. */
+function OffTargetSection({ comparison }: { comparison: Comparison }) {
+  const { legacy, legacyValue, legacyPct, totalValue } = comparison;
+  if (legacy.length === 0) return null;
+  return (
+    <section className="card cmp-list cmp-legacy">
+      <div className="cmp-list-head">
+        <h3>Fora do alvo</h3>
+        <span className="muted cmp-scale">
+          {money(legacyValue)} · {fmt(legacyPct)} do patrimônio
+        </span>
+      </div>
+      <ul className="cmp-rows">
+        {legacy.map((r) => (
+          <li className="cmp-row cmp-row-legacy" key={r.ticker}>
+            <span className="cmp-ticker">
+              <AssetLink ticker={r.ticker} />
+            </span>
+            <span className="muted cmp-legacy-class">{CLASS_LABEL[r.cls] ?? r.cls}</span>
+            <span className="cmp-brl">
+              <span>{money(r.currentValue)}</span>
+              <span className="muted cmp-detail">{fmt(r.portfolioPct)} do patrimônio</span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="muted cmp-note">
+        Sem peso na carteira alvo — não recebem aporte e não têm desvio a medir. O total de{" "}
+        {money(totalValue)} inclui esse valor.
+      </p>
+      <LegacyBaseToggle comparison={comparison} />
+    </section>
+  );
+}
+
+export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
+  const [showAll, setShowAll] = useState(false);
+  const {
+    rows,
+    byClass,
+    targetSumPct,
+    hasTarget,
+    alignedValue,
+    legacyValue,
+    legacyPct,
+    legacyInTotal,
+    targetBase,
+  } = comparison;
+
+  if (!hasTarget) {
+    return (
+      <div className="cmp">
+        <div className="card empty-target">
+          <h3>🎯 Defina sua carteira alvo</h3>
+          <p className="muted">
+            A comparação precisa de um destino: as metas por classe e a composição de cada uma.
+            É a mesma configuração que orienta os aportes na aba Plantar.
+          </p>
+          <Link className="primary" to="/alvo">
+            Montar carteira alvo →
+          </Link>
+        </div>
+        <OffTargetSection comparison={comparison} />
+      </div>
+    );
+  }
+
   const group = (pick: (r: ComparisonRow) => number) =>
-    INVESTABLE_CLASSES.map((cls) => ({
+    ALLOCATION_CLASSES.map((cls) => ({
       cls,
       items: rows
         .filter((r) => r.cls === cls && pick(r) > 0)
@@ -143,48 +248,52 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
         .map((r) => ({ ticker: r.ticker, pct: pick(r) })),
     })).filter((g) => g.items.length > 0);
 
-  const offTarget = rows.filter((r) => r.status === "off_target" && r.currentPct > 0);
-  const hoje = [
-    ...group((r) => (r.status === "off_target" ? 0 : r.currentPct)),
-    ...(offTarget.length
-      ? [{ cls: "UNKNOWN", items: offTarget.map((r) => ({ ticker: r.ticker, pct: r.currentPct })) }]
-      : []),
-  ];
+  // A renda fixa não tem linha por ticker (os itens da cesta são indexadores), então ela
+  // entra nas barras como um bloco único da classe.
+  const rf = byClass.find((b) => b.cls === RENDA_FIXA);
+  const rfBar = (pct: number) =>
+    pct > 0 ? [{ cls: RENDA_FIXA, items: [{ ticker: "Renda fixa", pct }] }] : [];
 
   const atTarget = rows.filter((r) => r.status === "ok");
   const acionaveis = rows.filter((r) => r.status !== "ok");
   const visiveis = showAll ? rows : acionaveis;
-  const scale = Math.max(...rows.map((r) => Math.abs(r.deltaPp)), 1);
+  const scale = Math.max(...rows.map((r) => Math.abs(r.deltaPp ?? 0)), 1);
 
   return (
     <div className="cmp">
+      <TargetAccess comparison={comparison} />
+
       <section className="card cmp-bars">
         <StackedBar
           label="Hoje"
-          groups={hoje}
+          groups={[...group((r) => r.currentPct), ...rfBar(rf?.currentPct ?? 0)]}
           caption={
-            offTargetPct > 0.05
-              ? `${fmt(offTargetPct)} fora da carteira alvo`
+            legacyPct > 0.05
+              ? `${money(alignedValue)} seguindo a estratégia`
               : "toda a carteira dentro do alvo"
           }
         />
         <StackedBar
           label="Alvo"
-          groups={group((r) => r.targetPct)}
+          groups={[...group((r) => r.targetPct ?? 0), ...rfBar(rf?.targetPct ?? 0)]}
           caption={
             Math.abs(targetSumPct - 100) > 0.5
               ? `metas somam ${fmt(targetSumPct)} — ajuste na Carteira alvo`
               : "metas somam 100%"
           }
         />
+        {legacyPct > 0.05 && (
+          <p className="muted cmp-note">
+            As duas barras comparam o capital que segue a estratégia. Os {money(legacyValue)}{" "}
+            fora do alvo aparecem à parte, abaixo.
+          </p>
+        )}
       </section>
 
       <section className="card cmp-list">
         <div className="cmp-list-head">
           <h3>Desvio por ativo</h3>
-          <span className="muted cmp-scale">
-            falta comprar ← │ → acima do alvo
-          </span>
+          <span className="muted cmp-scale">falta comprar ← │ → acima do alvo</span>
         </div>
         <ul className="cmp-rows">
           {visiveis.map((r) => (
@@ -199,6 +308,8 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
           </button>
         )}
       </section>
+
+      <OffTargetSection comparison={comparison} />
 
       <section className="card cmp-list">
         <h3>Desvio por classe</h3>
@@ -236,12 +347,14 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
               </li>
             ))}
         </ul>
-        {totalValue > 0 && (
-          <p className="muted cmp-note">
-            Os dois lados usam o mesmo denominador: {money(totalValue)} de renda variável. A
-            reserva fica de fora, como nas metas por classe.
-          </p>
-        )}
+        <p className="muted cmp-note">
+          Percentuais sobre {money(alignedValue)} (o capital alinhado); valores em R$ sobre{" "}
+          {money(targetBase)}
+          {legacyValue > 0 &&
+            (legacyInTotal
+              ? ", que inclui o que está fora do alvo — por isso a carteira segue subalocada até a venda."
+              : ", que exclui o que está fora do alvo.")}
+        </p>
       </section>
     </div>
   );

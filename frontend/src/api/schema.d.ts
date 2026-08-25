@@ -1396,6 +1396,35 @@ export interface components {
              */
             builtin: boolean;
         };
+        /**
+         * LegacySummary
+         * @description Quanto está parado em ativos fora da carteira alvo, e o que isso cobriria.
+         *
+         *     É ARITMÉTICA, não sugestão de venda: o app não recomenda vender nada. O que ele
+         *     responde é quanto do gap atual está em capital que já não segue a estratégia — número
+         *     que o usuário não consegue estimar de cabeça.
+         */
+        LegacySummary: {
+            /**
+             * Value
+             * @description Valor em ativos fora do alvo (BRL).
+             * @default 0
+             */
+            value: number;
+            /** Tickers */
+            tickers?: string[];
+            /**
+             * Gap
+             * @description Quanto falta comprar para atingir os alvos (BRL).
+             * @default 0
+             */
+            gap: number;
+            /**
+             * Gap Coverage
+             * @description Fração do gap que o legado cobriria (0..1+). None quando não há gap.
+             */
+            gap_coverage?: number | null;
+        };
         /** LoginBody */
         LoginBody: {
             /** Password */
@@ -1626,8 +1655,10 @@ export interface components {
              * @default 0
              */
             unallocated: number;
-            /** @description Sugestão de reserva/renda fixa (quando há reserve_target). */
+            /** @description Status do piso da reserva (quando há um piso configurado). */
             reserve?: components["schemas"]["ReserveSuggestion"] | null;
+            /** @description Ativos fora da carteira alvo (quando existem). */
+            legacy?: components["schemas"]["LegacySummary"] | null;
             /**
              * Classes Applied
              * @description Classes marcadas que tinham composição e entraram no plano.

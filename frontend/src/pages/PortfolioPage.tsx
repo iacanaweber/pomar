@@ -125,6 +125,10 @@ export function PortfolioPage() {
   // o do Ghostfolio como "patrimônio" esconderia justamente o que o usuário acabou de marcar.
   const total = exposure.data?.total ?? pf?.total_value ?? 0;
 
+  // A renda fixa das CONTAS vem do resumo da aba Reserva; a das posições atribuídas ao
+  // bucket já está em `positions` e é somada dentro de `buildComparison`.
+  const rendaFixaContas = fixedIncome.data?.portfolio_balance ?? 0;
+
   const comparison = useMemo(
     () =>
       buildComparison(
@@ -132,8 +136,12 @@ export function PortfolioPage() {
         pf?.total_value ?? 0,
         preferences.data?.targets ?? {},
         preferences.data?.class_targets ?? {},
+        {
+          rendaFixaValue: rendaFixaContas,
+          legacyInTotal: preferences.data?.legacy_in_total ?? true,
+        },
       ),
-    [positions, pf?.total_value, preferences.data],
+    [positions, pf?.total_value, preferences.data, rendaFixaContas],
   );
 
   const slices: Slice[] = useMemo(

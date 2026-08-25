@@ -1,37 +1,61 @@
 /** Carteira ATUAL × carteira PLANEJADA — aritmética pura, longe do React.
  *
- *  Os dois lados usam o MESMO denominador: o patrimônio de renda variável lido do
- *  Ghostfolio. É o que torna a comparação honesta — o peso atual de um ativo inclui no
- *  divisor até o que está fora da carteira alvo (o legado), que é justamente o que dilui
- *  os demais. A reserva/renda fixa fica de fora dos dois lados, como já acontece nas metas
- *  por classe.
+ *  Cada posição tem um ESTADO derivado (nunca armazenado):
+ *
+ *  * `IN_TARGET` — está na cesta alvo com peso > 0.
+ *  * `LEGACY`  — a posição existe, mas o peso alvo é zero ou o ativo não está em cesta
+ *                nenhuma. É o caso real de quem mudou de estratégia e ainda não vendeu.
+ *  * `NEW`     — está no alvo e ainda não foi comprado.
+ *
+ *  **`LEGACY` não tem razão ao alvo.** Com alvo zero, "desvio percentual" e "quanto falta"
+ *  não são números pequenos: não existem. Por isso `targetPct`, `deltaPp` e `deltaBrl` são
+ *  `null` nessas linhas — o tipo é que impede a tela de inventar uma barra de progresso
+ *  contra um denominador zero. O que essas posições têm é valor em R$ e participação no
+ *  patrimônio, e é só isso que a tela mostra.
+ *
+ *  **Os denominadores da comparação excluem o legado.** A pergunta da tela é "o capital que
+ *  segue a estratégia se parece com a estratégia?", e diluir os pesos pelo que está de saída
+ *  responderia outra coisa. O legado aparece somado à parte, nunca espalhado pelas linhas.
+ *
+ *  **Os alvos em R$ usam outra base**, escolhida por `legacyInTotal` (default `true`): o
+ *  legado entra no patrimônio que serve de base para os alvos das demais classes. Isso
+ *  aumenta o que falta comprar e mantém a carteira subalocada até a venda, que é o retrato
+ *  honesto. Com `false`, os alvos são calculados só sobre o capital alinhado. As duas
+ *  leituras convivem de propósito: a de p.p. compara FORMA, a de R$ compara TAMANHO — e
+ *  quando elas discordam, a diferença é exatamente o dinheiro que está fora da estratégia.
  */
 import { round2, shareOfTotal } from "./basket";
-import { INVESTABLE_CLASSES } from "./classes";
+import { ALLOCATION_CLASSES, INVESTABLE_CLASSES, RENDA_FIXA } from "./classes";
 
 /** Desvio abaixo do qual o ativo é considerado "no alvo" (p.p.). */
 export const AT_TARGET_PP = 0.5;
 
-export type RowStatus =
-  | "ok" // dentro da tolerância
-  | "below" // abaixo do alvo: destino dos próximos aportes
-  | "above" // acima do alvo: não aportar aqui
-  | "off_target" // tem posição, mas não está na carteira alvo (legado a diluir)
-  | "not_bought"; // está na carteira alvo, mas ainda não comprado
+/** Estado da posição em relação à carteira alvo. */
+export type PositionState = "IN_TARGET" | "LEGACY" | "NEW";
+
+/** Direção do desvio — só existe para quem TEM alvo. */
+export type TargetStatus = "ok" | "below" | "above";
 
 export interface ComparisonRow {
   ticker: string;
   cls: string;
-  currentPct: number; // % do patrimônio hoje
-  targetPct: number; // % do patrimônio planejado
-  deltaPp: number; // alvo − atual, em pontos percentuais (negativo = falta comprar)
-  deltaBrl: number; // quanto falta comprar (positivo) ou sobra (negativo), em R$
+  state: PositionState;
   currentValue: number;
-  status: RowStatus;
+  /** % do capital ALINHADO (o legado fica fora do denominador). */
+  currentPct: number;
+  /** % do PATRIMÔNIO — a leitura que faz sentido para o legado. */
+  portfolioPct: number;
+  /** `null` em LEGACY: não há alvo contra o qual medir. */
+  targetPct: number | null;
+  targetBrl: number | null;
+  deltaPp: number | null;
+  deltaBrl: number | null;
+  status: TargetStatus | null;
 }
 
 export interface ComparisonClassRow {
   cls: string;
+  currentValue: number;
   currentPct: number;
   targetPct: number;
   deltaPp: number;
@@ -39,13 +63,22 @@ export interface ComparisonClassRow {
 }
 
 export interface Comparison {
+  /** Linhas com alvo: `IN_TARGET` e `NEW`. O legado sai daqui e vive em `legacy`. */
   rows: ComparisonRow[];
+  legacy: ComparisonRow[];
   byClass: ComparisonClassRow[];
+  /** Patrimônio: renda variável + renda fixa que conta na carteira. */
   totalValue: number;
+  /** Capital que segue a estratégia (patrimônio − legado). */
+  alignedValue: number;
+  legacyValue: number;
+  /** Fatia do PATRIMÔNIO que está fora do alvo (0..100). */
+  legacyPct: number;
+  /** Base sobre a qual os alvos em R$ foram calculados. */
+  targetBase: number;
+  legacyInTotal: boolean;
   /** Soma das metas por classe (100 quando bem configurada). */
   targetSumPct: number;
-  /** % do patrimônio que está em ativos fora da carteira alvo. */
-  offTargetPct: number;
   hasTarget: boolean;
 }
 
@@ -55,12 +88,19 @@ interface PositionLike {
   value: number;
 }
 
-function classify(currentPct: number, targetPct: number): RowStatus {
-  if (targetPct <= 0) return "off_target";
-  if (currentPct <= 0) return "not_bought";
-  const delta = targetPct - currentPct;
-  if (Math.abs(delta) < AT_TARGET_PP) return "ok";
-  return delta > 0 ? "below" : "above";
+interface Options {
+  /** Saldo das contas de renda fixa que contam na carteira (sem as posições de RV). */
+  rendaFixaValue?: number;
+  legacyInTotal?: boolean;
+}
+
+/** Divisão que devolve 0 quando não há denominador — nunca `Infinity` nem `NaN`. */
+const share = (value: number, total: number): number =>
+  total > 0 ? round2((value / total) * 100) : 0;
+
+function statusOf(deltaPp: number): TargetStatus {
+  if (Math.abs(deltaPp) < AT_TARGET_PP) return "ok";
+  return deltaPp > 0 ? "below" : "above";
 }
 
 export function buildComparison(
@@ -68,8 +108,11 @@ export function buildComparison(
   totalValue: number,
   targets: Record<string, number>,
   classTargets: Record<string, Record<string, number>>,
+  options: Options = {},
 ): Comparison {
-  const total = totalValue > 0 ? totalValue : 0;
+  const rendaFixaAccounts = Math.max(0, options.rendaFixaValue ?? 0);
+  const legacyInTotal = options.legacyInTotal ?? true;
+  const rvTotal = totalValue > 0 ? totalValue : 0;
 
   // peso-alvo de cada ticker sobre a carteira INTEIRA (meta da classe × peso na cesta)
   const targetPctByTicker = new Map<string, { cls: string; pct: number }>();
@@ -83,50 +126,109 @@ export function buildComparison(
     }
   }
 
-  const currentByTicker = new Map<string, PositionLike>();
-  for (const p of positions) currentByTicker.set(p.ticker.toUpperCase(), p);
+  // Posições atribuídas à cesta de renda fixa não são tickers da comparação: os itens
+  // daquela cesta são indexadores. Elas somam no valor da classe, junto com as contas.
+  const rvPositions = positions.filter((p) => p.asset_class !== RENDA_FIXA);
+  const rendaFixaValue =
+    rendaFixaAccounts +
+    positions
+      .filter((p) => p.asset_class === RENDA_FIXA)
+      .reduce((s, p) => s + p.value, 0);
 
-  const tickers = new Set([...targetPctByTicker.keys(), ...currentByTicker.keys()]);
+  const currentByTicker = new Map<string, PositionLike>();
+  for (const p of rvPositions) currentByTicker.set(p.ticker.toUpperCase(), p);
+
+  const patrimonio = round2(rvTotal + rendaFixaAccounts);
+  const legacyValue = round2(
+    [...currentByTicker.values()]
+      .filter((p) => (targetPctByTicker.get(p.ticker.toUpperCase())?.pct ?? 0) <= 0)
+      .reduce((s, p) => s + p.value, 0),
+  );
+  const alignedValue = round2(Math.max(0, patrimonio - legacyValue));
+  const targetBase = legacyInTotal ? patrimonio : alignedValue;
+
   const rows: ComparisonRow[] = [];
+  const legacy: ComparisonRow[] = [];
+  const tickers = new Set([...targetPctByTicker.keys(), ...currentByTicker.keys()]);
   for (const ticker of tickers) {
     const target = targetPctByTicker.get(ticker);
     const position = currentByTicker.get(ticker);
     const currentValue = position?.value ?? 0;
-    const currentPct = total > 0 ? round2((currentValue / total) * 100) : 0;
     const targetPct = target?.pct ?? 0;
-    const deltaPp = round2(targetPct - currentPct);
-    rows.push({
+    const base = {
       ticker,
       cls: target?.cls ?? position?.asset_class ?? "UNKNOWN",
+      currentValue,
+      currentPct: share(currentValue, alignedValue),
+      portfolioPct: share(currentValue, patrimonio),
+    };
+
+    if (targetPct <= 0) {
+      // Sem alvo não há razão ao alvo: os campos de desvio ficam nulos de propósito.
+      legacy.push({
+        ...base,
+        currentPct: 0, // o legado não participa do denominador alinhado
+        state: "LEGACY",
+        targetPct: null,
+        targetBrl: null,
+        deltaPp: null,
+        deltaBrl: null,
+        status: null,
+      });
+      continue;
+    }
+
+    const targetBrl = round2((targetPct / 100) * targetBase);
+    const deltaPp = round2(targetPct - base.currentPct);
+    rows.push({
+      ...base,
+      state: currentValue > 0 ? "IN_TARGET" : "NEW",
+      targetPct,
+      targetBrl,
+      deltaPp,
+      deltaBrl: round2(targetBrl - currentValue),
+      status: statusOf(deltaPp),
+    });
+  }
+
+  // maior desvio primeiro: o topo da lista é o que precisa de decisão
+  rows.sort(
+    (a, b) => Math.abs(b.deltaPp ?? 0) - Math.abs(a.deltaPp ?? 0) || a.ticker.localeCompare(b.ticker),
+  );
+  legacy.sort((a, b) => b.currentValue - a.currentValue || a.ticker.localeCompare(b.ticker));
+
+  const byClass: ComparisonClassRow[] = ALLOCATION_CLASSES.map((cls) => {
+    const currentValue =
+      cls === RENDA_FIXA
+        ? rendaFixaValue
+        : round2(rows.filter((r) => r.cls === cls).reduce((s, r) => s + r.currentValue, 0));
+    const currentPct = share(currentValue, alignedValue);
+    const targetPct = round2((targets[cls] ?? 0) * 100);
+    const deltaPp = round2(targetPct - currentPct);
+    return {
+      cls,
+      currentValue,
       currentPct,
       targetPct,
       deltaPp,
-      deltaBrl: round2((deltaPp / 100) * total),
-      currentValue,
-      status: classify(currentPct, targetPct),
-    });
-  }
-  // maior desvio primeiro: o topo da lista é o que precisa de decisão
-  rows.sort((a, b) => Math.abs(b.deltaPp) - Math.abs(a.deltaPp) || a.ticker.localeCompare(b.ticker));
-
-  const byClass: ComparisonClassRow[] = INVESTABLE_CLASSES.map((cls) => {
-    const inClass = rows.filter((r) => r.cls === cls);
-    const currentPct = round2(inClass.reduce((s, r) => s + r.currentPct, 0));
-    const targetPct = round2((targets[cls] ?? 0) * 100);
-    const deltaPp = round2(targetPct - currentPct);
-    return { cls, currentPct, targetPct, deltaPp, deltaBrl: round2((deltaPp / 100) * total) };
+      deltaBrl: round2((targetPct / 100) * targetBase - currentValue),
+    };
   });
 
+  const rfTargetPct = round2((targets[RENDA_FIXA] ?? 0) * 100);
   return {
     rows,
+    legacy,
     byClass,
-    totalValue: total,
+    totalValue: patrimonio,
+    alignedValue,
+    legacyValue,
+    legacyPct: share(legacyValue, patrimonio),
+    targetBase,
+    legacyInTotal,
     targetSumPct: round2(
-      INVESTABLE_CLASSES.reduce((s, c) => s + (targets[c] ?? 0) * 100, 0),
+      ALLOCATION_CLASSES.reduce((s, c) => s + (targets[c] ?? 0) * 100, 0),
     ),
-    offTargetPct: round2(
-      rows.filter((r) => r.status === "off_target").reduce((s, r) => s + r.currentPct, 0),
-    ),
-    hasTarget: targetPctByTicker.size > 0,
+    hasTarget: targetPctByTicker.size > 0 || rfTargetPct > 0,
   };
 }

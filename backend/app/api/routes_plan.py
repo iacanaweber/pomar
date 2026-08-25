@@ -18,6 +18,7 @@ from app.models.plan import (
     CLASS_LABEL,
     INVESTABLE_CLASSES,
     RENDA_FIXA,
+    LegacySummary,
     PlanAsset,
     PlanRequest,
     PlanResponse,
@@ -26,8 +27,9 @@ from app.models.plan import (
 )
 from app.models.portfolio import Allocations, Portfolio
 from app.repositories import fixed_income_repo, labels_repo, plans_repo, preferences_repo
+from app.services import legacy as legacy_svc
 from app.services import reserve as reserve_svc
-from app.services.allocation import allocate
+from app.services.allocation import aligned_value_by_class, allocate
 from app.services.analysis import analyze_asset, resolve_bazin_target_yield
 from app.services.portfolio_service import get_enriched_portfolio
 from app.services.reserve_service import resolve_floor
@@ -208,17 +210,17 @@ async def plan(req: PlanRequest) -> PlanResponse:
                 f"alvo de {CLASS_LABEL.get(c, c)} renormalizados entre os demais."
             )
 
-    # posições que você tem mas que não fazem parte da carteira alvo: não recebem compra
-    # (e não somem em silêncio — é justamente o que o rebalanceamento vai diluindo)
-    in_baskets = {t.upper() for b in baskets.values() for t in b}
-    extras = sorted(
-        p.ticker for p in portfolio.positions
-        if p.asset_class in baskets and p.ticker.upper() not in in_baskets
+    # posições fora da carteira alvo: não recebem compra e não somem em silêncio — é
+    # justamente o que o rebalanceamento vai diluindo. O resumo em R$ é montado depois da
+    # alocação, quando o gap já é conhecido.
+    legacy_items = legacy_svc.legacy_positions(
+        [p.model_dump() for p in portfolio.positions], all_baskets, targets
     )
-    if extras:
+    if legacy_items:
+        nomes = [p["ticker"] for p in legacy_items]
         warnings.append(
-            f"Fora da carteira alvo: {', '.join(extras[:8])}"
-            f"{f' (e mais {len(extras) - 8})' if len(extras) > 8 else ''}. "
+            f"Fora da carteira alvo: {', '.join(nomes[:8])}"
+            f"{f' (e mais {len(nomes) - 8})' if len(nomes) > 8 else ''}. "
             "Continuam na carteira, mas não recebem aporte."
         )
 
@@ -254,20 +256,41 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # o lote real da B3 (ações = 100; FII/ETF/BDR = 1).
     lot_mode = prefs.get("lot_mode") or "integral"
     lots = {a.ticker: (1 if lot_mode == "fracionario" else a.lot_size) for a in assets}
+    legacy_in_total = bool(prefs.get("legacy_in_total", True))
     unallocated = allocate(
         aporte_rv, ranking, portfolio, prices, lots, targets, baskets,
-        min_ticket=req.min_ticket,
+        min_ticket=req.min_ticket, legacy_in_total=legacy_in_total,
     )
 
     # mesma conta de necessidade do alocador — a explicação não pode divergir do motor
-    total_after = portfolio.total_value + aporte_rv
-    by_class = portfolio.allocations.by_class
+    held = {p.ticker: p.value for p in portfolio.positions}
+    aligned = aligned_value_by_class(held, all_baskets, targets)
+    base_alvo = portfolio.total_value if legacy_in_total else sum(aligned.values())
+    total_after = base_alvo + aporte_rv
     at_target = {
-        c for c in baskets
-        if targets.get(c, 0.0) * total_after - by_class.get(c, 0.0) * portfolio.total_value <= 0
+        c for c in baskets if targets.get(c, 0.0) * total_after - aligned.get(c, 0.0) <= 0
     }
     for item in ranking:
         item.reasons = _plan_reasons(item, at_target)
+
+    # Gap = o que ainda falta comprar depois deste aporte, somado sobre as classes que
+    # seguem abaixo do alvo. Mesma conta de necessidade do alocador, medida DEPOIS da
+    # compra: é o buraco que sobra, não o que existia antes de aportar.
+    valor_apos = {
+        c: aligned.get(c, 0.0)
+        + sum(
+            (r.suggested.invested_exact if r.suggested else 0.0)
+            for r in ranking
+            if r.asset_class == c
+        )
+        for c in baskets
+    }
+    gap_restante = sum(
+        max(0.0, targets.get(c, 0.0) * total_after - valor_apos[c]) for c in baskets
+    )
+    legacy = legacy_svc.summarize(
+        [p.model_dump() for p in portfolio.positions], gap_restante, all_baskets, targets
+    )
 
     # 8) status do piso (só quando existe um piso configurado — sem piso, sem card)
     reserve = None
@@ -309,6 +332,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
         ranking=suggested + others,
         unallocated=unallocated,
         reserve=reserve,
+        legacy=LegacySummary(**legacy) if legacy else None,
         classes_applied=sorted(baskets),
         classes_skipped=skipped,
         warnings=warnings,

@@ -223,3 +223,71 @@ def test_zero_target_class_gets_no_money():
     )
     assert ranking[0].suggested is None
     assert unallocated == 500.0
+
+
+# --- ativos fora do alvo: base dos alvos em R$ ---------------------------------------
+
+def test_legado_nao_conta_como_progresso_rumo_ao_alvo():
+    """O ponto do bloco: somar o legado dentro da classe fazia ele se CANCELAR — inflava a
+    base do alvo e o valor atual na mesma medida, e a classe parecia já estar no lugar."""
+    from app.services.allocation import aligned_value_by_class
+
+    held = {"AAA3": 1000.0, "VELHO4": 500.0}
+    baskets = {"STOCK": {"AAA3": 1.0}}
+    assert aligned_value_by_class(held, baskets, {"STOCK": 1.0}) == {"STOCK": 1000.0}
+
+
+def test_classe_com_meta_zero_nao_tem_valor_alinhado():
+    from app.services.allocation import aligned_value_by_class
+
+    held = {"AAA3": 1000.0}
+    alinhado = aligned_value_by_class(held, {"STOCK": {"AAA3": 1.0}}, {"STOCK": 0.0})
+    assert alinhado == {}
+
+
+def test_ticker_sem_cotacao_continua_sendo_capital_alinhado():
+    """Falha do provedor não é decisão de estratégia: o ativo não vira legado por isso."""
+    from app.services.allocation import aligned_value_by_class
+
+    held = {"AAA3": 1000.0, "SEMPRECO3": 400.0}
+    baskets = {"STOCK": {"AAA3": 0.5, "SEMPRECO3": 0.5}}
+    assert aligned_value_by_class(held, baskets, {"STOCK": 1.0}) == {"STOCK": 1400.0}
+
+
+def test_legado_aumenta_o_need_e_mantem_a_carteira_subalocada():
+    pf = _pf({"AAA3": ("STOCK", 1000.0), "VELHO4": ("STOCK", 500.0)}, {"STOCK": 1.0})
+    ranking = _ranking(("AAA3", "STOCK"))
+    prices, lots = {"AAA3": 10.0}, {"AAA3": 1}
+
+    sobra = allocate(100.0, ranking, pf, prices, lots, {"STOCK": 1.0},
+                     {"STOCK": {"AAA3": 1.0}}, min_ticket=10.0)
+    # o aporte inteiro é comprado: a classe segue abaixo do alvo por causa do legado
+    assert _spent(ranking) == 100.0
+    assert sobra == 0.0
+
+
+def test_legacy_in_total_false_mira_so_o_capital_alinhado():
+    """Sem o legado na base, a carteira do exemplo já está no alvo e a compra é proporcional."""
+    pf = _pf({"AAA3": ("STOCK", 1000.0), "VELHO4": ("STOCK", 500.0)}, {"STOCK": 1.0})
+    ranking = _ranking(("AAA3", "STOCK"))
+    prices, lots = {"AAA3": 10.0}, {"AAA3": 1}
+
+    sobra = allocate(100.0, ranking, pf, prices, lots, {"STOCK": 1.0},
+                     {"STOCK": {"AAA3": 1.0}}, min_ticket=10.0, legacy_in_total=False)
+    assert _spent(ranking) + sobra == 100.0  # invariante em qualquer modo
+
+
+def test_invariante_de_conservacao_com_legado_e_lote():
+    """`spent + unallocated == aporte`, com valores que forçam arredondamento de lote."""
+    pf = _pf({"AAA3": ("STOCK", 1234.56), "VELHO4": ("STOCK", 789.01)}, {"STOCK": 1.0})
+    for aporte in (333.33, 1000.0, 97.77, 5_555.55):
+        for legacy_in_total in (True, False):
+            ranking = _ranking(("AAA3", "STOCK"), ("BBB3", "STOCK"))
+            prices = {"AAA3": 27.31, "BBB3": 13.07}
+            lots = {"AAA3": 100, "BBB3": 100}  # lote inteiro: o troco é grande de propósito
+            sobra = allocate(
+                aporte, ranking, pf, prices, lots, {"STOCK": 1.0},
+                {"STOCK": {"AAA3": 0.6, "BBB3": 0.4}}, min_ticket=100.0,
+                legacy_in_total=legacy_in_total,
+            )
+            assert abs(_spent(ranking) + sobra - aporte) < 0.01

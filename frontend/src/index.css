@@ -687,3 +687,25 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .pf-note { font-size: 12px; margin: 8px 0 0; text-align: center; }
 .legend-target { white-space: nowrap; }
 .asset-labels { display: flex; flex-direction: column; gap: 8px; }
+
+/* ===== Carteira: acesso ao alvo, legado e a base dos alvos em R$ ===== */
+
+/* O acesso à Carteira alvo é a primeira coisa do bloco: é de lá que sai tudo o que a
+   comparação mede. Quando falta configuração, o card `empty-target` toma o lugar dele. */
+.cmp-access { display: flex; }
+.cmp-access-btn { text-decoration: none; display: inline-block; padding: 12px 18px;
+  width: auto; }
+
+/* Fora do alvo: sem eixo divergente e sem barra — não há alvo contra o qual medir. */
+.cmp-legacy .cmp-row-legacy { grid-template-columns: 74px 1fr auto; }
+.cmp-legacy-class { font-size: 12px; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+.cmp-legacy-toggle { margin-top: 4px; }
+
+@media (min-width: 640px) {
+  .cmp-legacy .cmp-row-legacy { grid-template-columns: 96px 1fr auto; gap: 12px; }
+}
+/* Linha do legado no plano: aritmética, não recomendação — por isso texto, sem selo. */
+.plan-legacy { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
+  line-height: 1.5; }
+.plan-legacy strong { color: var(--ink); }

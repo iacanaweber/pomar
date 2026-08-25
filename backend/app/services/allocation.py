@@ -4,10 +4,12 @@ Não existe score aqui (nem em lugar nenhum): o que decide quanto vai para cada 
 DISTÂNCIA até o peso que o usuário definiu. Em três passadas:
 
 1. **Entre as classes** marcadas, o orçamento é NEED-BASED sobre a carteira resultante:
-   `need_c = max(0, alvo_c·(total+aporte) − valor_atual_c)`. Os alvos entram CRUS (sem
+   `need_c = max(0, alvo_c·(total+aporte) − valor_alinhado_c)`. Os alvos entram CRUS (sem
    renormalizar entre as classes selecionadas): a proporção entre os needs já se
    normaliza sozinha, e renormalizar faria a classe escolhida perseguir um alvo que não
    é o dela — sobre-correção.
+   `valor_alinhado_c` conta só os membros da cesta: uma posição fora do alvo não é
+   progresso rumo ao alvo (ver `aligned_value_by_class`).
 2. **Dentro da classe**, cada ativo da cesta recebe proporcionalmente ao seu déficit
    (peso-alvo × total resultante da cesta − valor atual). Quem está no alvo ou acima
    recebe zero. `min_ticket` vale para ABRIR posição; lote inteiro é sempre respeitado.
@@ -113,6 +115,30 @@ def _share_target(members: Dict[str, float]) -> Dict[str, float]:
     return {t: w / wsum for t, w in members.items()}
 
 
+def aligned_value_by_class(
+    held: Dict[str, float],
+    class_baskets: Optional[Dict[str, Dict[str, float]]],
+    targets: Optional[Dict[str, float]] = None,
+) -> Dict[str, float]:
+    """Valor de cada classe que de fato SEGUE a carteira alvo (o legado fica de fora).
+
+    A alternativa — somar tudo que é da classe, como faz `allocations.by_class` — faz o
+    legado se cancelar: ele infla a base do alvo e o valor atual na mesma medida, e a
+    classe parece já estar no lugar. Contar só os membros da cesta é o que torna o `need`
+    sensível ao capital que está de saída.
+
+    Usa a cesta DECLARADA (não a filtrada por preço): um ticker do alvo cuja cotação falhou
+    continua sendo capital alinhado — a falha é do provedor, não uma decisão de estratégia.
+    """
+    alvos = targets or {}
+    out: Dict[str, float] = {}
+    for c, basket in (class_baskets or {}).items():
+        if not basket or alvos.get(c, 0.0) <= 0:
+            continue
+        out[c] = sum(held.get(t, 0.0) for t, w in basket.items() if (w or 0) > 0)
+    return out
+
+
 def allocate(
     aporte: float,
     ranking: List[PlanAsset],
@@ -122,8 +148,16 @@ def allocate(
     targets: Dict[str, float],
     class_baskets: Dict[str, Dict[str, float]],
     min_ticket: float = 100.0,
+    legacy_in_total: bool = True,
 ) -> float:
-    """Preenche `suggested` e os campos `basket_*` do ranking. Retorna a sobra não alocada."""
+    """Preenche `suggested` e os campos `basket_*` do ranking. Retorna a sobra não alocada.
+
+    `legacy_in_total` decide a BASE dos alvos em R$: com `True` (default), o valor das
+    posições fora da carteira alvo entra no patrimônio sobre o qual as metas são
+    aplicadas. Isso aumenta o `need` das classes-alvo e mantém a carteira subalocada até a
+    venda — o retrato aritmeticamente honesto de quem ainda tem capital fora da
+    estratégia. Com `False`, as metas incidem só sobre o capital alinhado.
+    """
     by_ticker = {r.ticker: r for r in ranking}
     baskets = {
         c: m
@@ -141,9 +175,9 @@ def allocate(
 
     if aporte > 0:
         # 1) orçamento por classe, NEED-BASED sobre a carteira resultante
-        total_after = portfolio.total_value + aporte
-        cur_weight = portfolio.allocations.by_class
-        cur_value = {c: cur_weight.get(c, 0.0) * portfolio.total_value for c in cur_weight}
+        cur_value = aligned_value_by_class(held, class_baskets, targets)
+        base = portfolio.total_value if legacy_in_total else sum(cur_value.values())
+        total_after = base + aporte
         needs = {
             c: max(0.0, targets.get(c, 0.0) * total_after - cur_value.get(c, 0.0)) for c in baskets
         }
