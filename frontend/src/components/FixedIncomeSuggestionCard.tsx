@@ -8,9 +8,11 @@ const fmtPp = (n: number) => `${n.toFixed(1).replace(".", ",")} p.p.`;
 /** A parcela de renda fixa do aporte — o primeiro degrau da cascata, e por isso o
  *  primeiro card da tela.
  *
- *  Não há quantidade de cotas aqui: a compra de renda fixa é manual e feita fora do app,
- *  então a saída é uma INSTRUÇÃO em reais. O que o app pode fazer é poupar a redigitação,
- *  levando direto ao lançamento do novo saldo na conta sugerida.
+ *  Duas formas de linha, porque são duas formas de comprar. A TAG de indexador vira uma
+ *  instrução em reais — essa compra é manual, feita fora do app — e o atalho leva ao
+ *  lançamento do novo saldo na conta sugerida, para não redigitar o que o app já sabe. O
+ *  TICKER (um ETF de renda fixa) vira cotas e preço, porque se executa na corretora como
+ *  qualquer outra compra.
  *
  *  O piso e o peso da classe aparecem separados de propósito: são perguntas diferentes —
  *  "quanto eu consigo sacar hoje" e "quanto da carteira está em renda fixa" — e uma
@@ -130,13 +132,18 @@ export function FixedIncomeSuggestionCard({
           {porIndexador.map((i) => (
             <li key={i.code}>
               <span className="fi-indexer-name">
-                {i.name}
+                {i.kind === "ticker" && i.ticker ? i.ticker : i.name}
                 {i.target_pct ? (
                   <span className="muted"> · alvo {pct(i.target_pct)} da classe</span>
                 ) : null}
               </span>
               <strong>{money(i.amount ?? 0, currency)}</strong>
-              {i.account_id ? (
+              {i.kind === "ticker" && i.ticker ? (
+                // cotas e preço, e não "lance em conta": esta compra é da corretora
+                <Link className="link-button fi-shortcut" to={`/ativo/${i.ticker}`}>
+                  {i.shares ?? 0} × {i.price ? money(i.price, currency) : "—"} →
+                </Link>
+              ) : i.account_id ? (
                 // atalho para não redigitar o que o app já sabe: abre a conta sugerida
                 <Link className="link-button fi-shortcut" to={`/reserva?conta=${i.account_id}`}>
                   lançar em {i.account_name} →
