@@ -278,6 +278,21 @@ _MIGRATIONS: list[tuple[int, str]] = [
         CREATE INDEX IF NOT EXISTS idx_bench_code_date ON benchmark_series(code, obs_date);
         """,
     ),
+    (
+        11,
+        # v11: teto do aporte para o PISO da reserva (0..1).
+        #
+        # Sem ele, o piso tem prioridade absoluta: um déficit de R$ 9.500 come aportes
+        # inteiros de R$ 2.000 por cinco meses, e a bolsa fica parada nesse período.
+        #
+        # DEFAULT 1.0 é o comportamento de sempre — quem não configurar nada não vê
+        # diferença. E é 1.0, não 0.0, justamente porque 0.0 é uma escolha legítima do
+        # usuário ("não mande nada para o piso"): a leitura precisa distinguir "não
+        # configurado" de "configurado em zero", então nunca usar `or` ao ler esta coluna.
+        """
+        ALTER TABLE preferences ADD COLUMN reserve_floor_share REAL NOT NULL DEFAULT 1.0;
+        """,
+    ),
 ]
 
 

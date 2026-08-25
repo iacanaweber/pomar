@@ -187,3 +187,31 @@ async def test_snapshot_mensal_grava_uma_vez_e_le_yoc(db):
     assert len(hist) == 1 and hist[0]["yoc"] == 0.11
     # carteira vazia nunca vira histórico
     assert await snapshots_repo.save_if_new_month(db, {"total_value": 0.0}) is False
+
+
+async def test_reserve_floor_share_nasce_em_cem_por_cento(db, settings):
+    """O default preserva o comportamento: quem não configurar nada não vê diferença."""
+    assert (await preferences_repo.get(db, settings))["reserve_floor_share"] == 1.0
+    cols = {r["name"] for r in await db.fetchall("PRAGMA table_info(preferences)")}
+    assert "reserve_floor_share" in cols
+
+
+async def test_reserve_floor_share_zero_sobrevive_ao_roundtrip(db, settings):
+    """0% é uma ESCOLHA ("não mande nada para o piso"), não ausência de valor.
+
+    Um `or 1.0` na leitura a transformaria em 100% em silêncio — exatamente o oposto do
+    que o usuário pediu, e sem nenhum sinal de que aconteceu.
+    """
+    await preferences_repo.put(db, {"reserve_floor_share": 0.0}, settings)
+    assert (await preferences_repo.get(db, settings))["reserve_floor_share"] == 0.0
+
+    # e sobrevive a um patch de OUTRO campo (o merge não pode reintroduzir o default)
+    await preferences_repo.put(db, {"min_ticket": 700.0}, settings)
+    lidas = await preferences_repo.get(db, settings)
+    assert lidas["reserve_floor_share"] == 0.0
+    assert lidas["min_ticket"] == 700.0
+
+
+async def test_reserve_floor_share_intermediario_persiste(db, settings):
+    await preferences_repo.put(db, {"reserve_floor_share": 0.35}, settings)
+    assert (await preferences_repo.get(db, settings))["reserve_floor_share"] == 0.35

@@ -51,6 +51,13 @@ class PreferencesBody(BaseModel):
         description="Se os ativos fora da carteira alvo entram no patrimônio que serve de "
         "base para os alvos em R$ das demais classes.",
     )
+    reserve_floor_share: Optional[float] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Teto do aporte para o PISO da reserva (0..1). 1 = prioridade absoluta "
+        "(padrão). Com o piso já composto não há déficit e o teto não faz nada.",
+    )
 
     @field_validator("reserve_floor_date")
     @classmethod
