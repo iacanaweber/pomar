@@ -51,3 +51,39 @@ async def test_sem_serie_o_fator_e_none(monkeypatch):
 
 async def test_janela_invertida_nao_chama_a_rede():
     assert await _client().series_range(433, date(2026, 5, 1), date(2026, 1, 1)) == []
+
+
+async def test_intervalo_sem_observacao_e_serie_vazia_nao_indisponibilidade(monkeypatch):
+    """O SGS responde 404 "Value(s) not found" quando o intervalo não tem observação.
+
+    Acontece no caso mais comum de todos: piso da reserva definido neste mês, cujo IPCA só
+    fecha no mês que vem. Tratar isso como falha fazia a tela anunciar "IPCA indisponível",
+    sugerindo Banco Central fora do ar — quando a resposta correta é "não há correção
+    ainda", e o fator é 1,0.
+    """
+
+    class Resp:
+        status_code = 404
+
+        def raise_for_status(self):
+            raise AssertionError("404 de intervalo vazio não deve chegar ao raise_for_status")
+
+        def json(self):
+            raise AssertionError("não há corpo útil a ler num 404")
+
+    class FakeAsyncClient:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+        async def get(self, url):
+            return Resp()
+
+    monkeypatch.setattr("app.clients.sgs_bcb.httpx.AsyncClient", lambda **kw: FakeAsyncClient())
+
+    c = _client()
+    assert await c.series_range(433, date(2026, 8, 24)) == []
+    # e o fator resultante é 1,0 — sem correção, não "indisponível"
+    assert await c.ipca_factor_since(date(2026, 8, 24)) == 1.0

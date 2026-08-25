@@ -93,6 +93,14 @@ class SgsClient:
                 resp = await client.get(
                     _RANGE.format(code=code, start=_br_date(start), end=_br_date(end))
                 )
+            # O SGS responde 404 "Value(s) not found" quando o intervalo simplesmente não
+            # tem observação — caso normal de série mensal cujo primeiro mês ainda não
+            # fechou. Isso é uma série VAZIA, não uma falha: tratar como falha fazia o
+            # piso da reserva anunciar "IPCA indisponível" no mês em que ele foi definido,
+            # sugerindo que o Banco Central estava fora do ar.
+            if resp.status_code == 404:
+                self.cache.set(key, [], _TTL)
+                return []
             resp.raise_for_status()
             raw = resp.json()
         except Exception:
