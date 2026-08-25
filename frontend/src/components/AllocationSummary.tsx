@@ -21,8 +21,7 @@ function LegacyLine({ plan }: { plan: PlanResponse }) {
       {tickers.length > 4 ? ` e mais ${tickers.length - 4}` : ""})
       {cobertura != null ? (
         <>
-          {" "}
-         . Vendê-los cobriria <strong>{pct(Math.min(cobertura, 1))}</strong> do gap de{" "}
+          . Vendê-los cobriria <strong>{pct(Math.min(cobertura, 1))}</strong> do gap de{" "}
           {money(legacy.gap ?? 0, plan.currency)}
           {cobertura > 1 && " (com sobra)"}.
         </>
