@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 from app.config import get_settings
 from app.deps import get_brapi, get_cache, get_db, get_sgs
-from app.repositories import preferences_repo, watchlist_repo
+from app.repositories import labels_repo, preferences_repo, watchlist_repo
 from app.services import market_data
 from app.services.analysis import (
     _bazin_ceiling_price,
@@ -59,8 +59,11 @@ async def add_to_watchlist(body: WatchlistAdd) -> dict:
     ticker = normalize_ticker(body.ticker)
     if not ticker:
         raise HTTPException(status_code=422, detail="Ticker inválido.")
-    # Valida classificando o ativo (StatusInvest -> watchlist -> heurística).
-    asset_class = await classify_ticker(ticker, get_cache())
+    # Valida classificando o ativo (override do usuário -> StatusInvest -> heurística).
+    # Sem os overrides, um ETF já marcado como renda fixa era gravado aqui como "ETF" e
+    # voltava sugerido na cesta errada da Carteira alvo.
+    overrides = await labels_repo.bucket_overrides(get_db())
+    asset_class = await classify_ticker(ticker, get_cache(), None, overrides)
     await watchlist_repo.add(get_db(), ticker, asset_class, body.note)
     return {"ticker": ticker, "asset_class": asset_class}
 

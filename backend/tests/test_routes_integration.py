@@ -1416,3 +1416,26 @@ def test_current_by_class_nao_depende_de_legacy_in_total(authed_client, monkeypa
     # a classe legado continua no card, com meta 0% — é o que precisa ser desinvestido
     assert com["current_by_class"]["STOCK"] == pytest.approx(0.7)
     assert com["targets_by_class"]["STOCK"] == 0.0
+
+
+def test_watchlist_respeita_o_bucket_escolhido_a_mao(authed_client, monkeypatch):
+    """A watchlist alimenta as sugestões de ticker por classe na Carteira alvo.
+
+    Sem os overrides, um ETF já marcado como renda fixa era gravado aqui como "ETF" e
+    voltava sugerido na cesta errada — a interface desfazendo a decisão do usuário.
+    """
+    c = authed_client
+    c.put("/api/labels/assignments", json={
+        "subject_type": "ticker", "subject_id": "ZZZZ11", "dimension": "bucket",
+        "items": [{"label_id": _bucket(c, "RENDA_FIXA")}],
+    })
+
+    async def _classify(ticker, cache, hint=None, overrides=None):
+        # o que importa é o quarto argumento CHEGAR: a precedência já é testada em
+        # test_classify.py, e duplicá-la aqui esconderia o que este teste prova
+        assert overrides == {"ZZZZ11": "RENDA_FIXA"}
+        return (overrides or {}).get(ticker) or "ETF"
+
+    monkeypatch.setattr("app.api.routes_watchlist.classify_ticker", _classify)
+    r = c.post("/api/watchlist", json={"ticker": "ZZZZ11"}).json()
+    assert r["asset_class"] == "RENDA_FIXA"

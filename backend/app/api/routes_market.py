@@ -9,7 +9,7 @@ from app.config import get_settings
 from app.deps import get_brapi, get_cache, get_db, get_ghostfolio, get_sgs
 from app.models.plan import AssetDetailResponse
 from app.models.portfolio import Allocations, Portfolio
-from app.repositories import preferences_repo
+from app.repositories import labels_repo, preferences_repo
 from app.services import market_data
 from app.services.analysis import analyze_asset, resolve_bazin_target_yield
 from app.services.portfolio_service import get_enriched_portfolio
@@ -34,7 +34,13 @@ async def universe() -> dict:
 async def asset(ticker: str) -> AssetDetailResponse:
     """Detalhe completo do ativo: classe+setor canônicos, fundamentos (incl. LPA/VPA),
     histórico de proventos e a leitura factual (preço-teto, consistência, red flags)."""
-    assets = await market_data.build_assets([ticker], get_cache(), get_brapi())
+    # A cesta escolhida à mão vence a classificação automática — sem passar os
+    # overrides, esta tela mostrava "Automática (ETF)" logo depois de o usuário ter
+    # marcado renda fixa NELA MESMA.
+    overrides = await labels_repo.bucket_overrides(get_db())
+    assets = await market_data.build_assets(
+        [ticker], get_cache(), get_brapi(), bucket_overrides=overrides
+    )
     if not assets or assets[0].price is None:
         raise HTTPException(status_code=404, detail="Ativo não encontrado ou sem dados de mercado.")
     a = assets[0]
