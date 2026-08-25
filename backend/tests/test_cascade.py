@@ -183,3 +183,85 @@ def test_conservacao_do_aporte_com_teto(aporte, piso, alvo, atual, share):
     assert out["rf_total"] == pytest.approx(out["floor_directed"] + out["rf_directed"], abs=1e-9)
     # meio centavo de folga: o teto arredonda para o centavo mais próximo
     assert out["floor_directed"] <= aporte * share + 0.005
+
+
+# --- a sobra vai para quem está mais defasado ---
+
+def test_a_sobra_e_repartida_por_deficit_com_a_renda_fixa_como_par():
+    """Déficits de 4.600 (RF) e 1.400 (bolsa): 76,7% / 23,3% de 2.000.
+
+    Antes a renda fixa levava os 2.000 inteiros e a bolsa, defasada em 1.400, ficava com
+    zero. É a prioridade que o dono recusou.
+    """
+    out = cascade.split_aporte(2_000.0, 0.0, 24_600.0, 20_000.0, rv_need=1_400.0)
+    assert out["rf_directed"] == 1_533.33
+    assert out["aporte_rv"] == 466.67
+
+
+def test_o_maior_deficit_leva_a_maior_fatia():
+    out = cascade.split_aporte(400.0, 0.0, 3_000.0, 0.0, rv_need=1_000.0)  # 3.000 × 1.000
+    assert out["rf_directed"] == 300.0
+    assert out["aporte_rv"] == 100.0
+
+
+def test_bolsa_mais_defasada_leva_a_maior_fatia():
+    """A simetria do teste acima: quando a bolsa está mais atrás, ela é que leva mais."""
+    out = cascade.split_aporte(400.0, 0.0, 1_000.0, 0.0, rv_need=3_000.0)
+    assert out["rf_directed"] == 100.0
+    assert out["aporte_rv"] == 300.0
+
+
+def test_renda_fixa_nunca_recebe_mais_que_o_proprio_deficit():
+    """Compra manual, sem lote para arredondar: o excedente segue para a bolsa."""
+    out = cascade.split_aporte(10_000.0, 0.0, 21_000.0, 20_000.0, rv_need=1_000.0)
+    assert out["rf_directed"] == 1_000.0
+    assert out["aporte_rv"] == 9_000.0
+
+
+def test_com_os_deficits_somando_o_aporte_a_disputa_reproduz_a_cascata():
+    """A identidade que torna a mudança invisível numa carteira equilibrada.
+
+    Quando nenhuma classe está acima do alvo e não há capital fora da carteira alvo, os
+    déficits somam exatamente o aporte — e a repartição proporcional devolve a cada classe
+    o próprio déficit, que é literalmente a regra sequencial anterior.
+    """
+    seq = cascade.split_aporte(2_000.0, 0.0, 24_600.0, 24_000.0)
+    novo = cascade.split_aporte(2_000.0, 0.0, 24_600.0, 24_000.0, rv_need=1_400.0)
+    assert novo == seq
+    assert novo["rf_directed"] == 600.0
+
+
+def test_renda_fixa_acima_do_alvo_nao_disputa_nada():
+    """O estado real do dono hoje: RF acima do alvo da classe, então ela sai da disputa."""
+    out = cascade.split_aporte(2_000.0, 0.0, 17_703.25, 20_498.42, rv_need=14_000.0)
+    assert out["rf_directed"] == 0.0
+    assert out["aporte_rv"] == 2_000.0
+
+
+def test_teto_do_piso_e_disputa_da_sobra_convivem():
+    """O cenário completo: teto de 50% no piso, e o R$1.000 liberado disputado."""
+    out = cascade.split_aporte(
+        2_000.0, 9_501.0, 24_600.0, 20_000.0, floor_share=0.5, rv_need=1_400.0
+    )
+    assert out["floor_directed"] == 1_000.0
+    # sobra 1.000 disputada entre RF (déficit 3.600 depois do piso) e bolsa (1.400)
+    assert out["rf_directed"] == 720.0
+    assert out["aporte_rv"] == 280.0
+    assert _soma(out) == pytest.approx(2_000.0, abs=1e-9)
+
+
+@pytest.mark.parametrize("share", [0.0, 0.335, 1.0])
+@pytest.mark.parametrize("rv", [0.0, 0.03, 1_234.56, 50_000.0])
+@pytest.mark.parametrize(
+    "aporte,piso,alvo,atual",
+    [
+        (2_000.0, 9_501.0, 30_000.0, 12_345.67),
+        (0.01, 0.02, 1.0, 0.5),
+        (2_500.55, 1_250.27, 3_000.0, 2_999.99),
+    ],
+)
+def test_conservacao_do_aporte_com_teto_e_disputa(aporte, piso, alvo, atual, rv, share):
+    out = cascade.split_aporte(aporte, piso, alvo, atual, floor_share=share, rv_need=rv)
+    assert _soma(out) == pytest.approx(aporte, abs=1e-9)
+    assert out["rf_total"] == pytest.approx(out["floor_directed"] + out["rf_directed"], abs=1e-9)
+    assert out["floor_directed"] >= 0 and out["rf_directed"] >= 0 and out["aporte_rv"] >= 0

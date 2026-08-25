@@ -33,6 +33,7 @@ def split_aporte(
     rf_class_target: float,
     rf_value: float,
     floor_share: float = 1.0,
+    rv_need: float = 0.0,
 ) -> Dict[str, Any]:
     """Divide o aporte entre piso, peso da renda fixa e renda variável.
 
@@ -43,6 +44,13 @@ def split_aporte(
     ir para o piso. É teto, não cota — com o piso já composto o déficit é zero e não há
     sobre o que incidir, então o controle desaparece do cálculo sozinho, sem `if` especial.
     O default 1.0 é a prioridade absoluta de sempre.
+
+    `rv_need` é o déficit somado das classes de bolsa, medido pela MESMA fórmula do
+    alocador (`allocation.class_needs`). Com ele, a renda fixa deixa de pré-empregar a
+    sobra e passa a disputá-la proporcionalmente ao próprio déficit, como as demais classes
+    já disputam entre si — e, como o denominador dos déficits é o mesmo para todas,
+    repartir por R$ é repartir por ponto percentual defasado. O default 0.0 reproduz a
+    cascata sequencial: sem ninguém para disputar, a renda fixa leva o que precisa.
     """
     disponivel = to_cents(max(0.0, aporte))
 
@@ -55,7 +63,14 @@ def split_aporte(
     # o que foi ao piso já engordou a classe: o déficit percentual é medido depois dele
     apos_piso = to_cents(max(0.0, rf_value)) + ao_piso
     deficit_pct = max(0, to_cents(max(0.0, rf_class_target)) - apos_piso)
-    ao_peso = min(disponivel, deficit_pct)
+    # a renda fixa disputa a sobra em pé de igualdade com a bolsa. O `min` com o próprio
+    # déficit é o que faz `rv_need=0` colapsar EXATAMENTE na regra sequencial anterior —
+    # e é também o teto certo: a compra de renda fixa é manual, sem lote para arredondar,
+    # então mandar mais do que falta só criaria excesso.
+    concorrentes = to_cents(max(0.0, rv_need))
+    total_need = deficit_pct + concorrentes
+    proporcional = int(round(disponivel * deficit_pct / total_need)) if total_need > 0 else 0
+    ao_peso = max(0, min(disponivel, deficit_pct, proporcional))
     disponivel -= ao_peso
 
     return {
