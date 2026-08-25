@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ApiError } from "../api/client";
 import { useLogin } from "../api/queries";
+import { BrandMark } from "../components/Icon";
 
 export function LoginPage() {
   const [password, setPassword] = useState("");
@@ -10,7 +11,7 @@ export function LoginPage() {
     <main className="page login-page">
       <div className="login-card">
         <div className="brand">
-          <span className="logo">🌳</span>
+          <BrandMark size={40} />
           <div>
             <h1>Pomar</h1>
             <p className="muted">Plante seus aportes, colha dividendos.</p>

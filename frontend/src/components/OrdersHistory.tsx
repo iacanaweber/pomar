@@ -41,7 +41,7 @@ export function OrdersHistory() {
       <p className="muted" style={{ marginTop: 0 }}>
         Total registrado: <strong>{money(orders.data?.total_invested ?? 0)}</strong>
         {streak >= 2 && (
-          <span className="orders-streak"> · 🔥 {streak} meses seguidos aportando</span>
+          <span className="orders-streak"> · {streak} meses seguidos aportando</span>
         )}
       </p>
       <ul className="pf-drill-list">

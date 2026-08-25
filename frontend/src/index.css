@@ -260,7 +260,10 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 /* Tooltip */
 .tip { position: relative; display: inline-block; }
 .tip-anchor { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
-.tip-mark { font-size: var(--fs-11); opacity: 0.6; margin-left: 2px; vertical-align: super; }
+/* O ⓘ era um glifo de 10px com `vertical-align: super` e um hack de padding para chegar
+   perto de tocável. Como SVG de 14px ele alinha na linha e é alvo de verdade. */
+.tip-mark { opacity: 0.65; margin-left: var(--sp-4); display: inline-block;
+  vertical-align: -0.18em; }
 .tip-box { position: absolute; z-index: 20; left: 0; top: 130%; width: min(280px, 80vw);
   background: var(--tip-bg); color: #fff; border-radius: var(--radius-sm); padding: 10px 12px;
   display: flex; flex-direction: column; gap: 5px; box-shadow: var(--shadow-2);
@@ -285,7 +288,16 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
   color: var(--muted); cursor: pointer; text-decoration: none; text-align: center;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 2px; }
-.tab-icon { font-size: var(--fs-20); line-height: 1; }
+.tab-icon { display: flex; }
+
+/* Ícones */
+.icon { flex-shrink: 0; display: block; }
+.icon-inline { display: inline-block; vertical-align: -0.18em; }
+/* Disclosure: o estado é ROTAÇÃO, nunca outro glifo. Antes o mesmo ▲/▼ era acordeão,
+   variação de preço e bullet de red flag — três significados no mesmo signo. */
+.icon-chevron { transition: transform 0.15s; }
+[aria-expanded="true"] .icon-chevron { transform: rotate(180deg); }
+@media (prefers-reduced-motion: reduce) { .icon-chevron { transition: none; } }
 /* Sem nowrap: em 360px, quatro rótulos + ícone não cabem, e o `flex: 1` só encolhe até
    o tamanho do texto. Aqui o rótulo pode reticenciar em vez de estourar a barra. */
 .tab-label { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
@@ -427,6 +439,19 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .ceiling-chip { display: inline-flex; align-items: center; gap: 5px; font-size: var(--fs-12);
   font-weight: 700; border-radius: var(--radius-pill); padding: 3px 10px; background: var(--surface-soft); }
 .ceiling-chip.risk-verde { background: var(--chip-bg); }
+/* Semáforo do preço-teto: TRÊS canais, não um. A forma carrega o estado sozinha
+   (triângulo p/ baixo = desconto, barra = no teto, triângulo p/ cima = caro), a cor
+   reforça e o texto confirma. Substitui os emoji 🟢🟡🔴⚪, que davam só cor — e cor
+   sozinha é o que este mesmo arquivo proíbe nos gráficos. Vale em daltonismo e no papel.
+   CONVENÇÃO: triângulo CHEIO de 8px = posição contra um limiar, e só aqui. */
+.ceiling-chip::before, .ceiling-verdict::before {
+  content: ""; display: inline-block; width: 8px; height: 8px;
+  background: currentColor; flex-shrink: 0; margin-right: var(--sp-6);
+}
+.risk-verde::before { clip-path: polygon(50% 100%, 0 0, 100% 0); }
+.risk-amarelo::before { clip-path: polygon(0 35%, 100% 35%, 100% 65%, 0 65%); }
+.risk-vermelho::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.metric-na::before { background: none; border-radius: 50%; box-shadow: inset 0 0 0 1.5px currentColor; }
 .ceiling-block h3 { margin-top: 0; }
 .ceiling-bar-labels { display: flex; justify-content: space-between; font-size: var(--fs-12); margin-top: 6px; }
 .ceiling-verdict { font-size: var(--fs-14); font-weight: 600; margin: 10px 0 0; }

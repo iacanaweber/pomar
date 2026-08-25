@@ -24,6 +24,7 @@ import {
 } from "../lib/basket";
 import { ALLOCATION_CLASSES, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
 import { parseBRL } from "../lib/format";
+import { Icon } from "../components/Icon";
 
 const fmtPct = (n: number) => n.toFixed(2).replace(".", ",");
 const SUM_CLASS: Record<SumState, string> = { over: "sum-over", under: "sum-under", ok: "sum-ok" };
@@ -243,7 +244,7 @@ function BasketEditor({
           ))}
         </datalist>
         <button type="button" className="link-button" onClick={addRow} disabled={!newTicker.trim()}>
-          ＋ adicionar
+          adicionar
         </button>
       </div>
 
@@ -259,7 +260,7 @@ function BasketEditor({
           </span>
           {!ok && (
             <button type="button" className="link-button" onClick={() => onChange(scaleTo100(rows))}>
-              ⚖️ Ajustar para 100%
+              Ajustar para 100%
             </button>
           )}
         </div>
@@ -267,7 +268,7 @@ function BasketEditor({
 
       <div className="basket-tools">
         <button type="button" className="link-button" onClick={seedFromPortfolio}>
-          📥 {isRF ? "Usar o que já está aplicado" : "Usar pesos atuais da carteira"}
+          {isRF ? "Usar o que já está aplicado" : "Usar pesos atuais da carteira"}
         </button>
         <button
           type="button"
@@ -275,7 +276,7 @@ function BasketEditor({
           onClick={() => onChange(distributeEvenly(rows))}
           disabled={rows.length === 0}
         >
-          ⚖️ Dividir igualmente
+          Dividir igualmente
         </button>
       </div>
 
@@ -288,8 +289,8 @@ function BasketEditor({
         {savePrefs.isPending
           ? "Salvando…"
           : rows.length === 0 && Object.keys(saved).length > 0
-            ? "💾 Salvar (remove a composição desta classe)"
-            : `💾 Salvar composição de ${label}`}
+            ? "Salvar (remove a composição desta classe)"
+            : `Salvar composição de ${label}`}
       </button>
     </div>
   );
@@ -346,7 +347,7 @@ function ClassTargetsEditor({
               onChange(Object.fromEntries(scaleTo100(rows).map((r) => [r.ticker, r.pct])))
             }
           >
-            ⚖️ Ajustar para 100%
+            Ajustar para 100%
           </button>
         )}
       </div>
@@ -361,7 +362,7 @@ function ClassTargetsEditor({
           )
         }
       >
-        {savePrefs.isPending ? "Salvando…" : "💾 Salvar metas por classe"}
+        {savePrefs.isPending ? "Salvando…" : "Salvar metas por classe"}
       </button>
     </section>
   );
@@ -429,7 +430,7 @@ export function TargetPortfolioPage() {
   return (
     <main className="page">
       <SavedToast show={savedAt} message="Carteira alvo salva." />
-      <h1 className="page-title">🎯 Carteira alvo</h1>
+      <h1 className="page-title">Carteira alvo</h1>
       <p className="muted">
         É daqui que sai toda recomendação do Plantar: o aporte vai para quem está mais longe
         do peso que você definiu. <Link to="/plano">Voltar ao Plantar →</Link>
@@ -470,7 +471,7 @@ export function TargetPortfolioPage() {
                           : "sem composição"}
                       </span>
                     </span>
-                    <span className="card-toggle">{isOpen ? "▲" : "▼"}</span>
+                    <span className="card-toggle"><Icon name="chevron" size={16} /></span>
                   </button>
                   {isOpen && (
                     <BasketEditor

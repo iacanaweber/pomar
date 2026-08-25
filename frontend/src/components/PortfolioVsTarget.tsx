@@ -124,7 +124,7 @@ function TargetAccess({ comparison }: { comparison: Comparison }) {
   if (problema) {
     return (
       <div className="card empty-target">
-        <h3>🎯 Ajuste sua carteira alvo</h3>
+        <h3>Ajuste sua carteira alvo</h3>
         <p className="muted">{problema}</p>
         <Link className="primary" to="/alvo">
           Abrir carteira alvo →
@@ -136,7 +136,7 @@ function TargetAccess({ comparison }: { comparison: Comparison }) {
   return (
     <div className="cmp-access">
       <Link className="primary cmp-access-btn" to="/alvo">
-        🎯 Editar carteira alvo
+        Editar carteira alvo
       </Link>
     </div>
   );
@@ -225,7 +225,7 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
     return (
       <div className="cmp">
         <div className="card empty-target">
-          <h3>🎯 Defina sua carteira alvo</h3>
+          <h3>Defina sua carteira alvo</h3>
           <p className="muted">
             A comparação precisa de um destino: as metas por classe e a composição de cada uma.
             É a mesma configuração que orienta os aportes na aba Plantar.
@@ -303,8 +303,8 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
         {atTarget.length > 0 && (
           <button type="button" className="link-button" onClick={() => setShowAll((v) => !v)}>
             {showAll
-              ? `▲ Ocultar os ${atTarget.length} que já estão no alvo`
-              : `▼ Mostrar também os ${atTarget.length} que já estão no alvo (desvio abaixo de ${String(AT_TARGET_PP).replace(".", ",")} p.p.)`}
+              ? `Ocultar os ${atTarget.length} que já estão no alvo`
+              : `Mostrar os ${atTarget.length} que já estão no alvo`}
           </button>
         )}
       </section>

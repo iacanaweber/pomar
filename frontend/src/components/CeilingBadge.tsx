@@ -42,12 +42,11 @@ export function classify(
   return { status: "vermelho", label: "acima do teto" };
 }
 
-const ICON: Record<Status, string> = {
-  verde: "🟢",
-  amarelo: "🟡",
-  vermelho: "🔴",
-  na: "⚪",
-};
+/* A marca de estado é CSS (::before com clip-path), não mais um emoji de círculo colorido.
+   Três canais em vez de um: FORMA (triângulo p/ baixo = desconto, barra = no teto,
+   triângulo p/ cima = caro), cor e o texto. Segue a doutrina que o app já aplica na
+   comparação — a polaridade é a geometria, não a cor — e sobrevive a daltonismo e a
+   impressão em preto e branco, que três círculos coloridos não sobrevivem. */
 const RISK_CLASS: Record<Status, string> = {
   verde: "risk-verde",
   amarelo: "risk-amarelo",
@@ -69,7 +68,6 @@ export function CeilingBadge({ ceiling, price, margin, belowCeiling, variant = "
         : `${label}${marginText ? `, ${marginText}` : ""}`;
     return (
       <span className={`ceiling-chip ${RISK_CLASS[status]}`} aria-label={aria}>
-        <span aria-hidden="true">{ICON[status]}</span>
         <span>
           {label}
           {status !== "na" && marginText ? ` (${marginText})` : ""}
@@ -110,16 +108,13 @@ export function CeilingBadge({ ceiling, price, margin, belowCeiling, variant = "
             </div>
           </div>
           <p className={`ceiling-verdict ${RISK_CLASS[status]}`}>
-            <span aria-hidden="true">{ICON[status]}</span>{" "}
-            <strong>{label.toUpperCase()}</strong>
+            <strong>{label}</strong>
             {marginText ? ` · ${marginText}` : ""}
             {status === "verde" ? " (pode comprar)" : status === "vermelho" ? " (caro)" : ""}
           </p>
         </>
       ) : (
-        <p className="muted">
-          Teto não calculado — faltam anos de dividendos consistentes para estimar com segurança.
-        </p>
+        <p className="muted">Teto não calculado: faltam anos de dividendos consistentes.</p>
       )}
     </div>
   );

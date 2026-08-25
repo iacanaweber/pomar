@@ -2,6 +2,7 @@ import { Suspense, lazy } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
 import { useAuthStatus, useLogout } from "./api/queries";
 import { GlossaryProvider } from "./app/GlossaryProvider";
+import { BrandMark, Icon, type IconName } from "./components/Icon";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AssetPage } from "./pages/AssetPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -22,11 +23,11 @@ const TargetPortfolioPage = lazy(() =>
 
 // O ícone só aparece na barra inferior do celular, onde o rótulo sozinho fica apertado
 // em 360px. No desktop ele some e o texto continua sendo a âncora.
-const TABS: { to: string; label: string; icon: string }[] = [
-  { to: "/plano", label: "Plantar", icon: "🌱" },
-  { to: "/carteira", label: "Carteira", icon: "🧺" },
-  { to: "/reserva", label: "Reserva", icon: "🏦" },
-  { to: "/watchlist", label: "Descobrir", icon: "🔍" },
+const TABS: { to: string; label: string; icon: IconName }[] = [
+  { to: "/plano", label: "Plantar", icon: "plant" },
+  { to: "/carteira", label: "Carteira", icon: "basket" },
+  { to: "/reserva", label: "Reserva", icon: "vault" },
+  { to: "/watchlist", label: "Descobrir", icon: "search" },
 ];
 
 function PageFallback() {
@@ -43,7 +44,7 @@ function AppShell() {
     <>
       <header className="header">
         <div className="brand">
-          <span className="logo">🌳</span>
+          <BrandMark size={26} />
           <div>
             <h1>Pomar</h1>
             <p>Plante seus aportes, colha dividendos.</p>
@@ -67,8 +68,8 @@ function AppShell() {
             to={t.to}
             className={({ isActive }) => `tab ${isActive ? "tab-on" : ""}`}
           >
-            <span className="tab-icon" aria-hidden="true">
-              {t.icon}
+            <span className="tab-icon">
+              <Icon name={t.icon} size={20} />
             </span>
             <span className="tab-label">{t.label}</span>
           </NavLink>

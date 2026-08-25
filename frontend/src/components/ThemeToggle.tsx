@@ -1,4 +1,5 @@
 import { useTheme } from "../hooks/useTheme";
+import { Icon } from "./Icon";
 
 /** Alterna claro/escuro. Cor nunca sozinha: traz ícone + rótulo acessível. */
 export function ThemeToggle() {
@@ -11,7 +12,7 @@ export function ThemeToggle() {
       aria-label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
       title={dark ? "Tema claro" : "Tema escuro"}
     >
-      <span aria-hidden="true">{dark ? "☀️" : "🌙"}</span>
+      <Icon name={dark ? "sun" : "moon"} size={18} />
     </button>
   );
 }

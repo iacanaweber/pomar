@@ -5,6 +5,7 @@ import { money } from "../lib/format";
 import { AssetLink } from "./AssetLink";
 import { CeilingBadge } from "./CeilingBadge";
 import { Tooltip } from "./Tooltip";
+import { Icon } from "./Icon";
 
 const RISK_CLASS: Record<string, string> = {
   verde: "risk-verde",
@@ -38,7 +39,7 @@ function RegisterBuyButton({ asset, planId }: { asset: PlanAsset; planId?: numbe
         });
       }}
     >
-      {create.isPending ? "registrando…" : "🛒 Registrei a compra"}
+      {create.isPending ? "registrando…" : "Registrei a compra"}
     </button>
   );
 }
@@ -109,7 +110,7 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
             variant="chip"
           />
           {discounted && !asset.suggested && (
-            <span className="discount-seal">💰 Abaixo do preço-teto</span>
+            <span className="discount-seal">Abaixo do preço-teto</span>
           )}
         </div>
       )}
@@ -117,7 +118,7 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
       {reasons.length > 0 && (
         <ul className="card-reasons">
           {reasons.map((r, i) => (
-            <li key={i}>🌱 {r}</li>
+            <li key={i}>{r}</li>
           ))}
         </ul>
       )}
@@ -132,7 +133,7 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
       {redFlags.length > 0 && (
         <ul className="card-flags">
           {redFlags.map((f, i) => (
-            <li key={i}>▲ {f}</li>
+            <li key={i}><Icon name="alert" size={13} /> {f}</li>
           ))}
         </ul>
       )}

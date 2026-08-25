@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useGlossary } from "../hooks/useGlossary";
+import { Icon } from "./Icon";
 
 /**
  * Tooltip explicativo. Funciona por hover (desktop) e por toque (mobile).
@@ -50,7 +51,7 @@ export function Tooltip({ metricKey, children }: { metricKey: string; children: 
         }}
       >
         {children}
-        <span className="tip-mark">ⓘ</span>
+        <Icon name="info" size={14} className="icon icon-info tip-mark" />
       </span>
       {open && (
         <span className="tip-box" role="tooltip">

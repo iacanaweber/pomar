@@ -18,6 +18,7 @@ import { PALETTE } from "../lib/palette";
 import { PortfolioVsTarget } from "../components/PortfolioVsTarget";
 import { PerformanceChart } from "../components/PerformanceChart";
 import { buildComparison } from "../lib/comparison";
+import { Icon } from "../components/Icon";
 
 type GroupBy = "target" | "rendimento" | "asset" | "class" | "geography" | "sector";
 
@@ -165,7 +166,7 @@ export function PortfolioPage() {
     return (
       <main className="page">
         <div className="banner banner-error">
-          ⚠️ Não consegui ler sua carteira no Ghostfolio:{" "}
+          <Icon name="alert" size={15} /> Não consegui ler sua carteira no Ghostfolio:{" "}
           {error instanceof ApiError ? error.userMessage : "erro desconhecido"}
         </div>
       </main>
@@ -323,7 +324,7 @@ export function PortfolioPage() {
                         <span
                           className={`pf-perf ${p.net_performance_pct >= 0 ? "pf-perf-up" : "pf-perf-down"}`}
                         >
-                          {p.net_performance_pct >= 0 ? "▲" : "▼"} {pct(Math.abs(p.net_performance_pct))}
+                          {p.net_performance_pct >= 0 ? "+" : "−"}{pct(Math.abs(p.net_performance_pct))}
                         </span>
                       </Tooltip>
                     )}

@@ -11,6 +11,7 @@ import { CeilingBadge } from "../components/CeilingBadge";
 import { Tooltip } from "../components/Tooltip";
 import type { Fundamentals } from "../types";
 import { money, pct } from "../lib/format";
+import { Icon } from "../components/Icon";
 
 /** Evolução do Yield on Cost, a partir dos snapshots mensais: quanto a posição rende
  *  sobre o PREÇO PAGO, e para onde esse número foi desde o primeiro snapshot. */
@@ -200,14 +201,14 @@ export function AssetPage() {
       {(analysis.highlights ?? []).length > 0 && (
         <ul className="card-reasons">
           {(analysis.highlights ?? []).map((r, i) => (
-            <li key={i}>🌱 {r}</li>
+            <li key={i}>{r}</li>
           ))}
         </ul>
       )}
       {(analysis.red_flags ?? []).length > 0 && (
         <ul className="card-flags">
           {(analysis.red_flags ?? []).map((r, i) => (
-            <li key={i}>▲ {r}</li>
+            <li key={i}><Icon name="alert" size={13} /> {r}</li>
           ))}
         </ul>
       )}

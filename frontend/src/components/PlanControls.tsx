@@ -8,6 +8,7 @@ import type { SwState } from "../lib/pwa";
 import { usePwa } from "../hooks/usePwa";
 import { SavedToast } from "./SavedToast";
 import { Tooltip } from "./Tooltip";
+import { Icon } from "./Icon";
 
 interface Props {
   preferences?: Preferences;
@@ -154,12 +155,12 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
           </div>
           <p className="muted class-picker-meta">
             {metaLine ? `Meta da carteira: ${metaLine}` : "Sem metas por classe definidas"} ·{" "}
-            <Link to="/alvo">✏️ Carteira alvo</Link>
+            <Link to="/alvo">Carteira alvo</Link>
           </p>
         </fieldset>
       ) : (
         <div className="card empty-target">
-          <h3>🌱 Comece pela carteira alvo</h3>
+          <h3>Comece pela carteira alvo</h3>
           <p className="muted">
             O Pomar não escolhe ativos por você: ele compra o que está mais longe do peso que{" "}
             <strong>você</strong> definiu. Diga quais ativos compõem cada classe e com que
@@ -175,8 +176,15 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
         </div>
       )}
 
-      <button type="button" className="link-button" onClick={() => setAdvanced((v) => !v)}>
-        {advanced ? "▲ Ocultar ajustes avançados" : "▼ Ajustes avançados"}
+      <button
+        type="button"
+        className="link-button"
+        aria-expanded={advanced}
+        onClick={() => setAdvanced((v) => !v)}
+      >
+        <>
+          <Icon name="chevron" size={16} /> Ajustes avançados
+        </>
       </button>
 
       {advanced && (
@@ -205,13 +213,13 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
             onClick={savePreferences}
             disabled={savePrefs.isPending}
           >
-            {savePrefs.isPending ? "Salvando…" : "💾 Salvar como meu padrão"}
+            {savePrefs.isPending ? "Salvando…" : "Salvar como meu padrão"}
           </button>
         </div>
       )}
 
       <button className="primary" type="submit" disabled={loading || usable.length === 0}>
-        {loading ? "Analisando o pomar…" : "🌳 Ver recomendações"}
+        {loading ? "Analisando o pomar…" : "Ver recomendações"}
       </button>
       {hasAnyBasket && usable.length === 0 && (
         <span className="field-error">

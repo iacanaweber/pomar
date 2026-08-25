@@ -6,6 +6,7 @@ import { AssetLink } from "../components/AssetLink";
 import { CeilingBadge } from "../components/CeilingBadge";
 import type { RadarItem, WatchlistItem } from "../types";
 import { money, pct, shortDateTime } from "../lib/format";
+import { Icon } from "../components/Icon";
 
 function StatusChip({ item }: { item: WatchlistItem }) {
   if (item.valid === 1)
@@ -69,7 +70,7 @@ function WatchlistRow({ item, radar }: { item: WatchlistItem; radar?: RadarItem 
           disabled={remove.isPending}
           aria-label={`Remover ${item.ticker} da lista`}
         >
-          🗑
+          <Icon name="trash" size={18} />
         </button>
       </div>
     </li>
@@ -121,7 +122,7 @@ export function WatchlistPage() {
 
       {belowNow.length > 0 && (
         <div className="banner radar-banner">
-          🎯 <strong>Abaixo do teto agora:</strong>{" "}
+          <strong>Abaixo do teto agora:</strong>{" "}
           {belowNow.slice(0, 6).map((r, i) => (
             <span key={r.ticker}>
               {i > 0 ? " · " : ""}
@@ -141,13 +142,13 @@ export function WatchlistPage() {
           aria-label="Ticker para adicionar"
         />
         <button className="primary" type="submit" disabled={add.isPending || !ticker.trim() || duplicate}>
-          {add.isPending ? "Adicionando…" : "＋ Adicionar"}
+          {add.isPending ? "Adicionando…" : "Adicionar"}
         </button>
       </form>
       {duplicate && <p className="field-error">{ticker.trim().toUpperCase()} já está na sua lista.</p>}
       {add.isError && (
         <div className="banner banner-error">
-          ⚠️ {add.error instanceof ApiError ? add.error.userMessage : "Não consegui adicionar."}
+          <Icon name="alert" size={15} /> {add.error instanceof ApiError ? add.error.userMessage : "Não consegui adicionar."}
         </div>
       )}
 

@@ -12,6 +12,7 @@ import { FixedIncomeSuggestionCard } from "../components/FixedIncomeSuggestionCa
 import type { PlanRequest } from "../types";
 import { classLabel } from "../lib/classes";
 import { shortDateTime } from "../lib/format";
+import { Icon } from "../components/Icon";
 
 export function PlanPage() {
   const preferences = usePreferences();
@@ -45,7 +46,7 @@ export function PlanPage() {
 
       {plan.isError && (
         <div className="banner banner-error">
-          ⚠️ {planError ? planError.userMessage : "Erro ao gerar o plano"}
+          <Icon name="alert" size={15} /> {planError ? planError.userMessage : "Erro ao gerar o plano"}
           {portfolioUnavailable && lastReq && (
             <div style={{ marginTop: 6 }}>
               <button
@@ -63,13 +64,13 @@ export function PlanPage() {
         <>
           {isRestored && (
             <p className="muted plan-restored">
-              📌 Último plano gerado{result.created_at ? ` em ${shortDateTime(result.created_at)}` : ""} —
+              Último plano gerado{result.created_at ? ` em ${shortDateTime(result.created_at)}` : ""} —
               gere um novo se a carteira ou o aporte mudaram.
             </p>
           )}
           {(result.classes_skipped ?? []).length > 0 && (
             <div className="banner banner-warn">
-              ⚠️ Sem composição definida:{" "}
+              <Icon name="alert" size={15} /> Sem composição definida:{" "}
               {(result.classes_skipped ?? []).map((c) => classLabel(c)).join(", ")} — essas
               classes ficaram de fora do plano.{" "}
               <Link to={`/alvo#${(result.classes_skipped ?? [])[0]}`}>definir agora →</Link>

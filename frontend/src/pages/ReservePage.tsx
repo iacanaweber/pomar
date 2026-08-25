@@ -25,6 +25,7 @@ import type {
 } from "../types";
 import { brToISO, isoToBR, money, parseBRL, pct, todayBR } from "../lib/format";
 import { Tooltip } from "../components/Tooltip";
+import { Icon } from "../components/Icon";
 
 /** Piso da reserva: o mínimo que fica em renda fixa de RESGATE IMEDIATO.
  *
@@ -178,7 +179,7 @@ function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefined }) 
         {floor.deficit > 0 ? (
           <> · faltam <strong>{money(floor.deficit)}</strong></>
         ) : (
-          <> · ✅ cumprido</>
+          <> · cumprido</>
         )}
       </p>
       {corrigido && (
@@ -229,7 +230,7 @@ function EntriesList({ accountId }: { accountId: number }) {
                 del.mutate({ accountId, entryId: e.id });
             }}
           >
-            🗑
+            <Icon name="trash" size={18} />
           </button>
         </li>
       ))}
@@ -296,7 +297,7 @@ function AccountClassification({
       <p className="reserve-window reserve-class">
         {resumo}{" "}
         <button className="link-button reserve-rename" onClick={() => setOpen((v) => !v)}>
-          {open ? "▲ fechar" : "editar"}
+          {open ? "fechar" : "editar"}
         </button>
       </p>
       {open && (
@@ -356,7 +357,7 @@ function AccountClassification({
           </div>
           {update.isError && (
             <div className="banner banner-error">
-              ⚠️{" "}
+              <Icon name="alert" size={15} />{" "}
               {update.error instanceof ApiError
                 ? update.error.userMessage
                 : "Não consegui salvar a mudança."}
@@ -418,7 +419,7 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
       </p>
       {addEntry.isError && (
         <div className="banner banner-error">
-          ⚠️ {addEntry.error instanceof ApiError ? addEntry.error.userMessage : "Erro ao lançar."}
+          <Icon name="alert" size={15} /> {addEntry.error instanceof ApiError ? addEntry.error.userMessage : "Erro ao lançar."}
         </div>
       )}
       <button className="primary" type="submit" disabled={addEntry.isPending || !(parseBRL(amount) > 0) || dateInvalid}>
@@ -526,10 +527,10 @@ function AccountCard({
 
       <div className="reserve-actions">
         <button className="link-button" onClick={() => setOpen((v) => !v)}>
-          {open ? "▲ Fechar lançamento" : "＋ Lançar aporte / atualizar saldo"}
+          {open ? "Fechar lançamento" : "Lançar aporte"}
         </button>
         <button className="link-button" onClick={() => setShowEntries((v) => !v)}>
-          {showEntries ? "▲ Ocultar lançamentos" : "📜 Ver lançamentos"}
+          {showEntries ? "Ocultar lançamentos" : "Ver lançamentos"}
         </button>
         <button
           className="link-button reserve-archive"
@@ -540,7 +541,7 @@ function AccountCard({
           disabled={archive.isPending}
           aria-label={`Arquivar conta ${account.name} (reversível)`}
         >
-          📦 Arquivar
+          Arquivar
         </button>
       </div>
 
@@ -606,7 +607,7 @@ function NewAccountForm() {
   if (!open)
     return (
       <button className="primary" onClick={() => setOpen(true)}>
-        ＋ Adicionar conta / aplicação
+        Adicionar conta / aplicação
       </button>
     );
 
@@ -686,7 +687,7 @@ function NewAccountForm() {
       </p>
       {(create.isError || addEntry.isError) && (
         <div className="banner banner-error">
-          ⚠️ {create.error instanceof ApiError ? create.error.userMessage : "Erro ao criar a conta."}
+          <Icon name="alert" size={15} /> {create.error instanceof ApiError ? create.error.userMessage : "Erro ao criar a conta."}
         </div>
       )}
       <div className="reserve-actions">
@@ -732,7 +733,7 @@ export function ReservePage() {
       {isLoading && <p className="muted">Carregando suas aplicações…</p>}
       {error && (
         <div className="banner banner-error">
-          ⚠️ {error instanceof ApiError ? error.userMessage : "Erro ao ler a renda fixa."}
+          <Icon name="alert" size={15} /> {error instanceof ApiError ? error.userMessage : "Erro ao ler a renda fixa."}
         </div>
       )}
 
@@ -816,7 +817,10 @@ export function ReservePage() {
       {archived.length > 0 && (
         <div style={{ marginTop: 16 }}>
           <button className="link-button" onClick={() => setShowArchived((v) => !v)}>
-            {showArchived ? "▲ Ocultar arquivadas" : `▼ Mostrar arquivadas (${archived.length})`}
+            <>
+              <Icon name="chevron" size={14} />{" "}
+              {showArchived ? "Ocultar arquivadas" : `Arquivadas (${archived.length})`}
+            </>
           </button>
           {showArchived && (
             <ul className="cards" style={{ marginTop: 8 }}>
