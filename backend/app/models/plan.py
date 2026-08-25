@@ -278,6 +278,13 @@ class PlanRequest(BaseModel):
     reserve_floor: Optional[float] = Field(
         None, ge=0, description="Sobrepõe o piso da reserva das preferências (BRL)."
     )
+    reserve_floor_share: Optional[float] = Field(
+        None,
+        ge=0,
+        le=1,
+        description="Teto do aporte para o PISO da reserva (0..1). Omitido usa a "
+        "preferência salva; 1 é prioridade absoluta.",
+    )
     allow_empty_portfolio: bool = Field(
         False,
         description="Permite gerar plano SEM conseguir ler a carteira (fail-open explícito). "

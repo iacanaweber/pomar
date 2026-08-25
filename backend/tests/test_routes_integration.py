@@ -1195,3 +1195,84 @@ def test_performance_requires_auth(monkeypatch, tmp_path):
     c = TestClient(create_app(), base_url="http://testserver")
     assert c.get("/api/performance").status_code == 401
     get_settings.cache_clear(); get_db.cache_clear()
+
+
+def test_plan_teto_do_aporte_para_o_piso(authed_client, _stub_cdi, monkeypatch):
+    """O caso do dono: aporte 2.000, teto em 50%, faltando 9.501 no piso.
+
+    Sem o teto, o déficit come o aporte inteiro e a bolsa fica com zero — mês após mês.
+    """
+    c = authed_client
+    c.put("/api/preferences", json={
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "reserve_floor_amount": 30_000.0,
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+
+    r = c.post("/api/plan", json={
+        "aporte": 2_000.0, "classes": ["STOCK"], "min_ticket": 10.0,
+        "reserve_current": 20_499.0, "reserve_floor_share": 0.5,
+    }).json()
+
+    assert r["reserve"]["gap"] == 9_501.0
+    assert r["reserve"]["directed_now"] == 1_000.0
+    assert "50% do aporte" in r["fixed_income"]["note"]
+    bought = next(x for x in r["ranking"] if x["ticker"] == "AAA3")
+    assert bought["suggested"]["invested_exact"] == 1_000.0
+
+
+def test_plan_teto_em_zero_nao_desvia_e_explica(authed_client, _stub_cdi, monkeypatch):
+    c = authed_client
+    c.put("/api/preferences", json={
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "reserve_floor_amount": 30_000.0,
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+
+    r = c.post("/api/plan", json={
+        "aporte": 1_000.0, "classes": ["STOCK"], "min_ticket": 10.0,
+        "reserve_current": 20_000.0, "reserve_floor_share": 0.0,
+    }).json()
+
+    assert r["reserve"]["directed_now"] == 0.0
+    # o silêncio esconderia a decisão de não cobrir o piso
+    assert "Nada para o piso da reserva" in r["fixed_income"]["note"]
+    assert next(x for x in r["ranking"] if x["ticker"] == "AAA3")["suggested"]["invested_exact"] == 1_000.0
+
+
+def test_plan_teto_salvo_nas_preferencias_vale_sem_o_cliente_mandar(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """PWA com JS em cache manda PlanRequest sem o campo — a preferência tem que valer."""
+    c = authed_client
+    c.put("/api/preferences", json={
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "reserve_floor_amount": 30_000.0,
+        "reserve_floor_share": 0.25,
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+
+    r = c.post("/api/plan", json={
+        "aporte": 2_000.0, "classes": ["STOCK"], "min_ticket": 10.0, "reserve_current": 0.0,
+    }).json()
+    assert r["reserve"]["directed_now"] == 500.0
+
+
+def test_plan_sem_teto_configurado_mantem_a_prioridade_absoluta(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """A garantia de que ninguém acorda com o plano diferente."""
+    c = authed_client
+    c.put("/api/preferences", json={
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+        "reserve_floor_amount": 30_000.0,
+    })
+    _stub_plan_market(monkeypatch, [_asset("AAA3", "STOCK", 10.0)])
+
+    r = c.post("/api/plan", json={
+        "aporte": 1_000.0, "classes": ["STOCK"], "min_ticket": 10.0,
+        "reserve_current": 20_000.0,
+    }).json()
+    assert r["reserve"]["directed_now"] == 1_000.0
+    # sem corte, a nota não ganha parêntese nenhum
+    assert "máximo de" not in r["fixed_income"]["note"]

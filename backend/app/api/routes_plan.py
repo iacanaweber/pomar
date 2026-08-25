@@ -36,7 +36,7 @@ from app.services import fixed_income as fi
 from app.services import indexers as indexers_svc
 from app.services import legacy as legacy_svc
 from app.services import reserve as reserve_svc
-from app.services.allocation import aligned_value_by_class, allocate
+from app.services.allocation import aligned_value_by_class, allocate, class_needs
 from app.services.analysis import analyze_asset, resolve_bazin_target_yield
 from app.services.portfolio_service import get_enriched_portfolio
 from app.services.reserve_service import resolve_floor
@@ -276,7 +276,26 @@ async def plan(req: PlanRequest) -> PlanResponse:
     total_after = base_rv + rf_value + req.aporte
     rf_class_target = targets.get(RENDA_FIXA, 0.0) * total_after
 
-    split = cascade.split_aporte(req.aporte, floor["deficit"], rf_class_target, rf_value)
+    # Teto do aporte para o piso: do pedido, ou da preferência salva, ou 1.0 (prioridade
+    # absoluta, o comportamento de sempre). `is not None` porque 0.0 é uma escolha.
+    pref_share = prefs.get("reserve_floor_share")
+    floor_share = (
+        req.reserve_floor_share
+        if req.reserve_floor_share is not None
+        else (1.0 if pref_share is None else float(pref_share))
+    )
+    # Déficit das classes de bolsa pela MESMA fórmula do alocador: é contra ele que a renda
+    # fixa disputa a sobra do aporte, em vez de pré-empregá-la.
+    needs_rv = class_needs(aligned, targets, total_after, baskets)
+
+    split = cascade.split_aporte(
+        req.aporte,
+        floor["deficit"],
+        rf_class_target,
+        rf_value,
+        floor_share=floor_share,
+        rv_need=sum(needs_rv.values()),
+    )
     aporte_rv = split["aporte_rv"]
 
     # 7) alocação do aporte de RENDA VARIÁVEL (após o pré-corte da reserva).
@@ -292,9 +311,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
     )
 
     # mesma conta de necessidade do alocador — a explicação não pode divergir do motor
-    at_target = {
-        c for c in baskets if targets.get(c, 0.0) * total_after - aligned.get(c, 0.0) <= 0
-    }
+    at_target = {c for c, n in needs_rv.items() if n <= 0}
     for item in ranking:
         item.reasons = _plan_reasons(item, at_target)
 
@@ -367,13 +384,22 @@ async def plan(req: PlanRequest) -> PlanResponse:
                     )
                 )
 
+        teto_txt = f"máximo de {floor_share * 100:.0f}% do aporte"
         if split["rf_total"] > 0:
             partes = []
             if split["floor_directed"] > 0:
-                partes.append(f"{_brl(split['floor_directed'])} para o piso da reserva")
+                piso_txt = f"{_brl(split['floor_directed'])} para o piso da reserva"
+                # sem isto, cobrir R$ 1.000 de um déficit de R$ 9.501 pareceria erro de conta
+                if split["floor_capped"]:
+                    piso_txt += f" ({teto_txt})"
+                partes.append(piso_txt)
             if split["rf_directed"] > 0:
                 partes.append(f"{_brl(split['rf_directed'])} para o peso da classe")
             nota = " e ".join(partes) + "."
+        elif split["floor_capped"]:
+            # só se chega aqui com o teto em 0% e o piso em déficit: o silêncio esconderia
+            # uma decisão de não cobrir o piso
+            nota = f"Nada para o piso da reserva: o {teto_txt}."
         elif gap["brl"] <= 0:
             # Acima do alvo é uma carteira saudável, não um erro: nada de aviso.
             nota = "Renda fixa no alvo ou acima — o aporte inteiro vai para a renda variável."
