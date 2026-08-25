@@ -26,16 +26,27 @@ export function Tooltip({ metricKey, children }: { metricKey: string; children: 
     <span
       className="tip"
       ref={ref}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
+      // Só o ponteiro FINO abre por hover. Com `onMouseEnter`, um toque disparava o
+      // mouseenter sintético (abre) e logo em seguida o click (fecha): no celular o
+      // tooltip abria e sumia no mesmo gesto, e a explicação era inalcançável.
+      onPointerEnter={(e) => e.pointerType === "mouse" && setOpen(true)}
+      onPointerLeave={(e) => e.pointerType === "mouse" && setOpen(false)}
     >
       <span
         className="tip-anchor"
         role="button"
         tabIndex={0}
+        aria-expanded={open}
         onClick={(e) => {
           e.stopPropagation();
           setOpen((v) => !v);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((v) => !v);
+          }
+          if (e.key === "Escape") setOpen(false);
         }}
       >
         {children}

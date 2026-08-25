@@ -6,6 +6,7 @@ import { PlanControls } from "../components/PlanControls";
 import { RankedList } from "../components/RankedList";
 import { AllocationSummary } from "../components/AllocationSummary";
 import { HealthBanner } from "../components/HealthBanner";
+import { UpdateBanner } from "../components/UpdateBanner";
 import { OrdersHistory } from "../components/OrdersHistory";
 import { FixedIncomeSuggestionCard } from "../components/FixedIncomeSuggestionCard";
 import type { PlanRequest } from "../types";
@@ -33,6 +34,7 @@ export function PlanPage() {
 
   return (
     <main className="page">
+      <UpdateBanner />
       <HealthBanner />
 
       <PlanControls

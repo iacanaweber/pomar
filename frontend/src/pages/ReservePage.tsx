@@ -144,9 +144,11 @@ function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefined }) 
   return (
     <div className="alloc reserve-goal">
       <div className="goal-head">
-        <Tooltip metricKey="reserve_floor">
-          <h3 style={{ margin: 0 }}>Piso da reserva</h3>
-        </Tooltip>
+        <h3 style={{ margin: 0 }}>
+          <Tooltip metricKey="reserve_floor">
+            <span>Piso da reserva</span>
+          </Tooltip>
+        </h3>
         <button className="link-button" onClick={open}>
           editar
         </button>

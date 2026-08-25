@@ -108,7 +108,9 @@ body {
 .header {
   background: linear-gradient(135deg, var(--green), var(--green-light));
   color: #fff;
-  padding: 18px 16px;
+  /* o padding-top absorve o notch quando o app roda em standalone */
+  padding: calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right))
+           18px calc(16px + env(safe-area-inset-left));
 }
 .header-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
 .brand { display: flex; align-items: center; gap: 12px; max-width: 820px; margin: 0 auto; }
@@ -117,7 +119,8 @@ body {
 .header p { margin: 0; opacity: 0.9; font-size: 13px; }
 
 /* Layout */
-.page { max-width: 820px; margin: 0 auto; padding: 16px; }
+.page { max-width: 820px; margin: 0 auto;
+  padding: 16px calc(16px + env(safe-area-inset-right)) 16px calc(16px + env(safe-area-inset-left)); }
 h2 { font-size: 18px; margin: 22px 0 10px; }
 h3 { font-size: 15px; margin: 18px 0 8px; }
 
@@ -193,7 +196,7 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 
 /* Tooltip */
 .tip { position: relative; display: inline-block; }
-.tip-anchor { cursor: help; border-bottom: 1px dotted currentColor; }
+.tip-anchor { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
 .tip-mark { font-size: 10px; opacity: 0.6; margin-left: 2px; vertical-align: super; }
 .tip-box { position: absolute; z-index: 20; left: 0; top: 130%; width: min(280px, 80vw);
   background: var(--tip-bg); color: #fff; border-radius: 10px; padding: 10px 12px;
@@ -205,15 +208,39 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .tip-src { opacity: 0.6; font-size: 11px; border-top: 1px solid rgba(255,255,255,.15);
   padding-top: 4px; }
 
-/* Tabs */
-.tabs { display: flex; gap: 4px; max-width: 820px; margin: 0 auto; padding: 0 16px;
-  background: var(--bg); position: sticky; top: 0; z-index: 10; overflow-x: auto;
-  -webkit-overflow-scrolling: touch; }
-.tab { flex: 1; min-width: max-content; min-height: 44px; background: none; border: 0;
-  border-bottom: 3px solid transparent; padding: 14px 10px; font-size: 15px; font-weight: 600;
-  color: var(--muted); cursor: pointer; white-space: nowrap; text-decoration: none;
-  text-align: center; display: flex; align-items: center; justify-content: center; }
-.tab-on { color: var(--green); border-bottom-color: var(--green); }
+/* Tabs — no CELULAR viram barra inferior fixa; no desktop, abas no topo.
+   Em standalone o topo da tela fica longe do polegar, e trocar de aba é o gesto mais
+   repetido do app. A barra respeita a safe area (barra de gestos do iOS/Android). */
+.tabs { display: flex; gap: 4px; background: var(--card); z-index: 20;
+  position: fixed; left: 0; right: 0; bottom: 0;
+  border-top: 1px solid var(--line);
+  padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+  padding-left: calc(8px + env(safe-area-inset-left));
+  padding-right: calc(8px + env(safe-area-inset-right)); }
+.tab { flex: 1; min-width: 0; min-height: 52px; background: none; border: 0;
+  border-radius: 10px; padding: 6px 4px; font-size: 11px; font-weight: 600;
+  color: var(--muted); cursor: pointer; text-decoration: none; text-align: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 2px; }
+.tab-icon { font-size: 19px; line-height: 1; }
+/* Sem nowrap: em 360px, quatro rótulos + ícone não cabem, e o `flex: 1` só encolhe até
+   o tamanho do texto. Aqui o rótulo pode reticenciar em vez de estourar a barra. */
+.tab-label { overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tab-on { color: var(--green); background: var(--chip-bg); }
+
+/* A barra fixa flutua sobre o conteúdo: o rodapé precisa de espaço para não ficar
+   embaixo dela — senão a última linha de toda página some. */
+.footer { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+
+@media (min-width: 640px) {
+  .tabs { position: sticky; top: 0; bottom: auto; max-width: 820px; margin: 0 auto;
+    padding: 0 16px; background: var(--bg); border-top: 0; }
+  .tab { flex-direction: row; gap: 0; min-height: 44px; font-size: 15px;
+    border-radius: 0; border-bottom: 3px solid transparent; padding: 14px 10px; }
+  .tab-icon { display: none; }
+  .tab-on { background: none; border-bottom-color: var(--green); }
+  .footer { padding-bottom: 24px; }
+}
 
 /* Portfolio summary */
 .pf-summary { display: flex; flex-direction: column; align-items: center; gap: 2px;
@@ -406,8 +433,10 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .yoc-yoc { font-weight: 600; }
 .yoc-up { color: var(--green); }
 /* Watchlist */
-.watchlist-add { display: flex; gap: 8px; margin-bottom: 8px; }
-.watchlist-add input { flex: 1; padding: 12px; border: 2px solid var(--line); border-radius: 10px;
+/* `flex: 1` sozinho não encolhe abaixo do tamanho do conteúdo: sem `min-width: 0` o
+   input empurrava o botão para fora e a página inteira ganhava 3px de scroll lateral. */
+.watchlist-add { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.watchlist-add input { flex: 1; min-width: 0; padding: 12px; border: 2px solid var(--line); border-radius: 10px;
   font-size: 16px; background: var(--card); color: var(--ink); min-height: 44px; }
 .watchlist-add .primary { width: auto; }
 .watchlist-row { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
@@ -456,7 +485,7 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .reserve-class { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 /* Chip de opção em largura cheia (o de classe é 2×2; este é uma pergunta só). */
 .class-chip-wide { width: 100%; }
-.reserve-rename { padding: 0 4px; min-height: 0; font-size: 12px; }
+.reserve-rename { padding: 15px 4px; margin: -15px 0; min-height: 0; font-size: 12px; }
 .reserve-archived-row { opacity: 0.75; }
 
 
@@ -475,8 +504,12 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .class-picker { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .class-picker legend { font-weight: 600; font-size: 14px; padding: 0; margin-bottom: 2px; }
 .class-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+/* `min-width: 0` é o que permite o chip encolher: item de grid nasce com min-width:auto
+   e o texto mais longo ("sem composição · definir →") empurrava a coluna para fora. */
 .class-chip { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 10px 12px;
-  border: 2px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; }
+  border: 2px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer;
+  min-width: 0; overflow-wrap: anywhere; }
+.class-chip > span:not(.class-chip-meta) { min-width: 0; }
 .class-chip-on { border-color: var(--leaf); background: var(--chip-bg); }
 .class-chip input { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
 .class-chip-name { font-weight: 700; font-size: 14px; }
@@ -612,7 +645,8 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   background: var(--surface-soft); font-size: 13px; }
 .basket-sum-value { font-weight: 700; font-variant-numeric: tabular-nums; }
 .basket-sum-note { color: var(--muted); }
-.basket-sum .link-button { margin-left: auto; padding: 0; min-height: 0; }
+.basket-sum .link-button { margin-left: auto; padding: 15px 0; margin-top: -15px;
+  margin-bottom: -15px; min-height: 0; }
 .basket-sum.sum-ok { border-color: var(--leaf); }
 .basket-sum.sum-ok .basket-sum-value { color: var(--green); }
 .basket-sum.sum-over { border-color: var(--danger); background: var(--err-bg); }
@@ -732,3 +766,45 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   .fi-shortcut { grid-column: auto; }
 }
 .fi-floor { margin: 2px 0 4px; }
+
+
+/* ===== Alvos de toque (auditoria em 360×780) ===== */
+
+/* Campos de formulário: a caixa é o alvo, e 21px de altura era metade do mínimo. */
+.field input:not([type="range"]):not([type="checkbox"]),
+.advanced input:not([type="range"]):not([type="checkbox"]) { min-height: 44px; }
+
+/* Links e âncoras INLINE não podem ter 44px de altura de caixa — quebrariam a linha do
+   texto. A área de toque cresce por padding VERTICAL com margem negativa: o dedo ganha o
+   alvo e o layout não muda.
+   Duas tentativas descartadas, na ordem em que falharam: padding também na horizontal
+   (empurrava a página e criava scroll lateral) e um pseudo-elemento absoluto (não estoura
+   menos, e a área nem é mensurável por getBoundingClientRect — ou seja, não dá para
+   auditar). */
+.asset-link, .tip-anchor, .page p a, .class-chip-meta a, .cmp-note a, .field-hint a {
+  display: inline-block;
+  padding-top: 14px;
+  padding-bottom: 14px;
+  margin-top: -14px;
+  margin-bottom: -14px;
+}
+
+/* Botão só de ícone (✏️, 🗑): a altura já vinha do padding, faltava a largura — 44×44
+   vale nos dois eixos. */
+.reserve-rename, .watchlist-remove { min-width: 44px; }
+
+/* O ⓘ do tooltip é o gatilho no celular: sozinho ele tinha 10px. */
+.tip-mark { padding: 0 4px; }
+
+/* Nada de ação só por hover: o realce da legenda também responde ao toque/foco. */
+.legend-item:active, .legend-item:focus-visible { background: var(--hover); }
+
+/* Aviso de nova versão do app (service worker) */
+.update-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--chip-bg); border: 1px solid var(--leaf); color: var(--ink);
+}
+.update-banner .link-button { padding: 0; white-space: nowrap; }
+
+/* Estado do cache offline nos ajustes — uma linha, sem prosa. */
+.sw-status { font-size: 12px; font-variant-numeric: tabular-nums; }

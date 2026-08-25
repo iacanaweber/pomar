@@ -85,9 +85,11 @@ export function FixedIncomeSuggestionCard({
   return (
     <section className="alloc fi-suggestion">
       <div className="goal-head">
-        <Tooltip metricKey="reserve_floor">
-          <h3 style={{ margin: 0 }}>1. Renda fixa</h3>
-        </Tooltip>
+        <h3 style={{ margin: 0 }}>
+          <Tooltip metricKey="reserve_floor">
+            <span>1. Renda fixa</span>
+          </Tooltip>
+        </h3>
         <strong className={total > 0 ? "fi-amount" : "muted"}>
           {total > 0 ? money(total, currency) : "nada neste aporte"}
         </strong>

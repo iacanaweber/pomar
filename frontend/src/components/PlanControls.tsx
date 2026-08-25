@@ -4,6 +4,8 @@ import type { PlanRequest, Preferences } from "../types";
 import { useSavePreferences } from "../api/queries";
 import { CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
 import { money, parseBRL } from "../lib/format";
+import type { SwState } from "../lib/pwa";
+import { usePwa } from "../hooks/usePwa";
 import { SavedToast } from "./SavedToast";
 import { Tooltip } from "./Tooltip";
 
@@ -15,6 +17,26 @@ interface Props {
 
 /** Aporte assumido quando o campo fica vazio — só para VER as recomendações. */
 const APORTE_PADRAO = 2000;
+
+/** Uma linha, sem prosa: o usuário precisa saber se tem cache offline sem abrir o
+ *  DevTools. Em `http://<ip-da-lan>` o service worker não registra, e sem esta linha o
+ *  app parecia ter offline que nunca teve. */
+const SW_LABEL: Record<SwState, string> = {
+  active: "Cache offline ativo",
+  insecure: "Sem cache offline (precisa de HTTPS)",
+  unsupported: "Sem cache offline (navegador não suporta)",
+  failed: "Sem cache offline (falha ao registrar)",
+  dev: "Sem cache offline (modo de desenvolvimento)",
+};
+
+function OfflineStatusLine() {
+  const { state } = usePwa();
+  return (
+    <span className="muted sw-status">
+      {state === "active" ? "●" : "○"} {SW_LABEL[state]}
+    </span>
+  );
+}
 
 export function PlanControls({ preferences, loading, onSubmit }: Props) {
   const [aporte, setAporte] = useState("");
@@ -178,6 +200,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
             não depende dele. O piso da reserva fica na aba{" "}
             <Link to="/reserva">Reserva</Link>, em reais.
           </span>
+          <OfflineStatusLine />
           <button
             type="button"
             className="link-button"

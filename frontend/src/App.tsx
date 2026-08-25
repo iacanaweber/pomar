@@ -20,11 +20,13 @@ const TargetPortfolioPage = lazy(() =>
   import("./pages/TargetPortfolioPage").then((m) => ({ default: m.TargetPortfolioPage })),
 );
 
-const TABS: { to: string; label: string }[] = [
-  { to: "/plano", label: "Plantar" },
-  { to: "/carteira", label: "Carteira" },
-  { to: "/reserva", label: "Reserva" },
-  { to: "/watchlist", label: "Descobrir" },
+// O ícone só aparece na barra inferior do celular, onde o rótulo sozinho fica apertado
+// em 360px. No desktop ele some e o texto continua sendo a âncora.
+const TABS: { to: string; label: string; icon: string }[] = [
+  { to: "/plano", label: "Plantar", icon: "🌱" },
+  { to: "/carteira", label: "Carteira", icon: "🧺" },
+  { to: "/reserva", label: "Reserva", icon: "🏦" },
+  { to: "/watchlist", label: "Descobrir", icon: "🔍" },
 ];
 
 function PageFallback() {
@@ -55,6 +57,9 @@ function AppShell() {
         </div>
       </header>
 
+      {/* No celular esta barra é fixada no rodapé (ver .tabs em index.css): em standalone
+          o topo da tela fica longe do polegar, e trocar de aba é o gesto mais repetido do
+          app. No desktop ela continua onde sempre esteve. */}
       <nav className="tabs" aria-label="Navegação principal">
         {TABS.map((t) => (
           <NavLink
@@ -62,7 +67,10 @@ function AppShell() {
             to={t.to}
             className={({ isActive }) => `tab ${isActive ? "tab-on" : ""}`}
           >
-            {t.label}
+            <span className="tab-icon" aria-hidden="true">
+              {t.icon}
+            </span>
+            <span className="tab-label">{t.label}</span>
           </NavLink>
         ))}
       </nav>

@@ -3,19 +3,18 @@
 **Plante seus aportes, colha dividendos.**
 
 App web pessoal para planejar aportes na B3. Você define uma **carteira alvo** — quanto cada
-classe (Ações, FIIs, ETFs, BDRs) deve pesar e, dentro de cada classe, quais ativos a compõem e
-com que percentual. Ao aportar, você informa quanto tem disponível e o Pomar responde **quantas
-cotas comprar de quê** para chegar mais perto dessa carteira.
+classe (Ações, FIIs, ETFs, BDRs e Renda fixa) deve pesar e, dentro de cada classe, quais itens
+a compõem e com que percentual. Ao aportar, você informa quanto tem disponível e o Pomar
+responde **quantas cotas comprar de quê** para chegar mais perto dessa carteira.
 
 O app não escolhe ativos por você e não dá nota a ninguém: a seleção é sua, e a recomendação é
 aritmética de rebalanceamento — quem está mais longe do peso-alvo recebe mais. Além disso ele
 calcula o **preço-teto de Bazin** (dividendo médio ÷ DY-alvo) e destaca quem está abaixo dele
-mesmo sem compra sugerida, sinaliza *red flags* factuais (prejuízo, endividamento, payout
-insustentável, liquidez baixa) e desvia parte do aporte para a reserva enquanto ela não atinge
-o alvo.
+mesmo sem compra sugerida, e sinaliza *red flags* factuais (prejuízo, endividamento, payout
+insustentável, liquidez baixa).
 
 As abas são **Plantar** (o aporte), **Carteira** (atual × alvo e composição), **Reserva**
-(rastreador de renda fixa) e **Descobrir** (watchlist com radar de preço-teto).
+(renda fixa) e **Descobrir** (watchlist com radar de preço-teto). É instalável como **PWA**.
 
 > ⚠️ Conteúdo educativo. **Não é recomendação de investimento.** Confira os dados antes de operar.
 
@@ -38,7 +37,18 @@ docker compose up -d --build
 ```
 
 Acesse **`http://<ip-do-servidor>:3334`** e entre com a sua `APP_PASSWORD`. O celular na mesma
-rede abre o mesmo endereço — a interface é mobile-first.
+rede abre o mesmo endereço — a interface é mobile-first, com a navegação fixa no rodapé.
+
+### Instalar no celular
+
+No Chrome (Android), menu → **Adicionar à tela inicial**; no Safari (iOS), compartilhar →
+**Adicionar à Tela de Início**. O app abre em tela cheia, sem barra do navegador.
+
+Uma ressalva honesta: **service worker exige HTTPS** (ou `localhost`). Servido em
+`http://<ip-da-lan>:3334`, a instalação e o modo standalone funcionam, mas o cache offline e o
+Web Push não — e o que o Chrome cria é um atalho, não um WebAPK. O app não esconde isso: a
+linha de estado em *Plantar → Ajustes avançados* diz se o cache offline está ativo. Servindo
+por HTTPS, ele passa a valer sozinho, sem mudar nada no código.
 
 ### O mínimo do `.env`
 
@@ -56,10 +66,95 @@ O `.env.example` documenta as demais (cache, CORS, backup, sessão).
 ### Primeiro uso
 
 1. Abra a aba **Plantar** → **Montar carteira alvo**.
-2. Defina as metas por classe (somando 100%) e, em cada classe, os ativos e seus pesos
+2. Defina as metas por classe (somando 100%) e, em cada classe, os itens e seus pesos
    (também somando 100%). O botão *"Usar pesos atuais da carteira"* semeia a partir do que você
    já tem no Ghostfolio.
-3. Volte ao Plantar, informe o aporte e gere as recomendações.
+3. Na aba **Reserva**, marque quais contas contam no patrimônio e informe a liquidez de cada
+   uma (veja abaixo).
+4. Volte ao Plantar, informe o aporte e gere as recomendações.
+
+---
+
+## Como a renda fixa entra na carteira
+
+A renda fixa deixou de ser só um rastreador ao lado da carteira: ela é uma **classe** como as
+outras. Três decisões, por conta:
+
+| Campo | O que muda |
+|---|---|
+| **Conta no patrimônio** | Só contas marcadas entram no total, nos gráficos e no cálculo dos alvos. O padrão é **não** contar — nenhuma conta antiga mudou de comportamento sozinha. |
+| **Propósito** | `investimento` ou `reservado para outro fim`. O segundo (a conta que provisiona o IR, por exemplo) **nunca** entra na carteira, mesmo marcado. |
+| **Liquidez** | `resgate imediato`, `janela/vencimento` ou `carência`. Só a primeira satisfaz o **piso da reserva**. |
+
+Os itens da cesta de Renda fixa não são tickers: são **tags de indexador** (CDI, Selic, IPCA,
+prefixado, LCI, LCA, poupança, ou o que você criar). Um ETF de renda fixa (IMAB11, IRFM11) pode
+receber uma tag e ser atribuído ao bucket `RENDA_FIXA` — a atribuição manual tem precedência
+sobre a classificação automática.
+
+### Piso da reserva
+
+Não existe reserva de emergência separada: ela mora no mesmo Tesouro Selic que é sua alocação
+em renda fixa, e duplicar o conceito faria o mesmo dinheiro aparecer duas vezes. O que existe é
+um **piso em reais** dentro da classe:
+
+```
+alvo da renda fixa (R$) = max(peso da classe × patrimônio, piso corrigido)
+```
+
+Com piso de R$ 30.000, peso de 20% e patrimônio de R$ 100.000, o alvo é R$ 30.000. Conforme o
+patrimônio cresce, o piso perde relevância sozinho. Um saque faz o déficit reaparecer, e ele
+tem prioridade absoluta no próximo aporte.
+
+**Só conta de resgate imediato satisfaz o piso.** Uma LCI travada por dois anos soma no peso
+percentual da classe, mas não no piso — mostrar a reserva como cumprida enquanto o dinheiro
+está preso é exatamente a falha que a reserva existe para evitar.
+
+**Correção pelo IPCA (opcional).** Um piso nominal encolhe: a 4,5% ao ano, R$ 30.000 valem o
+equivalente a ~R$ 19.000 em dez anos, e o número na tela nunca avisa. Ligando a correção, o
+piso sobe alguns reais por mês (e o plano pede aportes residuais na renda fixa de vez em
+quando — é o comportamento correto). Falha do Banco Central não quebra a tela: vale o nominal,
+com aviso.
+
+### Ordem de prioridade do aporte
+
+1. **Déficit do piso da reserva** — só cobrível por conta de resgate imediato.
+2. **Déficit percentual da classe Renda fixa**, rateado entre as tags de indexador.
+3. **O que sobrar** vai para a renda variável, pelo rebalanceamento de sempre.
+
+Como a compra de renda fixa é manual, a saída é uma instrução em reais (nunca quantidade de
+cotas), com atalho para lançar o novo saldo na conta sugerida.
+
+---
+
+## Rótulos por dimensão
+
+Em vez de uma coluna por ideia nova, o app tem rótulos `(dimensão, código)` e atribuições com
+peso. Três dimensões hoje:
+
+- **`bucket`** — a cesta em que o ativo é comprado. É a **única** que dirige a compra, e vence
+  a classificação automática.
+- **`indexer`** — a que indexador a aplicação rende. São os itens da cesta de Renda fixa.
+- **`geography`** — Brasil ou Internacional. **Só visualização.**
+
+Metas vinculantes em duas dimensões independentes formam um sistema sobredeterminado, sem
+solução para a maioria das combinações — por isso a geografia tem meta *informativa*, com
+desvio em p.p., e nenhum efeito sobre o que o app manda comprar.
+
+A geografia tem defaults curados por ticker (`backend/app/data/geography.py`), com fallback por
+sufixo, e a tela distingue o rótulo herdado do escolhido por você. A classificação é por
+**domicílio do ativo, não por origem da receita**: empresa brasileira com receita majoritariamente
+externa continua `BR`.
+
+### Ativos fora do alvo
+
+Uma posição cujo peso-alvo é zero (a classe foi a 0%, ou o ticker saiu da cesta) recebe o
+estado `LEGACY` e **não tem razão ao alvo**: sem alvo, "desvio percentual" não é um número
+pequeno, é um número que não existe. Ela ganha seção própria na Carteira, com valor em R$ e
+participação no patrimônio — nunca uma barra de progresso contra denominador zero.
+
+A preferência **"contar o que está fora do alvo no patrimônio"** (padrão: sim) decide a base
+dos alvos em R$. Contando, a carteira fica subalocada até a venda, que é o retrato
+aritmeticamente honesto.
 
 ### Persistência
 
@@ -102,9 +197,14 @@ frontend/  React + Vite; tipos gerados do OpenAPI
 ```
 
 **Onde ajustar o comportamento:** a carteira alvo é editável em `/alvo` e é o que define todas
-as recomendações; ticket mínimo e reserva-alvo ficam em "Ajustes avançados" no Plantar; a
-watchlist inicial está em `backend/app/data/watchlist.py` e os textos dos tooltips em
-`backend/app/data/glossary.py`.
+as recomendações; o ticket mínimo fica em "Ajustes avançados" no Plantar e o piso da reserva na
+aba Reserva; a watchlist inicial está em `backend/app/data/watchlist.py`, os defaults de
+geografia em `backend/app/data/geography.py`, os rótulos embutidos em
+`backend/app/data/labels_seed.py` e os textos dos tooltips em `backend/app/data/glossary.py`.
+
+**Ícone:** `cd frontend && node scripts/gen-icons.mjs` regenera os PNGs, o favicon e o SVG a
+partir da geometria no próprio script (sem dependência). As variações descartadas ficam em
+`frontend/icons-src/`.
 
 ## Licença
 

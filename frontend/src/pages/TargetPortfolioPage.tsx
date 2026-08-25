@@ -323,6 +323,7 @@ function ClassTargetsEditor({
             <span>{CLASS_LABEL[cls]}</span>
             <input
               type="number"
+              inputMode="decimal"
               min={0}
               max={100}
               step={1}

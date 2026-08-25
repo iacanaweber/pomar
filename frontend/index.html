@@ -2,8 +2,22 @@
 <html lang="pt-br">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#1b5e20" />
+    <!-- viewport-fit=cover: em standalone o app ocupa a tela inteira, e o CSS acerta as
+         bordas por env(safe-area-inset-*). Sem isto, o notch e a barra de gestos comem
+         conteúdo. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Duas theme-color: o Pomar tem ThemeToggle, então a barra de status precisa
+         acompanhar o tema escolhido em vez de ficar sempre verde. Valores de
+         src/index.css: --green (claro) e --bg (escuro). -->
+    <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#10140f" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="Pomar — plante seus aportes, colha dividendos." />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Pomar" />
     <title>Pomar — plante seus aportes, colha dividendos</title>
   </head>
   <body>
