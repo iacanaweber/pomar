@@ -438,8 +438,17 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .advanced { display: flex; flex-direction: column; gap: 12px; padding: 12px; background: var(--surface-soft);
   border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .adv-row { display: flex; flex-wrap: wrap; gap: 10px; }
+/* O slider dos ajustes avançados reaproveita o `.weight-slider` do editor de pesos: mesma
+   área de toque de 44px e o mesmo polegar desenhado à mão nos dois motores. */
+.adv-slider-field { flex-basis: 100%; }
+.adv-slider-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-8); }
+.adv-slider-value { font-weight: 700; font-variant-numeric: tabular-nums; }
 .adv-row .field { flex: 1; min-width: 110px; }
-.advanced input { padding: 8px 10px; border: 2px solid var(--line); border-radius: var(--radius-sm); font-size: var(--fs-16);
+/* `:not([type="range"])` não é preciosismo: esta regra tem especificidade (0,1,1) contra
+   os (0,1,0) de `.weight-slider`, então venceria INDEPENDENTEMENTE da ordem no arquivo, e
+   o slider viria com borda e padding por cima do `appearance: none`. A regra de alvo de
+   toque, mais abaixo, já abre a mesma exceção. */
+.advanced input:not([type="range"]) { padding: 8px 10px; border: 2px solid var(--line); border-radius: var(--radius-sm); font-size: var(--fs-16);
   background: var(--card); color: var(--ink); }
 .note-desc { margin: 0; font-size: var(--fs-13); color: var(--muted); }
 .money { background: var(--card); }
