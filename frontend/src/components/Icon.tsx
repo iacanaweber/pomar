@@ -58,7 +58,9 @@ export function Icon({
       aria-hidden="true"
       focusable="false"
       {...rest}
-    />
+    >
+      <path d={PATHS[name]} />
+    </svg>
   );
 }
 

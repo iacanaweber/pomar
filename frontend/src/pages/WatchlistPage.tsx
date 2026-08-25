@@ -6,6 +6,7 @@ import { AssetLink } from "../components/AssetLink";
 import { CeilingBadge } from "../components/CeilingBadge";
 import type { RadarItem, WatchlistItem } from "../types";
 import { money, pct, shortDateTime } from "../lib/format";
+import { classLabel } from "../lib/classes";
 import { Icon } from "../components/Icon";
 
 function StatusChip({ item }: { item: WatchlistItem }) {
@@ -41,7 +42,7 @@ function WatchlistRow({ item, radar }: { item: WatchlistItem; radar?: RadarItem 
             <AssetLink ticker={item.ticker} />
             {radar?.in_portfolio && <span className="muted watchlist-own"> · já tenho</span>}
           </span>
-          <span className="card-name">{item.asset_class || "—"}</span>
+          <span className="card-name">{item.asset_class ? classLabel(item.asset_class) : "—"}</span>
         </div>
         {radar ? (
           <div className="watchlist-radar-data">
@@ -110,13 +111,9 @@ export function WatchlistPage() {
     <main className="page">
       <h2>Observando</h2>
       <p className="muted" style={{ marginTop: 0 }}>
-        Radar de zona de compra: preço, DY e situação vs preço-teto de Bazin
-        {radar.data ? ` (DY-alvo ${pct(radar.data.bazin_target_yield)})` : ""} de cada ativo
-        que você acompanha.
-      </p>
-
-      <p className="muted" style={{ marginTop: 0 }}>
-        Acompanhamento. O aporte segue a <Link to="/alvo">carteira alvo</Link>.
+        Preço, DY e situação vs preço-teto de Bazin
+        {radar.data ? ` (DY-alvo ${pct(radar.data.bazin_target_yield)})` : ""}. O aporte
+        segue a <Link to="/alvo">carteira alvo</Link>.
       </p>
 
       {belowNow.length > 0 && (

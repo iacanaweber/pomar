@@ -64,8 +64,7 @@ export function PlanPage() {
         <>
           {isRestored && (
             <p className="muted plan-restored">
-              Último plano gerado{result.created_at ? ` em ${shortDateTime(result.created_at)}` : ""} —
-              gere um novo se a carteira ou o aporte mudaram.
+              Último plano{result.created_at ? `, de ${shortDateTime(result.created_at)}` : ""}.
             </p>
           )}
           {(result.classes_skipped ?? []).length > 0 && (
