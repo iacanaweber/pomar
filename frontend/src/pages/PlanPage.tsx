@@ -82,16 +82,19 @@ export function PlanPage() {
               ))}
             </div>
           )}
-          {/* A renda fixa vem PRIMEIRO: é o primeiro degrau da cascata, e a ordem da tela
-              é a ordem em que o dinheiro é decidido. */}
+          {/* Diagnóstico, depois ação. O desvio por classe é o que explica TODAS as
+              sugestões abaixo dele — ler primeiro o remédio e só depois o sintoma obriga a
+              subir a tela de volta. Dentro da ação, a renda fixa vem antes por ser o
+              primeiro degrau da cascata. */}
+          <AllocationSummary plan={result} />
           {result.fixed_income && (
             <FixedIncomeSuggestionCard
               suggestion={result.fixed_income}
               reserve={result.reserve}
               currency={result.currency}
+              planId={result.plan_id}
             />
           )}
-          <AllocationSummary plan={result} />
           <RankedList plan={result} />
         </>
       )}

@@ -62,6 +62,18 @@
   /* Tokens semânticos (substituem os hex antes hardcoded — habilitam o dark mode). */
   --surface-soft: #fafdfa;
   --track: #eef2ee;
+  /* Superfície do cartão de DIAGNÓSTICO. Neutro com viés frio, e não mais uma variação de
+     verde: o verde no app inteiro quer dizer "dinheiro se move aqui", e esse cartão não
+     move dinheiro nenhum — ele só diz onde a carteira está. É a única matiz nova.
+     Cada superfície tingida traz o próprio trilho: --track é quase a cor delas, e uma
+     barra sem calha não tem o que preencher. */
+  --surface-diag: #dfe6f0;
+  --track-diag: #c3d0e0;
+  --track-leaf: #cfe3cf;
+  /* Cinza secundário DENTRO das superfícies tingidas. Tingir o fundo derruba o --muted
+     normal para 3,98:1 sobre a fria e 4,10:1 sobre a verde — abaixo de AA. Este passa em
+     4,63:1 na pior das duas. Escopo local: no --card branco o de sempre continua valendo. */
+  --muted-tinted: #5a695c;
   --chip-bg: #eef5ee;
   --hover: #f3f7f3;
   --on-accent: #ffffff;
@@ -119,6 +131,10 @@
   --shadow-2: 0 10px 28px rgba(0, 0, 0, 0.6);
   --surface-soft: #1c2218;
   --track: #222a1f;
+  --surface-diag: #1e242d;
+  --track-diag: #2e3844;
+  --track-leaf: #162216;
+  --muted-tinted: var(--muted);  /* no escuro o --muted já passa com folga (6,75:1) */
   --chip-bg: #233122;
   --hover: #1f2a1c;
   --on-accent: #0c120a;
@@ -934,17 +950,31 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 
 /* ===== Plantar: a parcela de renda fixa (1º degrau da cascata) ===== */
 
+/* ===== Os dois tons do Plantar =====
+   Tom não é decoração aqui: ele separa LER de FAZER. O diagnóstico vem primeiro e fica
+   frio e recessivo; a instrução vem depois e usa o verde que no app inteiro significa
+   "dinheiro se move aqui". Sem nada a dirigir, a instrução se cala e volta ao neutro —
+   mesma regra de `.reserve-goal.goal-met`, logo acima. */
+.alloc-summary { background: var(--surface-diag);
+  --track: var(--track-diag); --muted: var(--muted-tinted); }
+
 .fi-suggestion { display: flex; flex-direction: column; gap: 8px; margin-top: 0; }
+/* Pela negação, e não desfazendo em `.fi-quiet`: `--track: var(--track)` ali seria uma
+   referência cíclica, que o CSS resolve para inválido — a calha simplesmente sumiria. */
+.fi-suggestion:not(.fi-quiet) { background: var(--chip-bg); border-color: var(--leaf);
+  --track: var(--track-leaf); --muted: var(--muted-tinted); }
+.fi-quiet { background: var(--surface-soft); border-color: var(--line); }
 .fi-amount { font-variant-numeric: tabular-nums; font-size: var(--fs-20); color: var(--green); white-space: nowrap; }
-/* Piso e peso lado a lado: são perguntas diferentes e a separação É a informação. */
-.fi-parts { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap;
-  gap: 6px 18px; font-size: var(--fs-13); }
-.fi-parts li { display: flex; flex-direction: column; }
 .fi-indexers { list-style: none; margin: 0; padding: 0; display: flex;
   flex-direction: column; gap: 8px; }
 .fi-indexers li { display: grid; grid-template-columns: 1fr auto; align-items: baseline;
   gap: 4px 10px; padding: 10px; border-radius: var(--radius-sm); background: var(--surface-soft);
   border: 1px solid var(--line); }
+/* A linha do piso sobe uma superfície: é a primeira instrução da cascata e a única que não
+   admite substituto — só conta com resgate imediato serve. Qualificada por `li` de
+   propósito: `.fi-line-floor` sozinha perde em especificidade para `.fi-indexers li` acima,
+   e a regra seria descartada em silêncio. */
+.fi-indexers li.fi-line-floor { background: var(--card); border-color: var(--leaf); }
 .fi-indexer-name { font-weight: 600; font-size: var(--fs-14); }
 /* O atalho ocupa a linha inteira no celular: é alvo de toque, não nota de rodapé. */
 .fi-shortcut { grid-column: 1 / -1; padding: 0; min-height: 44px; }

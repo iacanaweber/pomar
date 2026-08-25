@@ -43,7 +43,7 @@ export function AllocationSummary({ plan }: { plan: PlanResponse }) {
     new Set([...Object.keys(targetsByClass), ...Object.keys(currentByClass)]),
   ).filter((c) => (targetsByClass[c] ?? 0) > 0 || (currentByClass[c] ?? 0) > 0);
   return (
-    <div className="alloc">
+    <div className="alloc alloc-summary">
       <h3>
         <Tooltip metricKey="rebalance_gap">
           <span>Alocação atual vs sua meta</span>
