@@ -19,3 +19,21 @@ export const CLASS_LABEL: Record<string, string> = {
 };
 
 export const classLabel = (cls: string): string => CLASS_LABEL[cls] ?? cls;
+
+/** Ordena por PESO DECRESCENTE, com desempate ESTÁVEL pela ordem de entrada.
+ *
+ *  A ordem canônica (ALLOCATION_CLASSES) continua sendo a verdade de tudo que o usuário
+ *  EDITA — campo que muda de lugar enquanto se digita é campo que se perde. Esta ordem é
+ *  só de LEITURA: gráfico, legenda e lista de desvio, onde "o que pesa mais vem antes" é
+ *  a única ordem que responde à pergunta da tela.
+ *
+ *  `weightOf` devolve o peso — meta %, valor em R$ ou |desvio|, tanto faz: a função só
+ *  compara. Empate (inclusive todos os zeros) cai na ordem de entrada, então a lista
+ *  NUNCA embaralha sozinha entre renders com os mesmos dados. Não muta a entrada.
+ */
+export function byWeightDesc<T>(items: readonly T[], weightOf: (item: T) => number): T[] {
+  return items
+    .map((item, i) => ({ item, i }))
+    .sort((a, b) => (weightOf(b.item) || 0) - (weightOf(a.item) || 0) || a.i - b.i)
+    .map(({ item }) => item);
+}

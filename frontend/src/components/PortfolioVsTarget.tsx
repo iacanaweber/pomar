@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { usePreferences, useSavePreferences } from "../api/queries";
 import { AssetLink } from "./AssetLink";
 import { AT_TARGET_PP, type Comparison, type ComparisonRow } from "../lib/comparison";
-import { ALLOCATION_CLASSES, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
+import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
 import { money } from "../lib/format";
 
 /** Mesma matiz por classe do gráfico da Carteira alvo — a cor segue a entidade, e aqui ela
@@ -242,8 +242,17 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
     );
   }
 
+  // Uma ordem só para as DUAS barras: se "Hoje" e "Alvo" se ordenassem cada uma pelo seu
+  // próprio peso, elas deixariam de ser comparáveis lado a lado — que é a única razão de
+  // estarem coladas. A ordem sai do alvo, com o valor atual como desempate.
+  const pesoDaClasse = (cls: string) => {
+    const b = byClass.find((x) => x.cls === cls);
+    return b?.targetPct || b?.currentPct || 0;
+  };
+  const barOrder = byWeightDesc(ALLOCATION_CLASSES, pesoDaClasse);
+
   const group = (pick: (r: ComparisonRow) => number) =>
-    ALLOCATION_CLASSES.map((cls) => ({
+    barOrder.map((cls) => ({
       cls,
       items: rows
         .filter((r) => r.cls === cls && pick(r) > 0)
@@ -317,7 +326,7 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
       <section className="card cmp-list">
         <h3>Desvio por classe</h3>
         <ul className="cmp-rows">
-          {byClass
+          {byWeightDesc(byClass, (b) => Math.abs(b.deltaPp))
             .filter((b) => b.targetPct > 0 || b.currentPct > 0)
             .map((b) => (
               <li className="cmp-row" key={b.cls}>

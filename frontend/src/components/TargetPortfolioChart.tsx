@@ -1,4 +1,4 @@
-import { ALLOCATION_CLASSES, CLASS_LABEL } from "../lib/classes";
+import { CLASS_LABEL } from "../lib/classes";
 import { shareOfTotal, sumPct, type Row } from "../lib/basket";
 
 /** Cores das CLASSES. Uma matiz por classe, em ordem fixa (nunca cicladas): a cor segue
@@ -58,7 +58,9 @@ interface ClassView {
 export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
   const totalMeta = classes.reduce((s, c) => s + c.classPct, 0);
 
-  const views: ClassView[] = ALLOCATION_CLASSES.map((cls) => {
+  // Itera o prop `classes`, que já chega na ordem de leitura decidida pela página, em vez
+  // de re-derivar da ordem canônica: a decisão de ordem mora num lugar só.
+  const views: ClassView[] = classes.map(({ cls }) => {
     const item = classes.find((c) => c.cls === cls);
     const classPct = item?.classPct ?? 0;
     // maior peso primeiro: a rampa de cor fica monotônica com a magnitude

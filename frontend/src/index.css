@@ -719,7 +719,12 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .tp-bar { height: 100%; display: flex; gap: 2px; }
 .tp-seg { flex-basis: 0; min-width: 2px; border-radius: 2px; }
 /* virada de classe: 2px do gap + 2px daqui = 4px, o suficiente para agrupar sem legenda */
-.tp-bar > .tp-seg-class:not(:first-child) { margin-left: 2px; }
+/* Virada de classe: 2px do gap + 4px daqui. Com a ordenação por peso, o par BDR↔Ações
+   (que reprova no ΔE do modo escuro — ver a nota da paleta lá em cima) passa a encostar
+   com muito mais frequência. É este vão, na cor da superfície, que impede "encostar" de
+   virar "confundir": duas matizes separadas por uma faixa do fundo não são adjacentes no
+   sentido que o validador testa. */
+.tp-bar > .tp-seg-class:not(:first-child) { margin-left: 4px; }
 .tp-bar > .tp-seg:first-child { border-radius: 4px 2px 2px 4px; }
 .tp-bar > .tp-seg:last-child { border-radius: 2px 4px 4px 2px; }
 /* a sobra não é um segmento: é o trilho aparecendo, e isso É a informação */

@@ -22,7 +22,7 @@ import {
   type Row,
   type SumState,
 } from "../lib/basket";
-import { ALLOCATION_CLASSES, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
+import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
 import { parseBRL } from "../lib/format";
 import { Icon } from "../components/Icon";
 
@@ -421,7 +421,15 @@ export function TargetPortfolioPage() {
     }
   };
 
-  const chartData = ALLOCATION_CLASSES.map((cls) => ({
+  // Ordem de LEITURA: o que pesa mais vem antes. Derivada do valor SALVO, e não do
+  // rascunho — ordenar pelo que está sendo digitado faria a barra pular embaixo do dedo a
+  // cada dígito. Reordena só ao salvar. O gráfico e a lista abaixo usam a MESMA ordem.
+  const readOrder = useMemo(
+    () => byWeightDesc(ALLOCATION_CLASSES, (c) => savedClassPct[c] ?? 0),
+    [savedClassPct],
+  );
+
+  const chartData = readOrder.map((cls) => ({
     cls,
     classPct: effectivePct[cls] ?? 0,
     rows: rowsOf(cls),
@@ -450,7 +458,7 @@ export function TargetPortfolioPage() {
 
           <h2 className="section-title">Composição de cada classe</h2>
           <ul className="cards">
-            {ALLOCATION_CLASSES.map((cls) => {
+            {readOrder.map((cls) => {
               const rows = rowsOf(cls);
               const n = rows.length;
               const sum = sumPct(rows);
