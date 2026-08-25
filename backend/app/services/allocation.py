@@ -149,6 +149,7 @@ def allocate(
     class_baskets: Dict[str, Dict[str, float]],
     min_ticket: float = 100.0,
     legacy_in_total: bool = True,
+    extra_base: float = 0.0,
 ) -> float:
     """Preenche `suggested` e os campos `basket_*` do ranking. Retorna a sobra não alocada.
 
@@ -157,6 +158,10 @@ def allocate(
     aplicadas. Isso aumenta o `need` das classes-alvo e mantém a carteira subalocada até a
     venda — o retrato aritmeticamente honesto de quem ainda tem capital fora da
     estratégia. Com `False`, as metas incidem só sobre o capital alinhado.
+
+    `extra_base` é o patrimônio que existe FORA das posições de renda variável — hoje, a
+    renda fixa que conta na carteira. Sem ele, uma carteira 30% em Tesouro Selic miraria
+    alvos calculados como se aquele dinheiro não existisse, e a bolsa pediria aporte a mais.
     """
     by_ticker = {r.ticker: r for r in ranking}
     baskets = {
@@ -177,7 +182,7 @@ def allocate(
         # 1) orçamento por classe, NEED-BASED sobre a carteira resultante
         cur_value = aligned_value_by_class(held, class_baskets, targets)
         base = portfolio.total_value if legacy_in_total else sum(cur_value.values())
-        total_after = base + aporte
+        total_after = base + max(0.0, extra_base) + aporte
         needs = {
             c: max(0.0, targets.get(c, 0.0) * total_after - cur_value.get(c, 0.0)) for c in baskets
         }

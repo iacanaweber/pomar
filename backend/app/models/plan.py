@@ -127,6 +127,39 @@ class ReserveSuggestion(BaseModel):
     note: str = Field("O piso da reserva é coberto antes de qualquer compra.")
 
 
+class IndexerAllocation(BaseModel):
+    """Quanto do aporte vai para uma tag de indexador — instrução, não ordem de compra."""
+
+    code: str
+    name: str
+    amount: float = Field(0.0, description="Valor a aplicar neste indexador (BRL).")
+    current_value: float = Field(0.0, description="Quanto já existe neste indexador (BRL).")
+    target_pct: float = Field(0.0, description="Peso-alvo dentro da classe (0..1).")
+    account_id: Optional[int] = Field(
+        None, description="Conta sugerida para o lançamento (a maior com esta tag)."
+    )
+    account_name: Optional[str] = None
+
+
+class FixedIncomeSuggestion(BaseModel):
+    """A parcela de renda fixa do aporte — o primeiro degrau da cascata.
+
+    A compra de renda fixa é manual e feita fora do app, então aqui não há quantidade de
+    cotas: a saída é uma INSTRUÇÃO em reais, com o atalho para lançar o novo saldo na
+    conta sugerida (o app não pede que ninguém redigite o que já sabe).
+    """
+
+    directed_now: float = Field(0.0, description="Total do aporte que vai para a renda fixa.")
+    floor_part: float = Field(0.0, description="Parte que cobre o PISO da reserva (BRL).")
+    weight_part: float = Field(0.0, description="Parte que cobre o PESO da classe (BRL).")
+    current_value: float = Field(0.0, description="Valor atual da classe RENDA_FIXA (BRL).")
+    target_amount: float = Field(0.0, description="Alvo da classe pelo peso (BRL).")
+    gap_brl: float = Field(0.0, description="Gap da classe em BRL (0 quando está acima do alvo).")
+    gap_pp: float = Field(0.0, description="O mesmo gap em pontos percentuais do patrimônio.")
+    by_indexer: List[IndexerAllocation] = Field(default_factory=list)
+    note: Optional[str] = Field(None, description="Uma linha factual sobre o que fazer.")
+
+
 class LegacySummary(BaseModel):
     """Quanto está parado em ativos fora da carteira alvo, e o que isso cobriria.
 
@@ -154,6 +187,9 @@ class PlanResponse(BaseModel):
     unallocated: float = Field(0.0, description="Sobra do aporte não alocada (BRL).")
     reserve: Optional[ReserveSuggestion] = Field(
         None, description="Status do piso da reserva (quando há um piso configurado)."
+    )
+    fixed_income: Optional[FixedIncomeSuggestion] = Field(
+        None, description="Parcela de renda fixa do aporte (quando a classe tem peso ou piso)."
     )
     legacy: Optional[LegacySummary] = Field(
         None, description="Ativos fora da carteira alvo (quando existem)."

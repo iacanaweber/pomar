@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/client";
 import {
   useAddEntry,
@@ -430,14 +430,17 @@ function AccountCard({
   account,
   cdiAnnual,
   tag,
+  autoOpen = false,
 }: {
   account: AccountSummary;
   cdiAnnual?: number | null;
   tag?: AssignmentOut;
+  /** Veio do atalho do Plantar: abre já no formulário de lançamento. */
+  autoOpen?: boolean;
 }) {
   const archive = useArchiveAccount();
   const update = useUpdateAccount();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen);
   const [showEntries, setShowEntries] = useState(false);
 
   const annual = account.history_yield_annual;
@@ -700,6 +703,10 @@ const AVISO_MARCAR = "pomar:reserva-aviso-marcar";
 
 export function ReservePage() {
   const navigate = useNavigate();
+  // Atalho do Plantar (/reserva?conta=7): abre a conta sugerida já no lançamento, para o
+  // usuário não ter que reencontrá-la e redigitar o que o plano acabou de dizer.
+  const [params] = useSearchParams();
+  const contaDoAtalho = Number(params.get("conta")) || null;
   const { data, isLoading, error } = useFixedIncome();
   const update = useUpdateAccount();
   const tags = useAssignments({ dimension: "indexer", subjectType: "fi_account" });
@@ -790,6 +797,7 @@ export function ReservePage() {
               account={a}
               cdiAnnual={data?.cdi_annual}
               tag={tagOf.get(String(a.id))}
+              autoOpen={a.id === contaDoAtalho}
             />
           ))}
         </ul>

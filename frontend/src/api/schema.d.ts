@@ -1080,6 +1080,65 @@ export interface components {
             /** Warnings */
             warnings?: string[];
         };
+        /**
+         * FixedIncomeSuggestion
+         * @description A parcela de renda fixa do aporte — o primeiro degrau da cascata.
+         *
+         *     A compra de renda fixa é manual e feita fora do app, então aqui não há quantidade de
+         *     cotas: a saída é uma INSTRUÇÃO em reais, com o atalho para lançar o novo saldo na
+         *     conta sugerida (o app não pede que ninguém redigite o que já sabe).
+         */
+        FixedIncomeSuggestion: {
+            /**
+             * Directed Now
+             * @description Total do aporte que vai para a renda fixa.
+             * @default 0
+             */
+            directed_now: number;
+            /**
+             * Floor Part
+             * @description Parte que cobre o PISO da reserva (BRL).
+             * @default 0
+             */
+            floor_part: number;
+            /**
+             * Weight Part
+             * @description Parte que cobre o PESO da classe (BRL).
+             * @default 0
+             */
+            weight_part: number;
+            /**
+             * Current Value
+             * @description Valor atual da classe RENDA_FIXA (BRL).
+             * @default 0
+             */
+            current_value: number;
+            /**
+             * Target Amount
+             * @description Alvo da classe pelo peso (BRL).
+             * @default 0
+             */
+            target_amount: number;
+            /**
+             * Gap Brl
+             * @description Gap da classe em BRL (0 quando está acima do alvo).
+             * @default 0
+             */
+            gap_brl: number;
+            /**
+             * Gap Pp
+             * @description O mesmo gap em pontos percentuais do patrimônio.
+             * @default 0
+             */
+            gap_pp: number;
+            /** By Indexer */
+            by_indexer?: components["schemas"]["IndexerAllocation"][];
+            /**
+             * Note
+             * @description Uma linha factual sobre o que fazer.
+             */
+            note?: string | null;
+        };
         /** FixedIncomeSummary */
         FixedIncomeSummary: {
             /** Accounts */
@@ -1305,6 +1364,41 @@ export interface components {
             currency: string;
             /** Warnings */
             warnings?: string[];
+        };
+        /**
+         * IndexerAllocation
+         * @description Quanto do aporte vai para uma tag de indexador — instrução, não ordem de compra.
+         */
+        IndexerAllocation: {
+            /** Code */
+            code: string;
+            /** Name */
+            name: string;
+            /**
+             * Amount
+             * @description Valor a aplicar neste indexador (BRL).
+             * @default 0
+             */
+            amount: number;
+            /**
+             * Current Value
+             * @description Quanto já existe neste indexador (BRL).
+             * @default 0
+             */
+            current_value: number;
+            /**
+             * Target Pct
+             * @description Peso-alvo dentro da classe (0..1).
+             * @default 0
+             */
+            target_pct: number;
+            /**
+             * Account Id
+             * @description Conta sugerida para o lançamento (a maior com esta tag).
+             */
+            account_id?: number | null;
+            /** Account Name */
+            account_name?: string | null;
         };
         /**
          * IndexerSlice
@@ -1657,6 +1751,8 @@ export interface components {
             unallocated: number;
             /** @description Status do piso da reserva (quando há um piso configurado). */
             reserve?: components["schemas"]["ReserveSuggestion"] | null;
+            /** @description Parcela de renda fixa do aporte (quando a classe tem peso ou piso). */
+            fixed_income?: components["schemas"]["FixedIncomeSuggestion"] | null;
             /** @description Ativos fora da carteira alvo (quando existem). */
             legacy?: components["schemas"]["LegacySummary"] | null;
             /**

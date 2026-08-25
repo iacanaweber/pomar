@@ -25,6 +25,9 @@ export type AssetDetailResponse = Schemas["AssetDetailResponse"];
 export type Asset = Schemas["Asset"];
 export type Fundamentals = Schemas["Fundamentals"];
 export type ReserveSuggestion = Schemas["ReserveSuggestion"];
+export type FixedIncomeSuggestion = Schemas["FixedIncomeSuggestion"];
+export type IndexerAllocation = Schemas["IndexerAllocation"];
+export type LegacySummary = Schemas["LegacySummary"];
 
 // --- Yield on Cost (dos snapshots mensais) ---
 export type YocPoint = Schemas["YocPoint"];

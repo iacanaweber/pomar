@@ -972,3 +972,124 @@ def test_legacy_in_total_muda_a_base_dos_alvos(authed_client, monkeypatch):
     sem = c.post("/api/plan", json={"aporte": 100.0, "min_ticket": 10.0}).json()
     # base 1000 + 100 = 1100; alinhado após a compra = 1100 => sem buraco
     assert sem["legacy"]["gap"] == 0.0
+
+
+# --- cascata do aporte no plano -------------------------------------------------------
+
+def test_plan_cascade_floor_then_weight_then_equities(authed_client, _stub_cdi, monkeypatch):
+    """Os três degraus, em ordem, com a invariante de conservação verificada."""
+    c = authed_client
+    selic = _conta(c, "Tesouro Selic", counts_in_portfolio=True).json()
+    _saldo(c, selic["id"], 9_000.0)
+    c.put("/api/labels/assignments", json={
+        "subject_type": "fi_account", "subject_id": str(selic["id"]), "dimension": "indexer",
+        "items": [{"label_id": _tag(c, "SELIC")}],
+    })
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.8, "RENDA_FIXA": 0.2, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"SELIC": 1.0}},
+        "reserve_floor_amount": 10_000.0,
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 40_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 3_000.0, "min_ticket": 10.0}).json()
+
+    fi = r["fixed_income"]
+    assert fi is not None
+    # piso 10.000 contra reserva líquida 9.000 => 1.000 no primeiro degrau
+    assert fi["floor_part"] == 1_000.0
+    # patrimônio resultante = 40.000 + 9.000 + 3.000 = 52.000; alvo RF 20% = 10.400
+    # após o piso a classe tem 10.000 => faltam 400 no segundo degrau
+    assert fi["weight_part"] == 400.0
+    assert fi["directed_now"] == 1_400.0
+    assert fi["by_indexer"][0]["code"] == "SELIC"
+    assert fi["by_indexer"][0]["account_id"] == selic["id"]
+    assert fi["by_indexer"][0]["account_name"] == "Tesouro Selic"
+
+    comprado = sum(x["suggested"]["invested_exact"] for x in r["ranking"] if x["suggested"])
+    assert abs(fi["directed_now"] + comprado + r["unallocated"] - 3_000.0) < 0.01
+
+
+def test_plan_fixed_income_above_target_sends_everything_to_equities(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """Renda fixa acima do alvo: gap zero, aporte inteiro para a RV, sem erro."""
+    c = authed_client
+    acc = _conta(c, "CDB", counts_in_portfolio=True).json()
+    _saldo(c, acc["id"], 50_000.0)
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.9, "RENDA_FIXA": 0.1, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 10_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 1_000.0, "min_ticket": 10.0}).json()
+
+    assert r["fixed_income"]["gap_brl"] == 0.0
+    assert r["fixed_income"]["directed_now"] == 0.0
+    assert "aporte inteiro" in r["fixed_income"]["note"]
+    # e nenhum aviso de erro por causa disso
+    assert not any("renda fixa" in w.lower() and "erro" in w.lower() for w in r["warnings"])
+    comprado = sum(x["suggested"]["invested_exact"] for x in r["ranking"] if x["suggested"])
+    assert abs(comprado + r["unallocated"] - 1_000.0) < 0.01
+
+
+def test_plan_gap_is_reported_in_brl_and_pp(authed_client, _stub_cdi, monkeypatch):
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.8, "RENDA_FIXA": 0.2, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 9_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 1_000.0, "min_ticket": 10.0}).json()
+    fi = r["fixed_income"]
+    # patrimônio resultante = 10.000; alvo 20% = 2.000; atual 0 => gap 2.000 = 20 p.p.
+    assert fi["gap_brl"] == 2_000.0
+    assert fi["gap_pp"] == 20.0
+    assert fi["directed_now"] == 1_000.0  # o aporte inteiro, e ainda falta
+
+
+def test_plan_renda_fixa_no_patrimonio_muda_o_alvo_da_bolsa(authed_client, _stub_cdi, monkeypatch):
+    """A base dos alvos passa a incluir a renda fixa marcada: sem isso, a bolsa pedia
+    aporte calculado como se aquele dinheiro não existisse."""
+    c = authed_client
+    acc = _conta(c, "Tesouro Selic", counts_in_portfolio=True).json()
+    _saldo(c, acc["id"], 50_000.0)
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "RENDA_FIXA": 0.5, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 50_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 1_000.0, "min_ticket": 10.0}).json()
+    # 50k em ações e 50k em RF: a carteira já está 50/50 e o aporte se divide, não corre
+    # para a bolsa como se o patrimônio fosse só os 50k de ações
+    assert r["fixed_income"]["current_value"] == 50_000.0
+    comprado = sum(x["suggested"]["invested_exact"] for x in r["ranking"] if x["suggested"])
+    assert abs(r["fixed_income"]["directed_now"] + comprado + r["unallocated"] - 1_000.0) < 0.01
+
+
+def test_plan_fixed_income_without_basket_still_instructs(authed_client, _stub_cdi, monkeypatch):
+    """Sem cesta de indexadores, a instrução é o total: inventar um alvo seria pior."""
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "RENDA_FIXA": 0.5, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 10_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 1_000.0, "min_ticket": 10.0}).json()
+    assert r["fixed_income"]["directed_now"] == 1_000.0
+    assert r["fixed_income"]["by_indexer"][0]["code"] == "SEM_INDEXADOR"
+    assert any("indexador" in w for w in r["warnings"])

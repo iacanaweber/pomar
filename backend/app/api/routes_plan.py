@@ -18,6 +18,8 @@ from app.models.plan import (
     CLASS_LABEL,
     INVESTABLE_CLASSES,
     RENDA_FIXA,
+    FixedIncomeSuggestion,
+    IndexerAllocation,
     LegacySummary,
     PlanAsset,
     PlanRequest,
@@ -27,6 +29,11 @@ from app.models.plan import (
 )
 from app.models.portfolio import Allocations, Portfolio
 from app.repositories import fixed_income_repo, labels_repo, plans_repo, preferences_repo
+from app.util import from_cents, to_cents
+from app.data.labels_seed import NO_INDEXER_CODE, NO_INDEXER_NAME
+from app.services import cascade
+from app.services import fixed_income as fi
+from app.services import indexers as indexers_svc
 from app.services import legacy as legacy_svc
 from app.services import reserve as reserve_svc
 from app.services.allocation import aligned_value_by_class, allocate
@@ -40,6 +47,11 @@ router = APIRouter()
 
 # Diferença mínima (em pontos percentuais) para dizer que o ativo está "abaixo do alvo".
 GAP_PP_MIN = 0.5
+
+
+def _brl(value: float) -> str:
+    """Formata em reais no padrão brasileiro (1.234,56) para as frases do plano."""
+    return f"R$ {value:,.2f}".replace(",", " ").replace(".", ",").replace(" ", ".")
 
 
 def _plan_reasons(item: PlanAsset, classes_at_target: set[str]) -> list[str]:
@@ -248,25 +260,45 @@ async def plan(req: PlanRequest) -> PlanResponse:
             "Não consegui buscar o IPCA para corrigir o piso da reserva; usando o valor "
             "nominal por enquanto."
         )
-    split = reserve_svc.direct_to_floor(req.aporte, floor["deficit"])
-    aporte_rv = split["remaining"]
+    # 6b) CASCATA: piso → peso da classe RENDA_FIXA → renda variável.
+    # A base dos alvos em R$ passa a incluir a renda fixa que conta na carteira: enquanto
+    # ela ficava de fora, uma carteira 30% em Tesouro Selic mirava alvos calculados como
+    # se aquele dinheiro não existisse, e as classes de renda variável pediam aporte a mais.
+    try:
+        contas_rf = [
+            a for a in await fixed_income_repo.balances(get_db()) if fi.counts_in_portfolio(a)
+        ]
+    except Exception as exc:  # noqa: BLE001
+        warnings.append(f"Não consegui ler as contas de renda fixa ({exc}).")
+        contas_rf = []
+    rf_value = from_cents(
+        sum(to_cents(a["balance"]) for a in contas_rf)
+        + sum(to_cents(p.value) for p in portfolio.positions if p.asset_class == RENDA_FIXA)
+    )
+
+    held = {p.ticker: p.value for p in portfolio.positions}
+    legacy_in_total = bool(prefs.get("legacy_in_total", True))
+    aligned = aligned_value_by_class(held, all_baskets, targets)
+    base_rv = portfolio.total_value if legacy_in_total else sum(aligned.values())
+    total_after = base_rv + rf_value + req.aporte
+    rf_class_target = targets.get(RENDA_FIXA, 0.0) * total_after
+
+    split = cascade.split_aporte(req.aporte, floor["deficit"], rf_class_target, rf_value)
+    aporte_rv = split["aporte_rv"]
 
     # 7) alocação do aporte de RENDA VARIÁVEL (após o pré-corte da reserva).
     # Lote conforme a preferência: 'fracionario' compra por unidade; 'integral' respeita
     # o lote real da B3 (ações = 100; FII/ETF/BDR = 1).
     lot_mode = prefs.get("lot_mode") or "integral"
     lots = {a.ticker: (1 if lot_mode == "fracionario" else a.lot_size) for a in assets}
-    legacy_in_total = bool(prefs.get("legacy_in_total", True))
+    # A renda fixa entra na base pelo `rf_base`: o alvo em R$ de cada classe de renda
+    # variável é calculado sobre o patrimônio INTEIRO, não só sobre a bolsa.
     unallocated = allocate(
         aporte_rv, ranking, portfolio, prices, lots, targets, baskets,
-        min_ticket=req.min_ticket, legacy_in_total=legacy_in_total,
+        min_ticket=req.min_ticket, legacy_in_total=legacy_in_total, extra_base=rf_value,
     )
 
     # mesma conta de necessidade do alocador — a explicação não pode divergir do motor
-    held = {p.ticker: p.value for p in portfolio.positions}
-    aligned = aligned_value_by_class(held, all_baskets, targets)
-    base_alvo = portfolio.total_value if legacy_in_total else sum(aligned.values())
-    total_after = base_alvo + aporte_rv
     at_target = {
         c for c in baskets if targets.get(c, 0.0) * total_after - aligned.get(c, 0.0) <= 0
     }
@@ -292,7 +324,82 @@ async def plan(req: PlanRequest) -> PlanResponse:
         [p.model_dump() for p in portfolio.positions], gap_restante, all_baskets, targets
     )
 
-    # 8) status do piso (só quando existe um piso configurado — sem piso, sem card)
+    # 8) parcela de renda fixa: instrução em R$, nunca quantidade de cotas (a compra é
+    # manual e feita fora do app), com a conta sugerida para o lançamento do novo saldo.
+    fixed_income_suggestion = None
+    if targets.get(RENDA_FIXA, 0.0) > 0 or floor_nominal > 0:
+        gap = cascade.rf_gap(rf_class_target, rf_value, total_after)
+        by_indexer: list[IndexerAllocation] = []
+        if split["rf_total"] > 0:
+            db = get_db()
+            tags_conta = await labels_repo.assignments_by_subject(db, "indexer", "fi_account")
+            tags_ticker = await labels_repo.assignments_by_subject(db, "indexer", "ticker")
+            atual = indexers_svc.value_by_indexer(
+                contas_rf,
+                tags_conta,
+                [
+                    {"ticker": p.ticker, "value": p.value}
+                    for p in portfolio.positions
+                    if p.asset_class == RENDA_FIXA
+                ],
+                tags_ticker,
+            )
+            cesta = all_baskets.get(RENDA_FIXA) or {}
+            # Sem cesta definida, a instrução é o total: dividir por tag exigiria um alvo
+            # que o usuário não deu, e inventá-lo seria pior que não dividir.
+            rateio = (
+                indexers_svc.basket_deficits(cesta, atual, split["rf_total"])
+                if cesta
+                else {NO_INDEXER_CODE: split["rf_total"]}
+            )
+            nomes = {r["code"]: r["name"] for r in await labels_repo.list_labels(db, "indexer")}
+            nomes[NO_INDEXER_CODE] = NO_INDEXER_NAME
+            # conta sugerida por tag: a de maior saldo que já tem aquele indexador — é
+            # onde o dinheiro provavelmente vai, e evita redigitar o que o app já sabe.
+            conta_da_tag: dict[str, dict] = {}
+            for acc in sorted(contas_rf, key=lambda a: a["balance"], reverse=True):
+                for tag in tags_conta.get(str(acc["id"]), []):
+                    conta_da_tag.setdefault(tag["code"], acc)
+            for code, amount in sorted(rateio.items(), key=lambda kv: kv[1], reverse=True):
+                acc = conta_da_tag.get(code)
+                by_indexer.append(
+                    IndexerAllocation(
+                        code=code,
+                        name=nomes.get(code, code),
+                        amount=amount,
+                        current_value=atual.get(code, 0.0),
+                        target_pct=round(float(cesta.get(code, 0.0)), 6),
+                        account_id=acc["id"] if acc else None,
+                        account_name=acc["name"] if acc else None,
+                    )
+                )
+
+        if split["rf_total"] > 0:
+            partes = []
+            if split["floor_directed"] > 0:
+                partes.append(f"{_brl(split['floor_directed'])} para o piso da reserva")
+            if split["rf_directed"] > 0:
+                partes.append(f"{_brl(split['rf_directed'])} para o peso da classe")
+            nota = " e ".join(partes) + "."
+        elif gap["brl"] <= 0:
+            # Acima do alvo é uma carteira saudável, não um erro: nada de aviso.
+            nota = "Renda fixa no alvo ou acima — o aporte inteiro vai para a renda variável."
+        else:
+            nota = "Sem sobra para a renda fixa neste aporte."
+
+        fixed_income_suggestion = FixedIncomeSuggestion(
+            directed_now=split["rf_total"],
+            floor_part=split["floor_directed"],
+            weight_part=split["rf_directed"],
+            current_value=rf_value,
+            target_amount=round(rf_class_target, 2),
+            gap_brl=gap["brl"],
+            gap_pp=gap["pp"],
+            by_indexer=by_indexer,
+            note=nota,
+        )
+
+    # 9) status do piso (só quando existe um piso configurado — sem piso, sem card)
     reserve = None
     if floor_nominal > 0:
         try:
@@ -332,6 +439,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
         ranking=suggested + others,
         unallocated=unallocated,
         reserve=reserve,
+        fixed_income=fixed_income_suggestion,
         legacy=LegacySummary(**legacy) if legacy else None,
         classes_applied=sorted(baskets),
         classes_skipped=skipped,

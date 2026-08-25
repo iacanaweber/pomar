@@ -8,6 +8,7 @@ import { AllocationSummary } from "../components/AllocationSummary";
 import { HealthBanner } from "../components/HealthBanner";
 import { OrdersHistory } from "../components/OrdersHistory";
 import { ReserveSummaryCard } from "../components/ReserveSummaryCard";
+import { FixedIncomeSuggestionCard } from "../components/FixedIncomeSuggestionCard";
 import type { PlanRequest } from "../types";
 import { classLabel } from "../lib/classes";
 import { shortDateTime } from "../lib/format";
@@ -79,6 +80,14 @@ export function PlanPage() {
                 <div key={i}>• {w}</div>
               ))}
             </div>
+          )}
+          {/* A renda fixa vem PRIMEIRO: é o primeiro degrau da cascata, e a ordem da tela
+              é a ordem em que o dinheiro é decidido. */}
+          {result.fixed_income && (
+            <FixedIncomeSuggestionCard
+              suggestion={result.fixed_income}
+              currency={result.currency}
+            />
           )}
           {result.reserve && (
             <ReserveSummaryCard reserve={result.reserve} currency={result.currency} />
