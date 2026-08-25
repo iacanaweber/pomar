@@ -518,16 +518,21 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 .class-picker { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
 .class-picker legend { font-weight: 600; font-size: 14px; padding: 0; margin-bottom: 2px; }
 .class-chips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-/* `min-width: 0` é o que permite o chip encolher: item de grid nasce com min-width:auto
-   e o texto mais longo ("sem composição · definir →") empurrava a coluna para fora. */
+/* `min-width: 0` é o que permite o chip encolher: item de grid nasce com min-width:auto.
+   Mas NUNCA `overflow-wrap: anywhere` aqui: ao contrário de `break-word`, `anywhere` entra
+   no cálculo de min-content, e a coluna passa a poder encolher até UMA LETRA — era isso
+   que empilhava "A ç õ e s" na vertical em 360px. O texto longo era só o gatilho; a regra
+   era a causa. Quem não cabe agora vira reticências. */
 .class-chip { display: flex; align-items: center; gap: 8px; min-height: 56px; padding: 10px 12px;
   border: 2px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer;
-  min-width: 0; overflow-wrap: anywhere; }
+  min-width: 0; overflow-wrap: break-word; }
 .class-chip > span:not(.class-chip-meta) { min-width: 0; }
 .class-chip-on { border-color: var(--leaf); background: var(--chip-bg); }
 .class-chip input { width: 20px; height: 20px; accent-color: var(--green); flex-shrink: 0; }
-.class-chip-name { font-weight: 700; font-size: 14px; }
-.class-chip-meta { font-size: 11px; color: var(--muted); display: block; }
+.class-chip-name { font-weight: 700; font-size: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.class-chip-meta { font-size: 11px; color: var(--muted); display: block;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .class-chip-meta.warn { color: var(--warn-ink); }
 .class-chip > span:not(.class-chip-meta) { display: flex; flex-direction: column; }
 .class-chip-name + .class-chip-meta { margin-top: 1px; }

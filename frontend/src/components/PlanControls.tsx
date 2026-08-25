@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { PlanRequest, Preferences } from "../types";
 import { useSavePreferences } from "../api/queries";
-import { CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
+import { ALLOCATION_CLASSES, CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
 import { money, parseBRL } from "../lib/format";
 import type { SwState } from "../lib/pwa";
 import { usePwa } from "../hooks/usePwa";
@@ -101,7 +101,10 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
   };
 
   const valueInvalid = touched && !blank && !(parseBRL(aporte) > 0);
-  const metaLine = INVESTABLE_CLASSES.filter((c) => (targets[c] ?? 0) > 0)
+  // ALLOCATION_CLASSES, e não INVESTABLE_CLASSES: a linha se chama "meta da CARTEIRA" e a
+  // renda fixa é uma classe dela como qualquer outra. Com a lista dos investáveis, uma
+  // carteira 50% em renda fixa exibia "5% FIIs · 45% ETFs" — sem somar 100%.
+  const metaLine = ALLOCATION_CLASSES.filter((c) => (targets[c] ?? 0) > 0)
     .map((c) => `${Math.round((targets[c] ?? 0) * 100)}% ${CLASS_LABEL[c]}`)
     .join(" · ");
 
@@ -143,12 +146,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
                   {n > 0 ? (
                     <span className="class-chip-meta">{n} ativos</span>
                   ) : (
-                    <span className="class-chip-meta warn">
-                      sem composição ·{" "}
-                      <Link to={`/alvo#${cls}`} onClick={(e) => e.stopPropagation()}>
-                        definir →
-                      </Link>
-                    </span>
+                    <span className="class-chip-meta warn">sem composição</span>
                   )}
                 </label>
               );
