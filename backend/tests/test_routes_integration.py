@@ -1321,3 +1321,35 @@ def test_plan_o_patrimonio_do_alocador_e_o_da_rota_sao_o_mesmo(
         fi_card["directed_now"] + aaa["invested_exact"] + ccc["invested_exact"]
         + r["unallocated"] - 10_000.0
     ) < 0.01
+
+
+def test_plan_posicao_de_renda_fixa_do_ghostfolio_nao_conta_duas_vezes(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """Um ETF no balde RENDA_FIXA já está em `portfolio.total_value`.
+
+    Somá-lo de novo pelo valor da classe inflava o patrimônio e, com ele, o alvo em R$ de
+    todo mundo. As duas grandezas são diferentes: o PESO da classe inclui a posição (para
+    o peso, ela vale o que vale), o PATRIMÔNIO a conta uma vez só.
+    """
+    c = authed_client
+    acc = _conta(c, "CDB", counts_in_portfolio=True).json()
+    _saldo(c, acc["id"], 10_000.0)
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "RENDA_FIXA": 0.5, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 1.0}},
+    })
+    _stub_plan_market(
+        monkeypatch,
+        [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 30_000.0),
+                                          ("ZZZZ11", "RENDA_FIXA", 10_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 1_000.0, "min_ticket": 10.0}).json()
+
+    fi_card = r["fixed_income"]
+    assert fi_card["current_value"] == 20_000.0   # a CLASSE: 10.000 da conta + 10.000 do ETF
+    # patrimônio REAL = 30.000 + 10.000 + 10.000 = 50.000; resultante = 51.000.
+    # Antes o ETF entrava duas vezes: 61.000, e o alvo de 50% saía 30.500.
+    assert fi_card["target_amount"] == 25_500.0
+    assert fi_card["gap_brl"] == 5_500.0

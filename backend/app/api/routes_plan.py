@@ -32,6 +32,7 @@ from app.repositories import fixed_income_repo, labels_repo, plans_repo, prefere
 from app.util import from_cents, to_cents
 from app.data.labels_seed import NO_INDEXER_CODE, NO_INDEXER_NAME
 from app.services import cascade
+from app.services import exposure as exposure_svc
 from app.services import fixed_income as fi
 from app.services import indexers as indexers_svc
 from app.services import legacy as legacy_svc
@@ -264,16 +265,36 @@ async def plan(req: PlanRequest) -> PlanResponse:
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"Contas de renda fixa ilegíveis ({exc}).")
         contas_rf = []
-    rf_value = from_cents(
-        sum(to_cents(a["balance"]) for a in contas_rf)
-        + sum(to_cents(p.value) for p in portfolio.positions if p.asset_class == RENDA_FIXA)
-    )
+    # A composição sai da MESMA função pura da aba Carteira: ela soma cada posição e cada
+    # conta uma vez só, então o valor da classe já vem sem a dupla contagem que a soma
+    # manual daqui produzia. Zero I/O e zero query — os dois insumos já estão em mãos.
+    posicoes = [
+        {"ticker": p.ticker, "asset_class": p.asset_class, "sector": p.sector, "value": p.value}
+        for p in portfolio.positions
+    ]
+    composicao = exposure_svc.compose(posicoes, contas_rf)
+
+    # DUAS grandezas, não uma. `rf_classe` é o PESO da classe: um ETF de renda fixa vale o
+    # que vale, então as posições do Ghostfolio entram. O PATRIMÔNIO é outra pergunta —
+    # ali elas não podem entrar de novo, porque já estão na bolsa. Somar as duas coisas
+    # contava o mesmo dinheiro duas vezes e inflava o alvo em R$ de todas as classes.
+    rf_classe = composicao["by_class"].get(RENDA_FIXA, 0.0)
 
     held = {p.ticker: p.value for p in portfolio.positions}
     legacy_in_total = bool(prefs.get("legacy_in_total", True))
     aligned = aligned_value_by_class(held, all_baskets, targets)
-    base_rv = portfolio.total_value if legacy_in_total else sum(aligned.values())
-    total_after = base_rv + rf_value + req.aporte
+    # Com o legado na base, o patrimônio é o que a composição já somou — cada posição e
+    # cada conta uma vez. Sem ele, a base é só o capital alinhado de bolsa, e aí a classe
+    # renda fixa precisa entrar INTEIRA: nada dela sobrevive ao filtro do alinhado, porque
+    # a cesta de RENDA_FIXA é de tags de indexador e não de tickers. O `!= RENDA_FIXA`
+    # explícito é o que torna a não-dupla-contagem verdadeira por construção, e não por
+    # coincidência de nomenclatura.
+    patrimonio = (
+        composicao["total"]
+        if legacy_in_total
+        else sum(v for c, v in aligned.items() if c != RENDA_FIXA) + rf_classe
+    )
+    total_after = patrimonio + req.aporte
     rf_class_target = targets.get(RENDA_FIXA, 0.0) * total_after
 
     # Teto do aporte para o piso: do pedido, ou da preferência salva, ou 1.0 (prioridade
@@ -292,7 +313,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
         req.aporte,
         floor["deficit"],
         rf_class_target,
-        rf_value,
+        rf_classe,
         floor_share=floor_share,
         rv_need=sum(needs_rv.values()),
     )
@@ -341,7 +362,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # manual e feita fora do app), com a conta sugerida para o lançamento do novo saldo.
     fixed_income_suggestion = None
     if targets.get(RENDA_FIXA, 0.0) > 0 or floor_nominal > 0:
-        gap = cascade.rf_gap(rf_class_target, rf_value, total_after)
+        gap = cascade.rf_gap(rf_class_target, rf_classe, total_after)
         by_indexer: list[IndexerAllocation] = []
         if split["rf_total"] > 0:
             db = get_db()
@@ -413,7 +434,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
             directed_now=split["rf_total"],
             floor_part=split["floor_directed"],
             weight_part=split["rf_directed"],
-            current_value=rf_value,
+            current_value=rf_classe,
             target_amount=round(rf_class_target, 2),
             gap_brl=gap["brl"],
             gap_pp=gap["pp"],
