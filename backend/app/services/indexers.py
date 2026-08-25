@@ -18,7 +18,7 @@ from __future__ import annotations
 from typing import Any, Dict, Iterable, List, Optional
 
 from app.data.labels_seed import NO_INDEXER_CODE
-from app.util import from_cents, to_cents
+from app.util import from_cents, looks_like_ticker, to_cents
 
 
 def _split(value: float, labels: Optional[List[Dict[str, Any]]]) -> Dict[str, int]:
@@ -45,14 +45,22 @@ def value_by_indexer(
     account_labels: Dict[str, List[Dict[str, Any]]],
     positions: Iterable[Dict[str, Any]] = (),
     ticker_labels: Optional[Dict[str, List[Dict[str, Any]]]] = None,
+    basket_tickers: Iterable[str] = (),
 ) -> Dict[str, float]:
-    """{código do indexador: valor em R$}.
+    """{código do item da cesta: valor em R$}.
 
     `accounts` já vem filtrado por quem conta na carteira (ver `fixed_income_repo.balances`
     + `counts_in_portfolio`); `positions` são as posições de renda variável cujo bucket é
     `RENDA_FIXA`. As chaves de `account_labels` são ids de conta como texto, as de
     `ticker_labels` são tickers normalizados — a mesma convenção de `label_assignments`.
+
+    `basket_tickers` são os tickers que são ITEM PRÓPRIO da cesta (IMAB11 declarado em
+    `class_targets["RENDA_FIXA"]`). O valor deles vai para o código do próprio ticker e
+    NÃO é rateado pela tag de indexador: somar as duas coisas contaria o mesmo dinheiro
+    duas vezes dentro da mesma cesta, e a soma dos itens passaria do total da classe.
+    Vazio — o default — reproduz exatamente o comportamento de sempre.
     """
+    proprios = {str(t).strip().upper() for t in (basket_tickers or ())}
     total: Dict[str, int] = {}
 
     def somar(partes: Dict[str, int]) -> None:
@@ -63,9 +71,31 @@ def value_by_indexer(
         somar(_split(acc.get("balance", 0.0), account_labels.get(str(acc["id"]))))
     for pos in positions:
         ticker = str(pos.get("ticker", "")).upper()
+        if ticker in proprios:
+            cents = to_cents(pos.get("value", 0.0))
+            if cents:
+                somar({ticker: cents})
+            continue
         somar(_split(pos.get("value", 0.0), (ticker_labels or {}).get(ticker)))
 
     return {code: from_cents(cents) for code, cents in total.items() if cents}
+
+
+def split_basket(
+    basket: Optional[Dict[str, float]]
+) -> tuple[Dict[str, float], Dict[str, float]]:
+    """(tags, tickers) — a cesta de renda fixa partida pelo TIPO do item, pesos intactos.
+
+    Os dois tipos disputam o mesmo orçamento pela mesma régua de déficit; o que muda é
+    COMO o dinheiro entra: a tag por lançamento em conta, em qualquer valor; o ticker por
+    compra de cotas, com lote e ticket mínimo.
+    """
+    tags: Dict[str, float] = {}
+    tickers: Dict[str, float] = {}
+    for code, peso in (basket or {}).items():
+        chave = str(code).strip().upper()
+        (tickers if looks_like_ticker(chave) else tags)[chave] = float(peso)
+    return tags, tickers
 
 
 def basket_deficits(

@@ -109,3 +109,53 @@ def test_conservacao_do_orcamento_com_arredondamento():
 def test_sem_alvo_ou_sem_orcamento_nada_e_rateado():
     assert ix.basket_deficits({}, {"CDI": 100.0}, 1_000.0) == {}
     assert ix.basket_deficits({"CDI": 1.0}, {}, 0.0) == {}
+
+
+# --- a cesta com dois tipos de item ---
+
+def test_split_basket_separa_tag_de_ticker():
+    """B5P211 é o caso que mata a regra ingênua de 'quatro letras e dígitos'."""
+    tags, tickers = ix.split_basket({"CDI": 0.6, "IMAB11": 0.3, "B5P211": 0.1})
+    assert tags == {"CDI": 0.6}
+    assert tickers == {"IMAB11": 0.3, "B5P211": 0.1}
+
+
+def test_split_basket_de_cesta_so_de_tags_nao_inventa_ticker():
+    """A cesta de hoje — a que está gravada em produção — continua inteira do lado das tags."""
+    assert ix.split_basket({"CDI": 1.0}) == ({"CDI": 1.0}, {})
+    assert ix.split_basket(None) == ({}, {})
+
+
+def test_ticker_da_cesta_nao_conta_duas_vezes():
+    """Como item PRÓPRIO, o valor vai para o código do ticker e não é rateado pela tag.
+
+    Somar as duas coisas contaria o mesmo dinheiro duas vezes DENTRO da mesma cesta: os
+    R$ 28.498 do exemplo virariam R$ 36.498 e a soma dos itens passaria do total da classe.
+    """
+    contas = [{"id": 1, "balance": 20_498.0}]
+    labs = {"1": [{"code": "CDI", "weight": 1.0}]}
+    pos = [{"ticker": "IMAB11", "value": 8_000.0}]
+    tags = {"IMAB11": [{"code": "IPCA", "weight": 1.0}]}
+
+    # sem cesta: comportamento de sempre — o valor entra pela TAG do ticker
+    assert ix.value_by_indexer(contas, labs, pos, tags) == {"CDI": 20_498.0, "IPCA": 8_000.0}
+
+    # como item da cesta: entra pelo próprio código, e IPCA não aparece
+    com_cesta = ix.value_by_indexer(contas, labs, pos, tags, basket_tickers={"IMAB11"})
+    assert com_cesta == {"CDI": 20_498.0, "IMAB11": 8_000.0}
+    assert sum(com_cesta.values()) == 28_498.0
+
+
+def test_ticker_da_cesta_sem_tag_nenhuma_nao_cai_no_residual():
+    """Sendo item da cesta, a tag de indexador deixa de ser obrigatória — ela vira
+    informativa (alimenta o benchmark). Sem isso, o dinheiro caía em SEM_INDEXADOR."""
+    out = ix.value_by_indexer([], {}, [{"ticker": "IMAB11", "value": 5_000.0}], {},
+                              basket_tickers={"IMAB11"})
+    assert out == {"IMAB11": 5_000.0}
+
+
+def test_a_regua_de_deficit_e_a_mesma_para_os_dois_tipos():
+    # base = 20.000 + 4.000 = 24.000; alvo de cada = 12.000; CDI já tem 20.000 (déficit 0)
+    out = ix.basket_deficits({"CDI": 0.5, "IMAB11": 0.5},
+                             {"CDI": 20_000.0, "IMAB11": 0.0}, 4_000.0)
+    assert out == {"IMAB11": 4_000.0}

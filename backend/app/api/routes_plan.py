@@ -375,6 +375,10 @@ async def plan(req: PlanRequest) -> PlanResponse:
             db = get_db()
             tags_conta = await labels_repo.assignments_by_subject(db, "indexer", "fi_account")
             tags_ticker = await labels_repo.assignments_by_subject(db, "indexer", "ticker")
+            cesta = all_baskets.get(RENDA_FIXA) or {}
+            # Ticker declarado na cesta é item PRÓPRIO: o valor dele vai para o próprio
+            # código e não é rateado pela tag, senão contaria duas vezes na mesma cesta.
+            _, cesta_tickers = indexers_svc.split_basket(cesta)
             atual = indexers_svc.value_by_indexer(
                 contas_rf,
                 tags_conta,
@@ -384,8 +388,8 @@ async def plan(req: PlanRequest) -> PlanResponse:
                     if p.asset_class == RENDA_FIXA
                 ],
                 tags_ticker,
+                basket_tickers=cesta_tickers,
             )
-            cesta = all_baskets.get(RENDA_FIXA) or {}
             # Sem cesta definida, a instrução é o total: dividir por tag exigiria um alvo
             # que o usuário não deu, e inventá-lo seria pior que não dividir.
             rateio = (

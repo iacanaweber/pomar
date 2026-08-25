@@ -106,9 +106,14 @@ async def indexers() -> IndexersResponse:
             f"Carteira ilegível ({exc}). A composição mostra só as contas de renda fixa."
         )
 
-    valores = indexers_svc.value_by_indexer(contas, rotulos_conta, posicoes, rotulos_ticker)
     prefs = await preferences_repo.get(db, settings)
     alvos = (prefs.get("class_targets") or {}).get(RENDA_FIXA) or {}
+    # Ticker declarado na cesta é item PRÓPRIO: o valor dele vai para o próprio código e
+    # não é rateado pela tag de indexador, senão o mesmo dinheiro contaria duas vezes.
+    _, alvos_ticker = indexers_svc.split_basket(alvos)
+    valores = indexers_svc.value_by_indexer(
+        contas, rotulos_conta, posicoes, rotulos_ticker, basket_tickers=alvos_ticker
+    )
 
     nomes = {r["code"]: r["name"] for r in await labels_repo.list_labels(db, "indexer")}
     nomes[NO_INDEXER_CODE] = NO_INDEXER_NAME
