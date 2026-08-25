@@ -167,6 +167,11 @@ body {
 }
 .muted { color: var(--muted); font-weight: 400; }
 
+/* Não existia NENHUMA regra `a { color }` no arquivo: todo <Link> sem classe herdava o
+   azul (e o roxo de visitado) do navegador, dentro de um tema verde. */
+a { color: var(--green); text-underline-offset: 2px; }
+a:visited { color: var(--green); }
+
 /* ===== Barra do app =====
    52px em vez de 110. O argumento decisivo não é estético: em standalone o sistema JÁ
    pinta uma faixa #1b5e20 acima do app (o theme_color do manifest), e o header pintava a
@@ -839,9 +844,22 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 
 /* O acesso à Carteira alvo é a primeira coisa do bloco: é de lá que sai tudo o que a
    comparação mede. Quando falta configuração, o card `empty-target` toma o lugar dele. */
-.cmp-access { display: flex; }
-.cmp-access-btn { text-decoration: none; display: inline-block; padding: 12px 18px;
-  width: auto; }
+.cmp-access { display: flex; justify-content: center; }
+.cmp-access-btn { width: auto; }
+
+/* ===== Botão secundário =====
+   O primário de uma tela é a decisão que ela pede. Um atalho de navegação num bloco já
+   configurado não é isso: o verde sólido competia com a comparação inteira abaixo dele. */
+.btn-secondary {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--sp-6); width: auto; min-height: 44px;
+  padding: var(--sp-12) var(--sp-16);
+  background: var(--card); color: var(--green);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  font-size: var(--fs-14); font-weight: 600;
+  text-decoration: none; cursor: pointer;
+}
+.btn-secondary:hover { background: var(--hover); border-color: var(--leaf); }
 
 /* Fora do alvo: sem eixo divergente e sem barra — não há alvo contra o qual medir. */
 .cmp-legacy .cmp-row-legacy { grid-template-columns: 74px 1fr auto; }
@@ -894,20 +912,34 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
    (empurrava a página e criava scroll lateral) e um pseudo-elemento absoluto (não estoura
    menos, e a área nem é mensurável por getBoundingClientRect — ou seja, não dá para
    auditar). */
-.asset-link, .tip-anchor, .page p a, .class-chip-meta a, .cmp-note a, .field-hint a {
+   O hack fica SÓ para a âncora de ajuda, e cai de 14 para 10px: com line box de ~19px,
+   ±10 encosta na linha vizinha em vez de invadir 4,5px dela. Ajuda tocada por engano
+   custa um tooltip; destino tocado por engano custa navegação — por isso todo LINK que
+   decide algo saiu da prosa e virou `.link-row`, com 44px de verdade. */
+.tip-anchor {
   display: inline-block;
-  padding-top: 14px;
-  padding-bottom: 14px;
-  margin-top: -14px;
-  margin-bottom: -14px;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  margin-top: -10px;
+  margin-bottom: -10px;
 }
 
-/* Botão só de ícone (✏️, 🗑): a altura já vinha do padding, faltava a largura — 44×44
-   vale nos dois eixos. */
-.reserve-rename, .watchlist-remove { min-width: 44px; }
+/* Destino fora da prosa: linha própria, alvo real, sem área clicável fantasma. */
+.link-row {
+  display: flex; align-items: center; gap: var(--sp-6);
+  min-height: 44px; font-size: var(--fs-13); font-weight: 600; margin: 0;
+}
+.link-row a { text-decoration: none; }
+.link-row a:hover { text-decoration: underline; }
 
-/* O ⓘ do tooltip é o gatilho no celular: sozinho ele tinha 10px. */
-.tip-mark { padding: 0 4px; }
+/* Em LISTA o alvo é a linha inteira: aqui o padding negativo coincide com a caixa da
+   própria linha, que é o que o hack global nunca pôde garantir. */
+.cmp-row, .pf-drill-item { min-height: 44px; }
+
+/* Botão só de ícone: a altura já vinha do padding, faltava a largura — 44×44 nos dois
+   eixos. */
+.reserve-rename, .watchlist-remove { min-width: 44px;
+  display: inline-grid; place-items: center; }
 
 /* Nada de ação só por hover: o realce da legenda também responde ao toque/foco. */
 .legend-item:active, .legend-item:focus-visible { background: var(--hover); }

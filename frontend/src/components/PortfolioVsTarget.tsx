@@ -135,7 +135,10 @@ function TargetAccess({ comparison }: { comparison: Comparison }) {
 
   return (
     <div className="cmp-access">
-      <Link className="primary cmp-access-btn" to="/alvo">
+      {/* Secundário, não primário: quando este bloco aparece a carteira alvo JÁ está
+          configurada — é atalho de navegação, não a decisão da tela. O verde sólido fica
+          com o empty-target acima, que é o caso em que há mesmo o que decidir. */}
+      <Link className="btn-secondary cmp-access-btn" to="/alvo">
         Editar carteira alvo
       </Link>
     </div>

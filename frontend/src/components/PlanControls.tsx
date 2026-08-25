@@ -154,8 +154,10 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
             })}
           </div>
           <p className="muted class-picker-meta">
-            {metaLine ? `Meta da carteira: ${metaLine}` : "Sem metas por classe definidas"} ·{" "}
-            <Link to="/alvo">Carteira alvo</Link>
+            {metaLine ? `Meta da carteira: ${metaLine}` : "Sem metas por classe definidas"}
+          </p>
+          <p className="link-row">
+            <Link to="/alvo">Carteira alvo →</Link>
           </p>
         </fieldset>
       ) : (
