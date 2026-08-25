@@ -4,6 +4,7 @@ import {
   useExposure,
   useFixedIncome,
   useIncome,
+  usePerformance,
   usePortfolio,
   usePreferences,
 } from "../api/queries";
@@ -15,12 +16,14 @@ import { YocCell } from "../components/YocCell";
 import { money, pct } from "../lib/format";
 import { PALETTE } from "../lib/palette";
 import { PortfolioVsTarget } from "../components/PortfolioVsTarget";
+import { PerformanceChart } from "../components/PerformanceChart";
 import { buildComparison } from "../lib/comparison";
 
-type GroupBy = "target" | "asset" | "class" | "geography" | "sector";
+type GroupBy = "target" | "rendimento" | "asset" | "class" | "geography" | "sector";
 
 const GROUPS: { key: GroupBy; label: string }[] = [
   { key: "target", label: "Atual × alvo" },
+  { key: "rendimento", label: "Rendimento" },
   { key: "asset", label: "Por ativo" },
   { key: "class", label: "Por classe" },
   { key: "geography", label: "Por geografia" },
@@ -86,6 +89,8 @@ function aggregate(positions: Position[]): Group[] {
 export function PortfolioPage() {
   const { data: pf, isLoading, error } = usePortfolio();
   const exposure = useExposure();
+  const [perfWindow, setPerfWindow] = useState<string>("all");
+  const performance = usePerformance(perfWindow);
   const income = useIncome();
   const fixedIncome = useFixedIncome(); // só pelo CDI de referência (SGS/BCB)
   const preferences = usePreferences();
@@ -235,7 +240,20 @@ export function PortfolioPage() {
 
       {by === "target" && <PortfolioVsTarget comparison={comparison} />}
 
-      {by !== "target" && (
+      {by === "rendimento" &&
+        (performance.isLoading ? (
+          <p className="muted">Carregando a curva…</p>
+        ) : performance.data ? (
+          <PerformanceChart
+            data={performance.data}
+            window={perfWindow}
+            onWindow={setPerfWindow}
+          />
+        ) : (
+          <p className="muted">Não consegui ler a curva de rendimento.</p>
+        ))}
+
+      {by !== "target" && by !== "rendimento" && (
       <div className="pf-chart">
         <div className="pf-chart-pie">
           <PieChart slices={slices} active={active} onActive={setActive} ariaLabel={ariaLabel} />

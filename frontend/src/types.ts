@@ -32,6 +32,11 @@ export type LegacySummary = Schemas["LegacySummary"];
 // --- Yield on Cost (dos snapshots mensais) ---
 export type YocPoint = Schemas["YocPoint"];
 
+// --- curva de rendimento (TWR semanal) ---
+export type PerformanceResponse = Schemas["PerformanceResponse"];
+export type WeeklyPoint = Schemas["WeeklyPoint"];
+export type BenchmarkSeries = Schemas["BenchmarkSeries"];
+
 // --- Planos salvos e radar da watchlist (v4) ---
 export type PlanSummary = Schemas["PlanSummary"];
 export type RadarResponse = Schemas["RadarResponse"];

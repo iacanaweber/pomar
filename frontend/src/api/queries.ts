@@ -26,6 +26,7 @@ export const keys = {
   labels: ["labels"] as const,
   assignments: ["label-assignments"] as const,
   indexers: ["indexers"] as const,
+  performance: ["performance"] as const,
 };
 
 export const useHealth = () => useQuery({ queryKey: keys.health, queryFn: api.health });
@@ -214,6 +215,14 @@ export function useCreateLabel() {
 }
 
 export const useIndexers = () => useQuery({ queryKey: keys.indexers, queryFn: api.indexers });
+
+/** Curva de rendimento. A série é semanal, então cache longo: ela não muda entre visitas. */
+export const usePerformance = (window = "all") =>
+  useQuery({
+    queryKey: [...keys.performance, window],
+    queryFn: () => api.performance(window),
+    staleTime: 30 * 60 * 1000,
+  });
 
 // --- Ordens ("já comprei") ---
 export const useOrders = () => useQuery({ queryKey: keys.orders, queryFn: api.orders });

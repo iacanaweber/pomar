@@ -20,6 +20,7 @@ import type {
   OrderIn,
   OrderOut,
   OrdersListResponse,
+  PerformanceResponse,
   PlanRequest,
   PlanResponse,
   Portfolio,
@@ -170,6 +171,10 @@ export const api = {
   // plano (mais lento -> timeout maior)
   plan: (req: PlanRequest) => request<PlanResponse>("/api/plan", json(req), 60000),
   planLatest: () => request<PlanResponse>("/api/plan/latest"),
+
+  // curva de rendimento (TWR semanal contra os índices)
+  performance: (window = "all") =>
+    request<PerformanceResponse>(`/api/performance?window=${window}`, {}, 30000),
 
   // radar da watchlist (preço-teto de todos os observados)
   watchlistRadar: () => request<RadarResponse>("/api/watchlist/radar", {}, 60000),

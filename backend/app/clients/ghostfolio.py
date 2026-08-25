@@ -99,6 +99,52 @@ class GhostfolioClient:
             as_of=datetime.now(timezone.utc).isoformat(),
         )
 
+    async def get_activities(self) -> list[dict]:
+        """Transações da carteira — os FLUXOS externos que o TWR precisa neutralizar.
+
+        O `executed_orders` do Pomar só tem o que o usuário registrou no app e só compras;
+        o Ghostfolio é a fonte autoritativa da renda variável. (A renda fixa não passa por
+        aqui: os aportes e resgates dela vivem em `fixed_income_entries`, e é justamente o
+        dinheiro que nunca esteve no Ghostfolio.)
+
+        O endpoint mudou de nome entre versões (`/api/v1/order` nas antigas,
+        `/api/v1/activities` a partir da 2.x), então tentamos os dois: um 404 aqui é uma
+        versão diferente, não uma carteira vazia — e silenciar isso faria todo aporte
+        virar "rentabilidade" no gráfico.
+        """
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            data = None
+            for path in ("/api/v1/activities", "/api/v1/order"):
+                try:
+                    data = await self._get(client, path)
+                    break
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code != 404:
+                        raise
+            if data is None:
+                raise RuntimeError(
+                    "Nenhum endpoint de transações respondeu no Ghostfolio "
+                    "(tentados /api/v1/activities e /api/v1/order)."
+                )
+
+        raw = data.get("activities", data if isinstance(data, list) else [])
+        out: list[dict] = []
+        for a in raw:
+            profile = a.get("SymbolProfile") or a.get("assetProfile") or {}
+            value = _num(a.get("valueInBaseCurrency"))
+            if value is None:
+                value = _num(a.get("value")) or 0.0
+            out.append(
+                {
+                    "date": str(a.get("date") or "")[:10],
+                    "type": (a.get("type") or "").upper(),
+                    "ticker": normalize_ticker(profile.get("symbol") or a.get("symbol") or ""),
+                    "value": abs(value),
+                    "fee": abs(_num(a.get("feeInBaseCurrency")) or _num(a.get("fee")) or 0.0),
+                }
+            )
+        return [a for a in out if a["date"]]
+
     async def health(self) -> bool:
         try:
             async with httpx.AsyncClient(timeout=8.0) as client:

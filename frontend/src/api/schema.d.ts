@@ -569,6 +569,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Performance */
+        get: operations["performance_api_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/performance/capture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Capture
+         * @description Captura a semana agora — o mesmo caminho do agendador, exposto para uso manual.
+         */
+        post: operations["capture_api_performance_capture_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api": {
         parameters: {
             query?: never;
@@ -956,6 +993,25 @@ export interface components {
             dimension: string;
             /** Items */
             items?: components["schemas"]["AssignmentItem"][];
+        };
+        /** BenchmarkSeries */
+        BenchmarkSeries: {
+            /** Code */
+            code: string;
+            /** Label */
+            label: string;
+            /** Source */
+            source: string;
+            /**
+             * Proxy
+             * @description Ticker usado como aproximação do índice — tem taxa e tracking error.
+             */
+            proxy?: string | null;
+            /**
+             * Values
+             * @description Retorno acumulado em cada ponto da série, na mesma base do TWR.
+             */
+            values?: (number | null)[];
         };
         /** EntryIn */
         EntryIn: {
@@ -1614,6 +1670,67 @@ export interface components {
             currency: string;
         };
         /**
+         * PerformanceResponse
+         * @description Curva de rendimento: TWR da carteira contra os índices.
+         *
+         *     Só o TWR é comparado com índice. O XIRR responde outra pergunta ("quanto o MEU
+         *     dinheiro rendeu") e por isso vem separado, sem par de comparação.
+         */
+        PerformanceResponse: {
+            /** Points */
+            points?: components["schemas"]["WeeklyPoint"][];
+            /** Benchmarks */
+            benchmarks?: components["schemas"]["BenchmarkSeries"][];
+            /**
+             * Composite Weights
+             * @description Pesos do benchmark composto, derivados da carteira alvo do usuário.
+             */
+            composite_weights?: {
+                [key: string]: number;
+            };
+            /**
+             * Twr
+             * @description TWR acumulado da janela (fração).
+             */
+            twr?: number | null;
+            /** Twr Annualized */
+            twr_annualized?: number | null;
+            /**
+             * Xirr
+             * @description Retorno ponderado pelo dinheiro, anualizado (fração).
+             */
+            xirr?: number | null;
+            /**
+             * Invested
+             * @description Aportes líquidos no período (BRL).
+             * @default 0
+             */
+            invested: number;
+            /**
+             * Current Value
+             * @default 0
+             */
+            current_value: number;
+            /**
+             * Window
+             * @description Janela pedida: '3m' | '6m' | '12m' | 'all'.
+             * @default all
+             */
+            window: string;
+            /**
+             * Gaps
+             * @description Semanas sem captura dentro da série.
+             */
+            gaps?: string[];
+            /** Warnings */
+            warnings?: string[];
+            /**
+             * Currency
+             * @default BRL
+             */
+            currency: string;
+        };
+        /**
          * PlanAsset
          * @description Um ativo da carteira alvo dentro do plano.
          *
@@ -2149,6 +2266,48 @@ export interface components {
             ticker: string;
             /** Note */
             note?: string | null;
+        };
+        /** WeeklyPoint */
+        WeeklyPoint: {
+            /**
+             * Week Of
+             * @description Semana ISO 'yyyy-Www'.
+             */
+            week_of: string;
+            /**
+             * Week End
+             * @description Domingo de fechamento (ISO).
+             */
+            week_end: string;
+            /** Captured At */
+            captured_at: string;
+            /**
+             * Late
+             * @description Capturado fora da janela pretendida.
+             * @default false
+             */
+            late: boolean;
+            /** Total Value */
+            total_value: number;
+            /** Rv Value */
+            rv_value?: number | null;
+            /** Rf Value */
+            rf_value?: number | null;
+            /**
+             * Flow Net
+             * @default 0
+             */
+            flow_net: number;
+            /**
+             * Twr Period
+             * @description Retorno do período (fração).
+             */
+            twr_period?: number | null;
+            /**
+             * Twr Cumulative
+             * @description TWR acumulado (fração).
+             */
+            twr_cumulative?: number | null;
         };
         /** YocPoint */
         YocPoint: {
@@ -3245,6 +3404,70 @@ export interface operations {
             path: {
                 label_id: number;
             };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    performance_api_performance_get: {
+        parameters: {
+            query?: {
+                window?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PerformanceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    capture_api_performance_capture_post: {
+        parameters: {
+            query?: {
+                force?: boolean;
+            };
+            header?: never;
+            path?: never;
             cookie?: never;
         };
         requestBody?: never;

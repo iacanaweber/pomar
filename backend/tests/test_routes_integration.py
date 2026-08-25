@@ -1093,3 +1093,105 @@ def test_plan_fixed_income_without_basket_still_instructs(authed_client, _stub_c
     assert r["fixed_income"]["directed_now"] == 1_000.0
     assert r["fixed_income"]["by_indexer"][0]["code"] == "SEM_INDEXADOR"
     assert any("indexador" in w for w in r["warnings"])
+
+
+# --- curva de rendimento (TWR semanal) ------------------------------------------------
+
+def test_performance_sem_serie_explica_em_vez_de_erro(authed_client):
+    r = authed_client.get("/api/performance")
+    assert r.status_code == 200
+    d = r.json()
+    assert d["points"] == []
+    assert any("primeiro é gravado" in w for w in d["warnings"])
+
+
+def _semear_serie(client, monkeypatch, pontos):
+    """Captura N semanas seguidas com valores controlados, sem rede."""
+    from datetime import date
+    from app.deps import get_db
+    from app.services import weekly
+    import asyncio
+
+    class _GF:
+        def __init__(self, acts): self._a = acts
+        async def get_activities(self): return list(self._a)
+
+    async def run():
+        db = get_db()
+        for quando, total, acts in pontos:
+            def fake(gf, cache, overrides=None, _t=total):
+                from app.models.portfolio import Allocations, Portfolio, Position
+                async def inner():
+                    return Portfolio(total_value=_t, as_of="2026-06-01T00:00:00Z",
+                                     allocations=Allocations(),
+                                     positions=[Position(ticker="AAA3", asset_class="STOCK",
+                                                         value=_t, weight=1.0)])
+                return inner()
+            monkeypatch.setattr("app.services.portfolio_service.get_enriched_portfolio", fake)
+            await weekly.capture_week(db, _GF(acts), cache=None, when=date.fromisoformat(quando))
+    asyncio.get_event_loop().run_until_complete(run()) if False else asyncio.run(run())
+
+
+def test_performance_devolve_twr_e_xirr_separados(authed_client, monkeypatch):
+    """TWR compara com índice; XIRR responde 'quanto o MEU dinheiro rendeu' e por isso
+    vem sozinho."""
+    c = authed_client
+    _semear_serie(c, monkeypatch, [
+        ("2026-05-11", 10_000.0, []),
+        ("2026-05-18", 10_500.0, []),
+        ("2026-05-25", 11_025.0, []),
+    ])
+    d = c.get("/api/performance").json()
+    assert len(d["points"]) == 3
+    assert d["twr"] == pytest.approx(0.1025, abs=1e-6)  # 5% encadeado com 5%
+    assert d["points"][0]["twr_cumulative"] == 0.0
+    assert d["points"][-1]["twr_cumulative"] == pytest.approx(0.1025, abs=1e-6)
+    assert d["current_value"] == 11_025.0
+
+
+def test_performance_avisa_com_menos_de_quatro_pontos(authed_client, monkeypatch):
+    c = authed_client
+    _semear_serie(c, monkeypatch, [("2026-05-11", 10_000.0, []), ("2026-05-18", 10_100.0, [])])
+    d = c.get("/api/performance").json()
+    assert any("quatro pontos" in w for w in d["warnings"])
+
+
+def test_performance_reporta_lacuna(authed_client, monkeypatch):
+    c = authed_client
+    _semear_serie(c, monkeypatch, [
+        ("2026-05-11", 10_000.0, []),
+        ("2026-05-25", 10_500.0, []),  # pula a semana W20
+    ])
+    d = c.get("/api/performance").json()
+    assert d["gaps"] == ["2026-W20"]
+    assert any("lacuna" in w for w in d["warnings"])
+
+
+def test_performance_janela_recorta_a_serie(authed_client, monkeypatch):
+    c = authed_client
+    _semear_serie(c, monkeypatch, [
+        ("2026-05-11", 10_000.0, []),
+        ("2026-05-18", 10_500.0, []),
+    ])
+    d = c.get("/api/performance?window=3m").json()
+    assert d["window"] == "3m"
+    assert isinstance(d["points"], list)
+
+
+def test_performance_expoe_os_pesos_do_composto(authed_client, monkeypatch):
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.6, "FII": 0.2, "RENDA_FIXA": 0.2, "ETF": 0.0, "BDR": 0.0},
+    })
+    _semear_serie(c, monkeypatch, [("2026-05-11", 10_000.0, []), ("2026-05-18", 10_500.0, [])])
+    d = c.get("/api/performance").json()
+    assert d["composite_weights"] == {"IBOV": 0.6, "IFIX": 0.2, "CDI": 0.2}
+
+
+def test_performance_requires_auth(monkeypatch, tmp_path):
+    monkeypatch.setenv("APP_PASSWORD", "pw")
+    monkeypatch.setenv("DB_PATH", str(tmp_path / "t.db"))
+    get_settings.cache_clear(); get_db.cache_clear()
+    c = TestClient(create_app(), base_url="http://testserver")
+    assert c.get("/api/performance").status_code == 401
+    get_settings.cache_clear(); get_db.cache_clear()

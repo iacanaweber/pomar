@@ -232,6 +232,52 @@ _MIGRATIONS: list[tuple[int, str]] = [
         ALTER TABLE preferences ADD COLUMN dimension_targets_json TEXT;
         """,
     ),
+    (
+        10,
+        # v10: série SEMANAL do retorno + níveis dos índices de comparação.
+        #
+        # Tabela separada de `portfolio_snapshots` de propósito: aquela é mensal e serve à
+        # bola de neve de RENDA; reaproveitá-la contaminaria a série existente com outra
+        # periodicidade e outro significado.
+        #
+        # `week_of` e `captured_at` são campos distintos porque o container pode estar
+        # desligado no domingo: um deles diz a que semana o dado se refere, o outro quando
+        # a captura de fato rodou. `late=1` marca a captura fora da janela pretendida, para
+        # o gráfico não mentir sobre a data do dado.
+        #
+        # `flows_json` e `twr_period` são CONGELADOS na captura. Recalcular retroativamente
+        # a partir de preço histórico (que muda) ou de lançamento corrigido produziria um
+        # gráfico que se reescreve sozinho.
+        """
+        CREATE TABLE IF NOT EXISTS weekly_snapshots (
+            id             INTEGER PRIMARY KEY AUTOINCREMENT,
+            week_of        TEXT NOT NULL UNIQUE,      -- 'yyyy-Www' (ISO)
+            week_end       TEXT NOT NULL,             -- domingo a que a semana se refere
+            captured_at    TEXT NOT NULL,
+            late           INTEGER NOT NULL DEFAULT 0,
+            total_value    REAL NOT NULL,
+            rv_value       REAL,
+            rf_value       REAL,
+            flow_net       REAL NOT NULL DEFAULT 0,
+            flow_weighted  REAL NOT NULL DEFAULT 0,
+            twr_period     REAL,
+            twr_cumulative REAL,
+            flows_json     TEXT,
+            detail_json    TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS benchmark_series (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            code        TEXT NOT NULL,
+            obs_date    TEXT NOT NULL,
+            level       REAL NOT NULL,
+            source      TEXT,
+            captured_at TEXT,
+            UNIQUE (code, obs_date)
+        );
+        CREATE INDEX IF NOT EXISTS idx_bench_code_date ON benchmark_series(code, obs_date);
+        """,
+    ),
 ]
 
 

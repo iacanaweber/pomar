@@ -24,6 +24,7 @@ from app.api import (
     routes_market,
     routes_meta,
     routes_orders,
+    routes_performance,
     routes_plan,
     routes_portfolio,
     routes_preferences,
@@ -65,10 +66,34 @@ async def lifespan(app: FastAPI):
                 log.warning("backup do SQLite falhou: %r", exc)
             await asyncio.sleep(24 * 3600)
 
+    async def weekly_loop() -> None:
+        """Captura semanal com RECUPERAÇÃO, e não um alarme que se perde.
+
+        O `while True: sleep(24h)` do backup é adequado para backup (perder um dia custa
+        um snapshot a mais de idade), mas seria errado aqui: ele perde execuções quando o
+        container está desligado no domingo e desloca o horário a cada restart. Como o
+        que importa é "a semana corrente já foi gravada?", perguntamos isso no boot e a
+        cada 6 horas — e a resposta é idempotente.
+        """
+        from app.deps import get_brapi, get_cache, get_db, get_ghostfolio, get_sgs
+        from app.services import weekly
+
+        await asyncio.sleep(20)  # deixa o warmup e o primeiro request passarem na frente
+        while True:
+            try:
+                await weekly.catch_up(
+                    get_db(), get_ghostfolio(), get_cache(), get_brapi(), get_sgs()
+                )
+            except Exception as exc:  # noqa: BLE001
+                log.warning("captura semanal falhou: %r", exc)
+            await asyncio.sleep(6 * 3600)
+
     app.state.warmup_task = asyncio.create_task(warm())
     app.state.backup_task = asyncio.create_task(backup_loop())
+    app.state.weekly_task = asyncio.create_task(weekly_loop())
     yield
     app.state.backup_task.cancel()
+    app.state.weekly_task.cancel()
     # shutdown: fecha a conexão do SQLite, se aberta
     try:
         from app.deps import get_db
@@ -116,6 +141,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(routes_fixed_income.router, prefix="/api", tags=["fixed-income"])
     app.include_router(routes_orders.router, prefix="/api", tags=["orders"])
     app.include_router(routes_labels.router, prefix="/api", tags=["labels"])
+    app.include_router(routes_performance.router, prefix="/api", tags=["performance"])
 
     @app.get("/api")
     async def root() -> dict:

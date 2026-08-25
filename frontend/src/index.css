@@ -43,6 +43,15 @@
   /* 5ª matiz (renda fixa): não pode ser âmbar nem vermelha — no app essas duas já
      significam atenção e erro, e cor de estado nunca vira cor de série. */
   --viz-rf: #b5347e;
+  /* Curva de rendimento. A carteira usa o verde do app (é a identidade da tela, não uma
+     categoria); os quatro slots de comparação são fixos por série e validados nos dois
+     modos. Nem quatro matizes sobrevivem a daltonismo com linhas que se cruzam, então o
+     traço e o rótulo na ponta carregam a identidade junto com a cor. */
+  --perf-hero: #1b5e20;
+  --perf-1: #b5347e;
+  --perf-2: #2a78d6;
+  --perf-3: #eb6834;
+  --perf-4: #0f9490;
 }
 
 /* Dark mode: escolha manual ([data-theme="dark"]) ou preferência do sistema. */
@@ -80,6 +89,11 @@
   --viz-etf: #199e70;
   --viz-bdr: #9085e9;
   --viz-rf: #cf4f95;
+  --perf-hero: #4caf50;
+  --perf-1: #cf4f95;
+  --perf-2: #3987e5;
+  --perf-3: #d95926;
+  --perf-4: #17a8a3;
 }
 
 * { box-sizing: border-box; }
@@ -808,3 +822,59 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
 
 /* Estado do cache offline nos ajustes — uma linha, sem prosa. */
 .sw-status { font-size: 12px; font-variant-numeric: tabular-nums; }
+
+
+/* ===== Curva de rendimento ===== */
+
+.perf { display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.perf-head { display: flex; flex-direction: column; gap: 8px; }
+.perf-head h3 { margin: 0; }
+.perf-window { margin: 0; }
+
+/* Os dois retornos lado a lado: são perguntas diferentes, não duas versões do mesmo. */
+.perf-stats { display: flex; flex-wrap: wrap; gap: 10px 22px; }
+.perf-stat { display: flex; flex-direction: column; gap: 1px; font-size: 12px; min-width: 130px; }
+.perf-stat strong { font-size: 19px; font-variant-numeric: tabular-nums; }
+.perf-up { color: var(--green); }
+.perf-down { color: var(--danger); }
+
+.perf-plot { overflow-x: auto; }
+.perf-svg { width: 100%; min-width: 320px; height: auto; display: block; }
+/* grade recessiva: só o zero, que é a única linha com significado */
+.perf-zero { stroke: var(--line); stroke-width: 1; }
+.perf-crosshair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 2 3; opacity: .6; }
+.perf-label { font-size: 11px; fill: var(--muted); font-variant-numeric: tabular-nums; }
+.perf-label-hero { fill: var(--ink); font-weight: 700; }
+.perf-axis { font-size: 10px; fill: var(--muted); }
+.perf-late { fill: var(--warn-ink); }
+
+.perf-readout { font-size: 12px; margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.perf-readout-item { display: inline-flex; align-items: center; gap: 5px;
+  font-variant-numeric: tabular-nums; }
+
+.perf-legend { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.perf-legend-item { display: inline-flex; align-items: center; gap: 6px; min-height: 44px;
+  padding: 6px 10px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px;
+  background: var(--card); color: var(--muted); cursor: pointer; }
+.perf-legend-item:disabled { opacity: .45; cursor: not-allowed; }
+.perf-on { color: var(--ink); border-color: var(--leaf); background: var(--chip-bg); }
+.perf-legend-hero { color: var(--ink); font-weight: 700; cursor: default; }
+.perf-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+.perf-proxy { font-size: 11px; }
+.perf-note { font-size: 12px; margin: 0; }
+.perf-empty { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.perf-empty h3 { margin: 0; }
+
+/* Tabela (poucos pontos): rola dentro do próprio container, nunca a página. */
+.perf-table-wrap { overflow-x: auto; }
+.perf-table { border-collapse: collapse; font-size: 12px; width: 100%;
+  font-variant-numeric: tabular-nums; }
+.perf-table th, .perf-table td { padding: 7px 10px; text-align: right; white-space: nowrap;
+  border-bottom: 1px solid var(--line); }
+.perf-table thead th { color: var(--muted); font-weight: 600; }
+.perf-table tbody th { text-align: left; font-weight: 600; }
+
+@media (min-width: 640px) {
+  .perf-head { flex-direction: row; align-items: center; justify-content: space-between; }
+  .perf-window { max-width: 340px; }
+}
