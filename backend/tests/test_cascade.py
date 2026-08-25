@@ -108,3 +108,78 @@ def test_gap_zero_quando_acima_do_alvo():
 def test_gap_sem_patrimonio_nao_divide_por_zero():
     gap = cascade.rf_gap(10_000.0, 0.0, 0.0)
     assert gap["brl"] == 10_000.0 and gap["pp"] == 0.0
+
+
+# --- teto do aporte para o piso ---
+
+def test_teto_limita_o_que_vai_ao_piso():
+    """O caso do dono: aporte 2.000 com o teto em 50%, faltando 9.501 no piso.
+
+    Sem o teto, o déficit come o aporte inteiro e a bolsa fica com zero — por cinco meses
+    seguidos, no ritmo dele.
+    """
+    out = cascade.split_aporte(2_000.0, 9_501.0, 0.0, 0.0, floor_share=0.5)
+    assert out["floor_directed"] == 1_000.0
+    assert out["aporte_rv"] == 1_000.0
+    assert out["floor_capped"] is True
+
+
+def test_piso_composto_ignora_o_teto():
+    """Sem déficit não há sobre o que o teto incidir: 0% e 100% dão o MESMO plano.
+
+    É o que dispensa um `if` especial — o controle sai do cálculo sozinho.
+    """
+    a = cascade.split_aporte(2_000.0, 0.0, 10_000.0, 9_000.0, floor_share=0.0)
+    b = cascade.split_aporte(2_000.0, 0.0, 10_000.0, 9_000.0, floor_share=1.0)
+    assert a == b
+    assert a["floor_directed"] == 0.0
+    assert a["floor_capped"] is False
+
+
+def test_teto_em_zero_nao_manda_nada_ao_piso_mesmo_com_deficit():
+    out = cascade.split_aporte(1_000.0, 5_000.0, 0.0, 0.0, floor_share=0.0)
+    assert out["floor_directed"] == 0.0
+    assert out["aporte_rv"] == 1_000.0
+    # marcado como cortado: é o que faz a tela explicar o zero em vez de silenciar
+    assert out["floor_capped"] is True
+
+
+def test_teto_maior_que_o_deficit_nao_inventa_aporte():
+    """Teto é limite, não cota: com o piso pedindo 400 e teto de 1.000, vão 400."""
+    out = cascade.split_aporte(1_000.0, 400.0, 0.0, 0.0, floor_share=1.0)
+    assert out["floor_directed"] == 400.0
+    assert out["floor_capped"] is False
+
+
+def test_teto_fora_da_faixa_e_grampeado():
+    ref = cascade.split_aporte(1_000.0, 400.0, 0.0, 0.0)
+    assert cascade.split_aporte(1_000.0, 400.0, 0.0, 0.0, floor_share=1.7) == ref
+    assert cascade.split_aporte(1_000.0, 400.0, 0.0, 0.0, floor_share=-0.2)["floor_directed"] == 0.0
+
+
+def test_teto_em_cem_por_cento_e_identico_a_omitir():
+    """A garantia de que ninguém acorda com o plano diferente: o default não muda nada."""
+    for args in [
+        (1_000.0, 5_000.0, 0.0, 0.0),
+        (5_000.0, 300.0, 20_000.0, 19_000.0),
+        (2_500.55, 1_250.27, 3_000.0, 2_999.99),
+    ]:
+        assert cascade.split_aporte(*args, floor_share=1.0) == cascade.split_aporte(*args)
+
+
+@pytest.mark.parametrize("share", [0.0, 0.05, 0.335, 0.5, 1.0])
+@pytest.mark.parametrize(
+    "aporte,piso,alvo,atual",
+    [
+        (2_000.0, 9_501.0, 30_000.0, 12_345.67),
+        (0.01, 0.02, 1.0, 0.5),
+        (333.33, 111.11, 1_000.0, 950.55),
+        (2_500.55, 1_250.27, 3_000.0, 2_999.99),
+    ],
+)
+def test_conservacao_do_aporte_com_teto(aporte, piso, alvo, atual, share):
+    out = cascade.split_aporte(aporte, piso, alvo, atual, floor_share=share)
+    assert _soma(out) == pytest.approx(aporte, abs=1e-9)
+    assert out["rf_total"] == pytest.approx(out["floor_directed"] + out["rf_directed"], abs=1e-9)
+    # meio centavo de folga: o teto arredonda para o centavo mais próximo
+    assert out["floor_directed"] <= aporte * share + 0.005

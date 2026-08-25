@@ -2,9 +2,10 @@
 
 Três degraus, nesta ordem:
 
-1. **Déficit do piso da reserva.** Prioridade absoluta e sem sutileza: o piso é o que
-   separa "investir" de "ter que vender no pior momento". Só conta de resgate imediato
-   satisfaz esse degrau, então o déficit é medido contra a reserva LÍQUIDA.
+1. **Déficit do piso da reserva.** Primeiro degrau: o piso é o que separa "investir" de
+   "ter que vender no pior momento". Só conta de resgate imediato satisfaz esse degrau,
+   então o déficit é medido contra a reserva LÍQUIDA. `floor_share` põe um teto em quanto
+   do aporte pode ir para cá — sem ele, um déficit grande come aportes inteiros por meses.
 2. **Déficit percentual da classe `RENDA_FIXA`**, medido contra TODO o valor da classe
    (inclusive o que está travado — para o peso da carteira, uma LCI vale o que vale). O
    que foi ao piso no degrau 1 já conta aqui: são o mesmo dinheiro.
@@ -31,15 +32,24 @@ def split_aporte(
     floor_deficit: float,
     rf_class_target: float,
     rf_value: float,
-) -> Dict[str, float]:
+    floor_share: float = 1.0,
+) -> Dict[str, Any]:
     """Divide o aporte entre piso, peso da renda fixa e renda variável.
 
     `rf_class_target` é o alvo em R$ da classe pelo PESO (não o piso — ele entra pelo
     primeiro degrau). `rf_value` é o valor atual da classe inteira.
+
+    `floor_share` (0..1) é o TETO do primeiro degrau: no máximo essa fração do aporte pode
+    ir para o piso. É teto, não cota — com o piso já composto o déficit é zero e não há
+    sobre o que incidir, então o controle desaparece do cálculo sozinho, sem `if` especial.
+    O default 1.0 é a prioridade absoluta de sempre.
     """
     disponivel = to_cents(max(0.0, aporte))
 
-    ao_piso = min(disponivel, to_cents(max(0.0, floor_deficit)))
+    share = min(1.0, max(0.0, floor_share))
+    teto = int(round(disponivel * share))
+    sem_teto = min(disponivel, to_cents(max(0.0, floor_deficit)))
+    ao_piso = min(teto, sem_teto)
     disponivel -= ao_piso
 
     # o que foi ao piso já engordou a classe: o déficit percentual é medido depois dele
@@ -53,6 +63,9 @@ def split_aporte(
         "rf_directed": from_cents(ao_peso),
         "rf_total": from_cents(ao_piso + ao_peso),
         "aporte_rv": from_cents(disponivel),
+        # o teto cortou algo que iria para o piso? é o que a nota do plano usa para
+        # explicar por que só parte do aporte cobriu um déficit maior
+        "floor_capped": ao_piso < sem_teto,
     }
 
 
