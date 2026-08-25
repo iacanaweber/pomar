@@ -130,9 +130,10 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "alvo da classe é o maior entre o peso percentual e este piso.",
         "source": "configuração (preferências) + saldos das contas de resgate imediato que "
         "contam na carteira",
-        "interpretation": "Aplicação com carência soma no peso da classe, mas não conta para "
-        "o piso — o piso mede o dinheiro disponível hoje. Com a correção pelo IPCA ligada, "
-        "o piso sobe mensalmente para não encolher em poder de compra.",
+        "interpretation": "Aplicação com carência e ETF de renda fixa somam no peso da "
+        "classe, mas não contam para o piso — o piso mede o dinheiro disponível hoje, e o "
+        "ETF liquida em D+2 a preço de mercado. Com a correção pelo IPCA ligada, o piso "
+        "sobe mensalmente para não encolher em poder de compra.",
     },
     "liquid_reserve": {
         "label": "Reserva líquida",
@@ -140,7 +141,8 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "e resgate imediato (D+0/D+1). É o disponível para saque hoje.",
         "source": "calculado: saldos do rastreador de renda fixa filtrados por liquidez",
         "interpretation": "Menor que o total de renda fixa sempre que houver CDB com carência, "
-        "LCI/LCA travadas ou dinheiro reservado para outro fim (como a provisão de imposto).",
+        "LCI/LCA travadas, ETF de renda fixa (que é posição em bolsa, não saldo em conta) ou "
+        "dinheiro reservado para outro fim (como a provisão de imposto).",
     },
     "fixed_income_yield": {
         "label": "Rendimento da reserva",
