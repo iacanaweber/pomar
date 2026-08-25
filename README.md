@@ -126,6 +126,53 @@ cotas), com atalho para lançar o novo saldo na conta sugerida.
 
 ---
 
+## Curva de rendimento
+
+Comparar a evolução do VALOR da carteira com o Ibovespa é incorreto: o valor cresce por
+aporte, não só por rentabilidade, e sem correção qualquer carteira que aporta "bate o
+índice". A aba **Carteira → Rendimento** mostra duas medidas, que respondem perguntas
+diferentes:
+
+- **TWR** (ponderado pelo tempo) — "quão boas foram as escolhas". Neutraliza aportes e
+  resgates encadeando os retornos entre snapshots semanais, com ponderação por **Dietz
+  modificado** (cada fluxo pesa pela fração de dias que passou aplicado). É o único
+  comparado com índice, porque índice não recebe aporte.
+- **XIRR** (ponderado pelo dinheiro) — "quanto o meu dinheiro rendeu". Sensível a QUANDO
+  o dinheiro entrou, e por isso não se compara a índice.
+
+**Os fluxos vêm das duas fontes**, porque metade do patrimônio nunca esteve no Ghostfolio:
+as transações de renda variável saem do Ghostfolio (`/api/v1/activities`) e os aportes e
+resgates de renda fixa dos lançamentos do próprio app. Um dividendo entra como *saída*: o
+preço cai ex-dividendo e o dinheiro sai do que é medido, então sem registrar a saída o TWR
+leria a queda como prejuízo.
+
+### Índices
+
+| Índice | Fonte |
+|---|---|
+| Ibovespa | brapi `^BVSP` |
+| CDI, IPCA, Dólar | Banco Central (SGS 12, 433, 1) |
+| IFIX, IMA-B, IRF-M, S&P 500 | **ETF como proxy** (XFIX11, IMAB11, IRFM11, IVVB11) |
+| Sua estratégia | pesos da sua própria carteira alvo |
+
+Os quatro marcados como proxy não têm API pública gratuita; um ETF tem taxa de
+administração e desvio em relação ao índice, e a tela diz isso. O S&P entra **em reais**
+de propósito — é o que você efetivamente ganha, com o câmbio embutido.
+
+O **benchmark composto** ("Sua estratégia") é o único comparável metodologicamente
+defensável: confronta a execução da estratégia com a estratégia. O Ibovespa fica como
+referência cultural, não como critério.
+
+### Captura
+
+Semanal, fechando no domingo, chave `yyyy-Www`. O container pode estar desligado no
+domingo, então a captura não é um alarme que se perde: no boot e a cada 6 horas o app
+pergunta "a semana corrente já foi gravada?" — e a resposta é idempotente. Captura fora da
+janela é marcada como atrasada, e **semana perdida vira lacuna**, nunca valor inventado
+com o preço de hoje. Com menos de quatro pontos a tela mostra tabela em vez de gráfico.
+
+---
+
 ## Rótulos por dimensão
 
 Em vez de uma coluna por ideia nova, o app tem rótulos `(dimensão, código)` e atribuições com
