@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512"
+     role="img" aria-label="Pomar: um fruto cujo cabinho sobe em diagonal, com uma folha">
+  <!-- Variação C: um fruto único, cujo CABINHO é a linha ascendente. Mais memorável que
+       uma árvore (o desenho genérico de qualquer app verde) e o único dos três que não é
+       um círculo sobre um retângulo.
+
+       Risco assumido: a 48px a silhueta se aproxima de um círculo sólido, e o ícone do
+       GAIA também é um círculo — o cabinho em diagonal e a folha clara são o que os
+       separam lado a lado na tela inicial.
+       Cores lidas de frontend/src/index.css: green=#1b5e20, leaf=#66bb6a, bg=#f6f8f6. -->
+  <rect width="512" height="512" fill="#f6f8f6"/>
+  <!-- cabinho: sobe do fruto para a direita; é a "pequena linha ascendente" -->
+  <path d="M 250 200 C 274 146 326 110 386 94" fill="none" stroke="#1b5e20"
+        stroke-width="32" stroke-linecap="round"/>
+  <!-- folha no tom claro do tema: dá a leitura de "vivo" sem somar detalhe a 48px -->
+  <path d="M 310 142 C 276 96 200 92 164 120 C 200 176 276 184 310 142 z" fill="#66bb6a"/>
+  <circle cx="244" cy="322" r="148" fill="#1b5e20"/>
+</svg>
