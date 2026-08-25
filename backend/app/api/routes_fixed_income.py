@@ -133,9 +133,23 @@ async def indexers() -> IndexersResponse:
         for code in sorted(set(valores) | set(alvos))
     ]
     if NO_INDEXER_CODE in valores:
+        # O residual deixou de vir só de conta: um ativo de renda fixa que não é item da
+        # cesta nem tem tag cai aqui também. Dizer "em conta" mandaria procurar a correção
+        # numa tela onde ela não está — a do ativo é `/ativo/:ticker`, não a Reserva.
+        orfaos = sorted(
+            p["ticker"]
+            for p in posicoes
+            if p["ticker"] not in alvos_ticker and not rotulos_ticker.get(p["ticker"])
+        )
+        de_conta = NO_INDEXER_CODE in indexers_svc.value_by_indexer(contas, rotulos_conta)
+        onde = []
+        if de_conta:
+            onde.append("em conta que entra na carteira")
+        if orfaos:
+            onde.append("em " + ", ".join(orfaos[:3]) + (" e outros" if len(orfaos) > 3 else ""))
         warnings.append(
-            "Saldo sem indexador em conta que entra na carteira. Sem a tag, esse "
-            "dinheiro fica fora da cesta de renda fixa."
+            f"Saldo sem indexador {' e '.join(onde)}. Sem a tag, esse dinheiro fica fora "
+            "da cesta de renda fixa."
         )
     return IndexersResponse(items=items, total=total, warnings=warnings)
 

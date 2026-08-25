@@ -752,6 +752,37 @@ def test_indexers_inclui_etf_atribuido_ao_bucket_renda_fixa(authed_client, _stub
     assert r["warnings"] == []
 
 
+def test_indexers_aviso_nomeia_o_ativo_sem_tag_em_vez_de_falar_so_em_conta(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """O residual deixou de vir só de conta: um ativo de renda fixa sem tag cai nele também.
+
+    Dizer "em conta que entra na carteira" mandaria procurar a correção na aba Reserva,
+    onde ela não está — a do ativo é `/ativo/:ticker`.
+    """
+    from app.models.portfolio import Allocations, Portfolio, Position
+
+    c = authed_client
+    c.put("/api/labels/assignments", json={
+        "subject_type": "ticker", "subject_id": "ZZZZ11", "dimension": "bucket",
+        "items": [{"label_id": _bucket(c, "RENDA_FIXA")}],
+    })
+
+    async def carteira(gf, cache, overrides=None):
+        return Portfolio(
+            total_value=8_000.0, as_of="2026-06-01T00:00:00Z", allocations=Allocations(),
+            positions=[Position(
+                ticker="ZZZZ11", asset_class="RENDA_FIXA", value=8_000.0, weight=1.0,
+            )],
+        )
+
+    monkeypatch.setattr("app.api.routes_fixed_income.get_enriched_portfolio", carteira)
+    r = c.get("/api/fixed-income/indexers").json()
+    aviso = next(w for w in r["warnings"] if "indexador" in w)
+    assert "ZZZZ11" in aviso
+    assert "conta" not in aviso  # não há conta nenhuma nesta carteira
+
+
 def test_plan_avisa_renda_fixa_com_meta_e_sem_indexador(authed_client, monkeypatch):
     c = authed_client
     c.put("/api/preferences", json={
