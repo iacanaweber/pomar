@@ -22,7 +22,7 @@ Invariante: `spent + unallocated == aporte`.
 """
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Dict, Iterable, List, Optional
 
 from app.models.plan import PlanAsset, SuggestedBuy
 from app.models.portfolio import Portfolio
@@ -139,6 +139,27 @@ def aligned_value_by_class(
     return out
 
 
+def class_needs(
+    cur_value: Dict[str, float],
+    targets: Dict[str, float],
+    total_after: float,
+    classes: Iterable[str],
+) -> Dict[str, float]:
+    """Déficit em R$ de cada classe, medido sobre a carteira RESULTANTE (já com o aporte).
+
+    Uma fórmula, dois usuários: o alocador, para o orçamento por classe da bolsa, e a rota
+    do plano, para saber quanto a renda fixa tem a disputar na cascata. Duplicá-la
+    garantiria que um dia a explicação e o motor divergissem.
+
+    Acima do alvo devolve zero, não negativo: classe que já passou do peso não devolve
+    dinheiro para as outras — ela só deixa de pedir.
+    """
+    return {
+        c: max(0.0, targets.get(c, 0.0) * total_after - cur_value.get(c, 0.0))
+        for c in classes
+    }
+
+
 def allocate(
     aporte: float,
     ranking: List[PlanAsset],
@@ -183,9 +204,7 @@ def allocate(
         cur_value = aligned_value_by_class(held, class_baskets, targets)
         base = portfolio.total_value if legacy_in_total else sum(cur_value.values())
         total_after = base + max(0.0, extra_base) + aporte
-        needs = {
-            c: max(0.0, targets.get(c, 0.0) * total_after - cur_value.get(c, 0.0)) for c in baskets
-        }
+        needs = class_needs(cur_value, targets, total_after, baskets)
         total_need = sum(needs.values())
         if total_need > 0:
             class_budget = {c: aporte * (needs[c] / total_need) for c in baskets}

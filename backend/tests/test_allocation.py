@@ -3,6 +3,9 @@ from __future__ import annotations
 
 from app.models.plan import PlanAsset
 from app.models.portfolio import Allocations, Portfolio, Position
+import pytest
+
+from app.services import allocation
 from app.services.allocation import allocate
 
 
@@ -291,3 +294,28 @@ def test_invariante_de_conservacao_com_legado_e_lote():
                 legacy_in_total=legacy_in_total,
             )
             assert abs(_spent(ranking) + sobra - aporte) < 0.01
+
+
+def test_class_needs_e_a_formula_unica_do_deficit():
+    """Acima do alvo devolve ZERO, não negativo: classe que passou do peso não devolve
+    dinheiro para as outras, só deixa de pedir."""
+    cur = {"STOCK": 45_000.0, "FII": 15_000.0}
+    targets = {"STOCK": 0.5, "FII": 0.2}
+    needs = allocation.class_needs(cur, targets, 82_000.0, ["STOCK", "FII"])
+    assert needs["STOCK"] == 0.0            # alvo 41.000, tem 45.000
+    assert needs["FII"] == pytest.approx(1_400.0)
+
+
+def test_class_needs_soma_o_aporte_quando_nada_esta_acima_do_alvo():
+    """A propriedade que faz a disputa proporcional coincidir com a cascata sequencial:
+    metas fechando 100% e ninguém acima do alvo => os déficits somam exatamente o aporte."""
+    cur = {"STOCK": 39_000.0, "FII": 15_000.0, "RENDA_FIXA": 24_000.0}
+    targets = {"STOCK": 0.5, "FII": 0.2, "RENDA_FIXA": 0.3}
+    # patrimônio 78.000 + aporte 2.000
+    needs = allocation.class_needs(cur, targets, 80_000.0, targets)
+    assert sum(needs.values()) == pytest.approx(2_000.0)
+
+
+def test_class_needs_classe_sem_meta_nao_pede_nada():
+    needs = allocation.class_needs({"BDR": 500.0}, {"BDR": 0.0}, 10_000.0, ["BDR"])
+    assert needs["BDR"] == 0.0
