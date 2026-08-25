@@ -17,9 +17,13 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence
 
-from app.data.labels_seed import BUILTIN_LABELS, DIMENSIONS
+from app.data.labels_seed import BUCKET_LABELS, BUILTIN_LABELS, DIMENSIONS
 from app.repositories.db import Database
-from app.util import normalize_ticker
+from app.util import looks_like_ticker, normalize_ticker
+
+# As cinco classes da carteira alvo. Um `bucket` fora desta lista viraria
+# `asset_class` sem ter peso, rótulo nem lugar no alocador.
+_BUCKET_CODES = {code for code, _ in BUCKET_LABELS}
 
 SUBJECT_TYPES = ("ticker", "fi_account")
 
@@ -109,6 +113,22 @@ async def create_label(db: Database, dimension: str, code: str, name: str) -> Di
     n = (name or "").strip() or c
     if not c:
         raise ValueError("o código do rótulo é obrigatório.")
+    # A dimensão `bucket` são as CLASSES da carteira alvo, e só elas: o código vira
+    # `asset_class` verbatim em `classify.classify_ticker`, e uma sexta classe não teria
+    # peso em `targets`, nem rótulo em `CLASS_LABEL`, nem lugar no alocador — o ativo
+    # atribuído a ela sumiria do plano em silêncio.
+    if d == "bucket" and c not in _BUCKET_CODES:
+        raise ValueError(
+            "a dimensão 'bucket' são as classes da carteira alvo (Ações, FIIs, ETFs, "
+            "BDRs, Renda fixa); não há rótulo novo a criar."
+        )
+    # Um código de indexador com forma de ticker seria lido como TICKER pela cesta de
+    # renda fixa (ver `util.looks_like_ticker`) e o dinheiro daquela tag sumiria dela.
+    if d == "indexer" and looks_like_ticker(c):
+        raise ValueError(
+            f"'{c}' tem forma de ticker da B3. Na cesta de renda fixa um ticker é o "
+            "próprio item, não um indexador — use um código sem essa forma."
+        )
     existing = await find_label(db, d, c)
     if existing:
         raise ValueError(f"já existe o rótulo {c} na dimensão {d}.")

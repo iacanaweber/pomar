@@ -163,3 +163,28 @@ def test_unit_que_termina_em_11_nao_vira_bdr():
     """TAEE11 e SAPR11 são ações, não BDR — a heurística olha só os sufixos de BDR."""
     assert not geography.is_bdr_ticker("TAEE11")
     assert geography.is_bdr_ticker("MSFT34")
+
+
+async def test_bucket_nao_aceita_rotulo_novo(db):
+    """A dimensão `bucket` são as 5 classes da carteira alvo, e só elas.
+
+    O código vira `asset_class` verbatim em `classify_ticker`. Uma sexta classe não teria
+    peso em `targets`, nem rótulo em `CLASS_LABEL`, nem lugar no alocador — o ativo
+    atribuído a ela sumiria do plano sem nenhum aviso.
+    """
+    with pytest.raises(ValueError, match="classes da carteira alvo"):
+        await repo.create_label(db, "bucket", "CRIPTO", "Cripto")
+    # e os embutidos continuam lá, semeados por outro caminho
+    assert await repo.find_label(db, "bucket", "RENDA_FIXA") is not None
+
+
+async def test_indexador_recusa_codigo_com_forma_de_ticker(db):
+    """Um indexador 'IMAB11' seria lido como TICKER pela cesta de renda fixa, e o dinheiro
+    daquela tag sumiria dela. O guarda fecha o único jeito de criar essa ambiguidade."""
+    with pytest.raises(ValueError, match="forma de ticker"):
+        await repo.create_label(db, "indexer", "IMAB11", "IMA-B")
+    with pytest.raises(ValueError, match="forma de ticker"):
+        await repo.create_label(db, "indexer", "IPCA45", "IPCA 45")
+    # código sem essa forma continua sendo aceito
+    novo = await repo.create_label(db, "indexer", "IPCA_CURTO", "IPCA curto")
+    assert novo["code"] == "IPCA_CURTO"
