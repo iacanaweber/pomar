@@ -128,17 +128,38 @@ class ReserveSuggestion(BaseModel):
 
 
 class IndexerAllocation(BaseModel):
-    """Quanto do aporte vai para uma tag de indexador — instrução, não ordem de compra."""
+    """Quanto do aporte vai para UM item da cesta de renda fixa.
+
+    Dois tipos de item, uma lista só: a TAG de indexador, que se cumpre lançando dinheiro
+    numa conta em qualquer valor, e o TICKER (um ETF de renda fixa), que se cumpre
+    comprando cotas, com lote e ticket mínimo. Duas listas separadas obrigariam o leitor a
+    re-somar as partes para saber quanto foi para a classe — que é a única pergunta que o
+    cartão responde.
+    """
 
     code: str
     name: str
-    amount: float = Field(0.0, description="Valor a aplicar neste indexador (BRL).")
-    current_value: float = Field(0.0, description="Quanto já existe neste indexador (BRL).")
+    amount: float = Field(
+        0.0,
+        description="Valor a aplicar neste item (BRL). Num ticker é `cotas × preço` — o "
+        "gasto REAL depois do lote, para a soma do cartão bater com o que sai da conta.",
+    )
+    current_value: float = Field(0.0, description="Quanto já existe neste item (BRL).")
     target_pct: float = Field(0.0, description="Peso-alvo dentro da classe (0..1).")
     account_id: Optional[int] = Field(
-        None, description="Conta sugerida para o lançamento (a maior com esta tag)."
+        None, description="Conta sugerida para o lançamento (só quando kind='indexer')."
     )
     account_name: Optional[str] = None
+
+    # Campos do item que é TICKER. Todos com default: `GET /plan/latest` desserializa
+    # planos gravados quando a cesta de renda fixa só tinha tags.
+    kind: str = Field(
+        "indexer", description="'indexer' = lançar em conta; 'ticker' = comprar cotas."
+    )
+    ticker: Optional[str] = Field(None, description="Ticker a comprar (só em kind='ticker').")
+    price: Optional[float] = Field(None, description="Cotação usada no cálculo (BRL).")
+    shares: int = Field(0, description="Cotas inteiras a comprar.")
+    lot_size: int = Field(1, description="Tamanho do lote considerado.")
 
 
 class FixedIncomeSuggestion(BaseModel):

@@ -1441,7 +1441,13 @@ export interface components {
         };
         /**
          * IndexerAllocation
-         * @description Quanto do aporte vai para uma tag de indexador — instrução, não ordem de compra.
+         * @description Quanto do aporte vai para UM item da cesta de renda fixa.
+         *
+         *     Dois tipos de item, uma lista só: a TAG de indexador, que se cumpre lançando dinheiro
+         *     numa conta em qualquer valor, e o TICKER (um ETF de renda fixa), que se cumpre
+         *     comprando cotas, com lote e ticket mínimo. Duas listas separadas obrigariam o leitor a
+         *     re-somar as partes para saber quanto foi para a classe — que é a única pergunta que o
+         *     cartão responde.
          */
         IndexerAllocation: {
             /** Code */
@@ -1450,13 +1456,13 @@ export interface components {
             name: string;
             /**
              * Amount
-             * @description Valor a aplicar neste indexador (BRL).
+             * @description Valor a aplicar neste item (BRL). Num ticker é `cotas × preço` — o gasto REAL depois do lote, para a soma do cartão bater com o que sai da conta.
              * @default 0
              */
             amount: number;
             /**
              * Current Value
-             * @description Quanto já existe neste indexador (BRL).
+             * @description Quanto já existe neste item (BRL).
              * @default 0
              */
             current_value: number;
@@ -1468,11 +1474,39 @@ export interface components {
             target_pct: number;
             /**
              * Account Id
-             * @description Conta sugerida para o lançamento (a maior com esta tag).
+             * @description Conta sugerida para o lançamento (só quando kind='indexer').
              */
             account_id?: number | null;
             /** Account Name */
             account_name?: string | null;
+            /**
+             * Kind
+             * @description 'indexer' = lançar em conta; 'ticker' = comprar cotas.
+             * @default indexer
+             */
+            kind: string;
+            /**
+             * Ticker
+             * @description Ticker a comprar (só em kind='ticker').
+             */
+            ticker?: string | null;
+            /**
+             * Price
+             * @description Cotação usada no cálculo (BRL).
+             */
+            price?: number | null;
+            /**
+             * Shares
+             * @description Cotas inteiras a comprar.
+             * @default 0
+             */
+            shares: number;
+            /**
+             * Lot Size
+             * @description Tamanho do lote considerado.
+             * @default 1
+             */
+            lot_size: number;
         };
         /**
          * IndexerSlice

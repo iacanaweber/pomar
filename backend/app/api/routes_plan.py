@@ -135,12 +135,22 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # parte da carteira alvo, e cobrar uma cesta dela seria ruído.
     selected = list(req.classes or ALLOCATION_CLASSES)
     all_baskets = prefs.get("class_targets") or {}
-    # A cesta de RENDA_FIXA é de tags de indexador, não de tickers com preço: ela não passa
-    # pelo alocador de cotas e tem o próprio degrau na cascata do aporte.
+    # A classe RENDA_FIXA continua fora de INVESTABLE_CLASSES: ela tem o próprio degrau na
+    # cascata e a compra dela não disputa orçamento com a bolsa. Mas a cesta dela pode ter
+    # TICKERS (um ETF de renda fixa), e esses precisam de cotação e lote como qualquer
+    # outro — daí as duas listas.
     baskets = {
         c: b for c, b in all_baskets.items()
         if b and c in selected and c in INVESTABLE_CLASSES
     }
+    rf_tags, rf_tickers = indexers_svc.split_basket(all_baskets.get(RENDA_FIXA))
+    if RENDA_FIXA not in selected:
+        rf_tickers = {}
+    # O universo é o que precisa de COTAÇÃO — inclui os tickers da renda fixa. As tags
+    # ficam de fora: pedir preço de "CDI" não é uma pergunta com resposta.
+    universe_baskets = dict(baskets)
+    if rf_tickers:
+        universe_baskets[RENDA_FIXA] = rf_tickers
     skipped = [
         c for c in selected
         if c in INVESTABLE_CLASSES and c not in baskets and targets.get(c, 0.0) > 0
@@ -154,7 +164,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
             "Renda fixa com meta e sem indexador na cesta. Marque as contas que contam "
             "na carteira e dê a elas uma tag (CDI, IPCA, LCI)."
         )
-    if not baskets:
+    if not baskets and not rf_tickers:
         raise HTTPException(
             status_code=422,
             detail=(
@@ -174,7 +184,9 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # 3) universo: só os tickers das cestas selecionadas. O fetch de mercado domina o
     # tempo do plano, então buscar apenas o que pode ser comprado é o que o torna rápido.
     try:
-        assets = await build_universe(portfolio, get_cache(), get_brapi(), class_baskets=baskets)
+        assets = await build_universe(
+            portfolio, get_cache(), get_brapi(), class_baskets=universe_baskets
+        )
     except Exception as exc:  # noqa: BLE001
         warnings.append(f"brapi indisponível ({exc}).")
         assets = []
@@ -195,7 +207,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
     bazin_yield = resolve_bazin_target_yield(bazin_mode, bazin_manual, cdi)
 
     # 5) ranking = os ativos da carteira alvo, com a leitura factual de cada um
-    class_of = {t.upper(): c for c, b in baskets.items() for t in b}
+    class_of = {t.upper(): c for c, b in universe_baskets.items() for t in b}
     ranking: list[PlanAsset] = []
     for a in assets:
         cls = class_of.get(a.ticker.upper(), a.asset_class)
@@ -217,7 +229,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
         )
 
     prices = {a.ticker: (a.price or 0.0) for a in assets}
-    for c, basket in sorted(baskets.items()):
+    for c, basket in sorted(universe_baskets.items()):
         no_price = [t for t in basket if (prices.get(t) or 0.0) <= 0]
         if no_price:
             warnings.append(
@@ -341,8 +353,77 @@ async def plan(req: PlanRequest) -> PlanResponse:
         min_ticket=req.min_ticket, total_after=total_after,
     )
 
+    # 7b) o pedaço da renda fixa que é COTA. Segunda chamada ao MESMO alocador, num mundo
+    # de uma classe só — reusa déficit dentro da cesta, lote, ticket mínimo e troco sem
+    # nenhum motor novo.
+    #
+    # A renda fixa NUNCA entra na mesma chamada da bolsa: o troco de lote atravessaria a
+    # linha que a cascata acabou de traçar, e o plano diria "R$ X para o peso da classe"
+    # enquanto gastava parte disso em FII. A frase é sobre dinheiro real.
+    rateio_rf: dict[str, float] = {}
+    rf_atual_pre: dict[str, float] = {}
+    orc_rf_tickers = 0.0
+    if split["rf_total"] > 0 and (rf_tags or rf_tickers):
+        db_rf = get_db()
+        tags_conta_pre = await labels_repo.assignments_by_subject(db_rf, "indexer", "fi_account")
+        tags_ticker_pre = await labels_repo.assignments_by_subject(db_rf, "indexer", "ticker")
+        rf_atual_pre = indexers_svc.value_by_indexer(
+            contas_rf,
+            tags_conta_pre,
+            [
+                {"ticker": p.ticker, "value": p.value}
+                for p in portfolio.positions
+                if p.asset_class == RENDA_FIXA
+            ],
+            tags_ticker_pre,
+            basket_tickers=rf_tickers,
+        )
+        # UM rateio sobre a cesta inteira: os dois tipos disputam pela mesma régua. Só
+        # depois o resultado é partido pelo tipo.
+        rateio_rf = indexers_svc.basket_deficits(
+            {**rf_tags, **rf_tickers}, rf_atual_pre, split["rf_total"]
+        )
+        orc_rf_tickers = from_cents(
+            sum(to_cents(v) for c, v in rateio_rf.items() if c in rf_tickers)
+        )
+
+    if orc_rf_tickers > 0:
+        held_rf = sum(held.get(t, 0.0) for t in rf_tickers)
+        allocate(
+            orc_rf_tickers, ranking, portfolio, prices, lots,
+            {RENDA_FIXA: 1.0}, {RENDA_FIXA: rf_tickers},
+            min_ticket=req.min_ticket,
+            # `held + orçamento` faz `class_needs` devolver EXATAMENTE o orçamento: a
+            # classe é 100% de si mesma, então não há renormalização nem sobra.
+            total_after=held_rf + orc_rf_tickers,
+        )
+
+    # A cesta de renda fixa tem tags e tickers; o alocador só viu os tickers e renormalizou
+    # entre eles. Reescrevemos a visão com os pesos VERDADEIROS e o denominador da classe
+    # inteira — senão a linha do ranking diria "100% da cesta" para um ETF que o usuário pôs
+    # em 30%, e a frase de "p.p. abaixo do alvo" sairia de um alvo inventado.
+    if rf_tickers:
+        cesta_rf = all_baskets.get(RENDA_FIXA) or {}
+        peso_rf = sum(cesta_rf.values()) or 1.0
+        valor_classe = rf_classe + split["rf_total"]
+        for item in ranking:
+            if item.ticker not in rf_tickers:
+                continue
+            alvo = float(cesta_rf.get(item.ticker, 0.0)) / peso_rf
+            atual_item = held.get(item.ticker, 0.0)
+            depois = atual_item + (item.suggested.invested_exact if item.suggested else 0.0)
+            item.basket_target_pct = round(alvo, 6)
+            item.basket_current_pct = round(atual_item / rf_classe, 6) if rf_classe > 0 else 0.0
+            item.basket_after_pct = round(depois / valor_classe, 6) if valor_classe > 0 else 0.0
+            item.basket_gap_brl = round(alvo * valor_classe - atual_item, 2)
+
     # mesma conta de necessidade do alocador — a explicação não pode divergir do motor
     at_target = {c for c, n in needs_rv.items() if n <= 0}
+    # A renda fixa não passa por `needs_rv` (o alocador da bolsa nunca a vê), mas seus
+    # tickers estão no mesmo ranking. Sem isto, um ETF de renda fixa numa classe já no peso
+    # sairia com "não coube neste aporte" — culpando o lote por uma decisão da cascata.
+    if cascade.rf_gap(rf_class_target, rf_classe, total_after)["brl"] <= 0:
+        at_target.add(RENDA_FIXA)
     for item in ranking:
         item.reasons = _plan_reasons(item, at_target)
 
@@ -365,8 +446,10 @@ async def plan(req: PlanRequest) -> PlanResponse:
         [p.model_dump() for p in portfolio.positions], gap_restante, all_baskets, targets
     )
 
-    # 8) parcela de renda fixa: instrução em R$, nunca quantidade de cotas (a compra é
-    # manual e feita fora do app), com a conta sugerida para o lançamento do novo saldo.
+    # 8) parcela de renda fixa, item a item da cesta. A TAG vira instrução em R$ com a
+    # conta sugerida para o lançamento (a compra é manual e aceita qualquer valor); o
+    # TICKER vira cotas, preço e lote, porque essa se executa na corretora como qualquer
+    # outra compra.
     fixed_income_suggestion = None
     if targets.get(RENDA_FIXA, 0.0) > 0 or floor_nominal > 0:
         gap = cascade.rf_gap(rf_class_target, rf_classe, total_after)
@@ -374,29 +457,38 @@ async def plan(req: PlanRequest) -> PlanResponse:
         if split["rf_total"] > 0:
             db = get_db()
             tags_conta = await labels_repo.assignments_by_subject(db, "indexer", "fi_account")
-            tags_ticker = await labels_repo.assignments_by_subject(db, "indexer", "ticker")
             cesta = all_baskets.get(RENDA_FIXA) or {}
-            # Ticker declarado na cesta é item PRÓPRIO: o valor dele vai para o próprio
-            # código e não é rateado pela tag, senão contaria duas vezes na mesma cesta.
-            _, cesta_tickers = indexers_svc.split_basket(cesta)
-            atual = indexers_svc.value_by_indexer(
-                contas_rf,
-                tags_conta,
-                [
-                    {"ticker": p.ticker, "value": p.value}
-                    for p in portfolio.positions
-                    if p.asset_class == RENDA_FIXA
-                ],
-                tags_ticker,
-                basket_tickers=cesta_tickers,
+            atual = rf_atual_pre if cesta else {}
+            # O que os tickers de fato consumiram, somado dos CENTAVOS já arredondados de
+            # cada compra — e não do orçamento antes do lote. É o que faz a soma das linhas
+            # do cartão bater com o dinheiro que sai da conta.
+            por_ticker = {r.ticker: r for r in ranking}
+            comprado: dict[str, float] = {}
+            for t in rf_tickers:
+                r = por_ticker.get(t)
+                if r and r.suggested:
+                    comprado[t] = r.suggested.invested_exact
+            gasto_tickers = from_cents(sum(to_cents(v) for v in comprado.values()))
+            # O troco de lote da renda fixa NÃO volta para a bolsa: fica na classe, e o
+            # item que aceita qualquer valor sem lote é a conta. R$ 1,60 é um depósito
+            # perfeitamente executável — infinitamente melhor que "não alocado".
+            sobra_rf = from_cents(to_cents(orc_rf_tickers) - to_cents(gasto_tickers))
+            orc_tags = from_cents(
+                to_cents(split["rf_total"]) - to_cents(orc_rf_tickers) + to_cents(sobra_rf)
             )
-            # Sem cesta definida, a instrução é o total: dividir por tag exigiria um alvo
-            # que o usuário não deu, e inventá-lo seria pior que não dividir.
-            rateio = (
-                indexers_svc.basket_deficits(cesta, atual, split["rf_total"])
-                if cesta
-                else {NO_INDEXER_CODE: split["rf_total"]}
-            )
+            if rf_tags and orc_tags > 0:
+                rateio_tags = indexers_svc.basket_deficits(rf_tags, atual, orc_tags)
+            elif not cesta:
+                # Sem cesta definida, a instrução é o total: dividir por tag exigiria um
+                # alvo que o usuário não deu, e inventá-lo seria pior que não dividir.
+                rateio_tags = {NO_INDEXER_CODE: split["rf_total"]}
+            else:
+                # Cesta 100% de tickers: o troco fica órfão e vai honestamente para a
+                # sobra do aporte, em vez de atravessar a cascata.
+                rateio_tags = {}
+                if sobra_rf > 0:
+                    unallocated = from_cents(to_cents(unallocated) + to_cents(sobra_rf))
+
             nomes = {r["code"]: r["name"] for r in await labels_repo.list_labels(db, "indexer")}
             nomes[NO_INDEXER_CODE] = NO_INDEXER_NAME
             # conta sugerida por tag: a de maior saldo que já tem aquele indexador — é
@@ -405,17 +497,26 @@ async def plan(req: PlanRequest) -> PlanResponse:
             for acc in sorted(contas_rf, key=lambda a: a["balance"], reverse=True):
                 for tag in tags_conta.get(str(acc["id"]), []):
                     conta_da_tag.setdefault(tag["code"], acc)
-            for code, amount in sorted(rateio.items(), key=lambda kv: kv[1], reverse=True):
-                acc = conta_da_tag.get(code)
+
+            peso_total = sum(cesta.values()) or 1.0
+            itens = {**rateio_tags, **comprado}
+            for code, amount in sorted(itens.items(), key=lambda kv: kv[1], reverse=True):
+                r = por_ticker.get(code) if code in rf_tickers else None
+                acc = conta_da_tag.get(code) if r is None else None
                 by_indexer.append(
                     IndexerAllocation(
                         code=code,
-                        name=nomes.get(code, code),
+                        name=(r.name or code) if r else nomes.get(code, code),
                         amount=amount,
                         current_value=atual.get(code, 0.0),
-                        target_pct=round(float(cesta.get(code, 0.0)), 6),
+                        target_pct=round(float(cesta.get(code, 0.0)) / peso_total, 6),
                         account_id=acc["id"] if acc else None,
                         account_name=acc["name"] if acc else None,
+                        kind="ticker" if r else "indexer",
+                        ticker=code if r else None,
+                        price=r.suggested.price if r and r.suggested else None,
+                        shares=r.suggested.shares if r and r.suggested else 0,
+                        lot_size=r.suggested.lot_size if r and r.suggested else 1,
                     )
                 )
 
@@ -438,11 +539,27 @@ async def plan(req: PlanRequest) -> PlanResponse:
         elif gap["brl"] <= 0:
             # Acima do alvo é uma carteira saudável, não um erro: nada de aviso.
             nota = "Renda fixa no alvo ou acima — o aporte inteiro vai para a renda variável."
+            # Mas um ticker de renda fixa longe do peso DENTRO da cesta some sem explicação
+            # aqui: o usuário deu 40% ao IMAB11, não vê cota nenhuma e conclui que o app
+            # ignorou o que ele pediu. A causa é a classe estar acima do alvo, e a solução
+            # é trocar de aplicação — que é decisão dele, porque o Pomar não sugere venda.
+            atrasado = max(
+                (r for r in ranking if r.ticker in rf_tickers and (r.basket_gap_brl or 0) > 0),
+                key=lambda r: r.basket_gap_brl or 0.0,
+                default=None,
+            )
+            if atrasado is not None:
+                nota += (
+                    f" Dentro da classe, {atrasado.ticker} está "
+                    f"{_brl(atrasado.basket_gap_brl or 0.0)} abaixo do peso que você deu: "
+                    "isso se resolve trocando de aplicação, não com aporte novo."
+                )
         else:
             nota = "Sem sobra para a renda fixa neste aporte."
 
+        colocado = from_cents(sum(to_cents(i.amount) for i in by_indexer))
         fixed_income_suggestion = FixedIncomeSuggestion(
-            directed_now=split["rf_total"],
+            directed_now=colocado if by_indexer else split["rf_total"],
             floor_part=split["floor_directed"],
             weight_part=split["rf_directed"],
             current_value=rf_classe,

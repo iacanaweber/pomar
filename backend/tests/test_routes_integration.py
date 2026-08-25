@@ -1078,6 +1078,111 @@ def test_plan_renda_fixa_no_patrimonio_muda_o_alvo_da_bolsa(authed_client, _stub
     assert abs(r["fixed_income"]["directed_now"] + comprado + r["unallocated"] - 1_000.0) < 0.01
 
 
+def test_plan_etf_de_renda_fixa_recebe_cotas_e_o_troco_vira_lancamento(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """O caso que motivou tudo: um ETF de renda fixa na cesta da CLASSE, não na de ETFs.
+
+    Cesta {CDI: 60%, IMAB11: 40%} e R$ 2.500 dirigidos à classe. O ETF leva R$ 1.000, o
+    lote come R$ 998,40 e o troco de R$ 1,60 fica NA CLASSE, virando lançamento em conta —
+    porque o item que aceita qualquer valor sem lote é a conta. Se o troco voltasse para a
+    bolsa, "R$ 2.500 para o peso da classe" seria mentira por R$ 1,60.
+    """
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.75, "RENDA_FIXA": 0.25, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 0.6, "IMAB11": 0.4}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0), _asset("IMAB11", "ETF", 83.20)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 7_500.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 2_500.0, "min_ticket": 10.0}).json()
+
+    # resultante 10.000; alvo RF 25% = 2.500; classe zerada => o aporte inteiro vai à classe
+    fi = r["fixed_income"]
+    assert fi["weight_part"] == 2_500.0
+
+    linhas = {i["code"]: i for i in fi["by_indexer"]}
+    assert set(linhas) == {"CDI", "IMAB11"}
+
+    etf = linhas["IMAB11"]
+    assert etf["kind"] == "ticker" and etf["ticker"] == "IMAB11"
+    assert (etf["shares"], etf["price"], etf["lot_size"]) == (12, 83.20, 1)
+    assert etf["amount"] == 998.40  # o gasto REAL depois do lote, não o orçamento
+    assert etf["account_id"] is None  # não se compra ETF lançando saldo numa conta
+
+    cdi = linhas["CDI"]
+    assert cdi["kind"] == "indexer" and cdi["ticker"] is None
+    assert cdi["amount"] == 1_501.60  # 1.500 do rateio + o troco de 1,60 do lote
+
+    # o cartão não pode anunciar um total que suas próprias linhas não somam
+    assert fi["directed_now"] == 2_500.0 == round(sum(i["amount"] for i in fi["by_indexer"]), 2)
+
+    # e a invariante do aporte inteiro segue exata
+    comprado = sum(x["suggested"]["invested_exact"] for x in r["ranking"] if x["suggested"])
+    assert abs(fi["directed_now"] + comprado - 998.40 + r["unallocated"] - 2_500.0) < 0.01
+
+
+def test_plan_etf_de_renda_fixa_mostra_o_peso_que_o_usuario_deu(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """O alocador renormaliza entre os tickers; a linha do ranking não pode repetir isso.
+
+    Com um ticker só na cesta o alocador o vê como 100% do mundo dele. Dizer "100% da
+    cesta" para um ETF que o usuário pôs em 40% inventaria um alvo, e a frase de
+    "p.p. abaixo do alvo" sairia desse alvo inventado.
+    """
+    c = authed_client
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.75, "RENDA_FIXA": 0.25, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 0.6, "IMAB11": 0.4}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0), _asset("IMAB11", "ETF", 83.20)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 7_500.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 2_500.0, "min_ticket": 10.0}).json()
+
+    item = next(x for x in r["ranking"] if x["ticker"] == "IMAB11")
+    assert item["asset_class"] == "RENDA_FIXA"  # e não ETF, que é a classe do provedor
+    assert item["basket_target_pct"] == 0.4  # o peso do usuário, não os 100% do alocador
+    assert item["basket_gap_brl"] == 1_000.0  # 40% de uma classe que valerá 2.500
+    # a compra aparece nos DOIS lugares: aqui, com registro de ordem, e no card
+    assert item["suggested"]["shares"] == 12
+
+
+def test_plan_renda_fixa_acima_do_alvo_explica_o_etf_que_nao_foi_comprado(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """Classe acima do alvo => zero para a renda fixa, e o ETF da cesta some da tela.
+
+    Sem a cláusula, o usuário que deu 40% ao IMAB11 não vê cota nenhuma e conclui que o app
+    ignorou o que ele pediu. A causa é a classe, não o ETF — e a saída é trocar de
+    aplicação, decisão dele, porque o Pomar não sugere venda.
+    """
+    c = authed_client
+    acc = _conta(c, "CDB", counts_in_portfolio=True).json()
+    _saldo(c, acc["id"], 50_000.0)
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.9, "RENDA_FIXA": 0.1, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 0.6, "IMAB11": 0.4}},
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0), _asset("IMAB11", "ETF", 83.20)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 10_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 1_000.0, "min_ticket": 10.0}).json()
+
+    assert r["fixed_income"]["directed_now"] == 0.0
+    nota = r["fixed_income"]["note"]
+    assert "IMAB11" in nota and "trocando de aplicação" in nota
+    # e o motivo do ativo culpa a classe, não o lote
+    item = next(x for x in r["ranking"] if x["ticker"] == "IMAB11")
+    assert item["suggested"] is None
+    assert any("peso-alvo da carteira" in m for m in item["reasons"])
+
+
 def test_plan_fixed_income_without_basket_still_instructs(authed_client, _stub_cdi, monkeypatch):
     """Sem cesta de indexadores, a instrução é o total: inventar um alvo seria pior."""
     c = authed_client
