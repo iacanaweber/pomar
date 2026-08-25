@@ -616,7 +616,10 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .reserve-totals strong { color: var(--ink); }
 .reserve-class { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 /* Chip de opção em largura cheia (o de classe é 2×2; este é uma pergunta só). */
+/* O chip largo não é um chip de grade 2×2: aqui o rótulo é uma frase e tem a linha
+   inteira, então ele QUEBRA em vez de virar reticências. */
 .class-chip-wide { width: 100%; }
+.class-chip-wide .class-chip-name { white-space: normal; }
 .reserve-rename { padding: 15px 4px; margin: -15px 0; min-height: 0; font-size: var(--fs-12); }
 .reserve-archived-row { opacity: 0.75; }
 
@@ -832,9 +835,21 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 
 .cmp-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;
   gap: 6px; }
+/* No celular a linha tem QUATRO conteúdos e só três colunas cabem. Sem área nomeada, o
+   quarto (o valor em R$) era auto-posicionado numa segunda linha implícita na COLUNA 1,
+   de 74px — e como ele é `nowrap` e alinhado à direita, "faltam R$ 9.006,26" sangrava
+   para fora do card e o `overflow: hidden` do .card decepava o começo ("n R$ 9.006,26").
+   Com as áreas, ele desce alinhado à direita sob os p.p., que é onde se compara. */
 .cmp-row { display: grid; grid-template-columns: 74px 1fr auto; align-items: center;
-  gap: 8px; padding: 6px 0; }
-.cmp-ticker { font-weight: 700; font-size: var(--fs-14); overflow: hidden; text-overflow: ellipsis; }
+  grid-template-areas:
+    "ticker axis nums"
+    "ticker axis brl";
+  gap: 2px 8px; padding: 6px 0; }
+.cmp-ticker { grid-area: ticker; font-weight: 700; font-size: var(--fs-14);
+  overflow: hidden; text-overflow: ellipsis; }
+.cmp-axis { grid-area: axis; }
+.cmp-nums { grid-area: nums; }
+.cmp-brl { grid-area: brl; }
 .cmp-classname { color: var(--ink); }
 
 /* Eixo divergente: a POLARIDADE é a geometria (lado do zero), não a cor — por isso a cor
@@ -857,7 +872,8 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .cmp-row-not_bought .cmp-ticker { opacity: 0.75; }
 
 @media (min-width: 640px) {
-  .cmp-row { grid-template-columns: 96px 1fr auto auto; gap: 12px; }
+  .cmp-row { grid-template-columns: 96px 1fr auto auto; gap: 12px;
+    grid-template-areas: "ticker axis nums brl"; }
   .cmp-nums { flex-direction: row; align-items: baseline; gap: 8px; }
 }
 
@@ -889,13 +905,15 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .btn-secondary:hover { background: var(--hover); border-color: var(--leaf); }
 
 /* Fora do alvo: sem eixo divergente e sem barra — não há alvo contra o qual medir. */
-.cmp-legacy .cmp-row-legacy { grid-template-columns: 74px 1fr auto; }
-.cmp-legacy-class { font-size: var(--fs-12); overflow: hidden; text-overflow: ellipsis;
+.cmp-legacy .cmp-row-legacy { grid-template-columns: 74px 1fr auto;
+  grid-template-areas: "ticker class brl"; }
+.cmp-legacy-class { grid-area: class; font-size: var(--fs-12); overflow: hidden; text-overflow: ellipsis;
   white-space: nowrap; }
 .cmp-legacy-toggle { margin-top: 4px; }
 
 @media (min-width: 640px) {
-  .cmp-legacy .cmp-row-legacy { grid-template-columns: 96px 1fr auto; gap: 12px; }
+  .cmp-legacy .cmp-row-legacy { grid-template-columns: 96px 1fr auto; gap: 12px;
+    grid-template-areas: "ticker class brl"; }
 }
 /* Linha do legado no plano: aritmética, não recomendação — por isso texto, sem selo. */
 .plan-legacy { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);

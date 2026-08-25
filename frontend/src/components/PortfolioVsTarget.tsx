@@ -202,8 +202,7 @@ function OffTargetSection({ comparison }: { comparison: Comparison }) {
         ))}
       </ul>
       <p className="muted cmp-note">
-        Sem peso no alvo. Incluídos no total de{" "}
-        {money(totalValue)} inclui esse valor.
+        Sem peso no alvo. Incluídos no total de {money(totalValue)}.
       </p>
       <LegacyBaseToggle comparison={comparison} />
     </section>
