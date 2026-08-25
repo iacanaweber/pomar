@@ -329,10 +329,8 @@ export function PerformanceChart({
       </ul>
 
       <p className="muted perf-note">
-        Todas as séries partem de zero no início da janela. Só o TWR se compara a índice —
-        ele neutraliza aportes e resgates, que é o que um índice não tem.
-        {series.some((s) => s.proxy) &&
-          " Índices marcados como “via” usam um ETF como aproximação: têm taxa e desvio em relação ao índice real."}
+        Séries partem de zero no início da janela.
+        {series.some((s) => s.proxy) && " “via”: proxy por ETF, com taxa e desvio."}
       </p>
 
       {(data.warnings ?? []).map((w, i) => (

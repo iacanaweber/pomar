@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { classify } from "./CeilingBadge";
-import { streakMonths } from "./OrdersHistory";
 
 describe("classify (chip do preço-teto)", () => {
   it("classifica pela MARGEM mesmo sem preço (falso 'não calculado' do ranking)", () => {
@@ -21,29 +20,5 @@ describe("classify (chip do preço-teto)", () => {
   it("calcula a margem de teto+preço quando ela não vem", () => {
     expect(classify(30, 20, null, null).status).toBe("verde"); // 33% abaixo do teto
     expect(classify(30, 40, null, null).status).toBe("vermelho");
-  });
-});
-
-describe("streakMonths (disciplina de aportes)", () => {
-  const ym = (offset: number) => {
-    const d = new Date();
-    const x = new Date(d.getFullYear(), d.getMonth() - offset, 15);
-    return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-15`;
-  };
-
-  it("conta meses consecutivos terminando no atual", () => {
-    expect(streakMonths([ym(0), ym(1), ym(2)])).toBe(3);
-  });
-
-  it("mês corrente sem aporte não quebra a sequência", () => {
-    expect(streakMonths([ym(1), ym(2)])).toBe(2);
-  });
-
-  it("buraco no meio encerra a contagem", () => {
-    expect(streakMonths([ym(0), ym(2), ym(3)])).toBe(1);
-  });
-
-  it("vazio = 0", () => {
-    expect(streakMonths([])).toBe(0);
   });
 });

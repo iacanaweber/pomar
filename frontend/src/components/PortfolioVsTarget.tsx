@@ -163,11 +163,11 @@ function LegacyBaseToggle({ comparison }: { comparison: Comparison }) {
         onChange={(e) => savePrefs.mutate({ legacy_in_total: e.target.checked })}
       />
       <span>
-        <span className="class-chip-name">Contar o que está fora do alvo no patrimônio</span>
+        <span className="class-chip-name">Incluir o que está fora do alvo na base</span>
         <span className="class-chip-meta">
           {legacyInTotal
-            ? `Os alvos em R$ saem sobre ${money(comparison.targetBase)} e a carteira fica subalocada até a venda.`
-            : `Os alvos em R$ saem só sobre os ${money(comparison.alignedValue)} alinhados.`}
+            ? `Alvos em R$ sobre ${money(comparison.targetBase)}. Subalocada até a venda.`
+            : `Alvos em R$ sobre os ${money(comparison.alignedValue)} alinhados.`}
         </span>
       </span>
     </label>
@@ -202,7 +202,7 @@ function OffTargetSection({ comparison }: { comparison: Comparison }) {
         ))}
       </ul>
       <p className="muted cmp-note">
-        Sem peso na carteira alvo — não recebem aporte e não têm desvio a medir. O total de{" "}
+        Sem peso no alvo. Incluídos no total de{" "}
         {money(totalValue)} inclui esse valor.
       </p>
       <LegacyBaseToggle comparison={comparison} />
@@ -230,8 +230,7 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
         <div className="card empty-target">
           <h3>Defina sua carteira alvo</h3>
           <p className="muted">
-            A comparação precisa de um destino: as metas por classe e a composição de cada uma.
-            É a mesma configuração que orienta os aportes na aba Plantar.
+            Metas por classe e composição de cada uma.
           </p>
           <Link className="primary" to="/alvo">
             Montar carteira alvo →
@@ -296,8 +295,7 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
         />
         {legacyPct > 0.05 && (
           <p className="muted cmp-note">
-            As duas barras comparam o capital que segue a estratégia. Os {money(legacyValue)}{" "}
-            fora do alvo aparecem à parte, abaixo.
+            Barras sobre o capital alinhado. {money(legacyValue)} fora do alvo, abaixo.
           </p>
         )}
       </section>

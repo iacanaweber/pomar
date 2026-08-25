@@ -46,15 +46,14 @@ export class ApiError extends Error {
 }
 
 function translate(status: number, path: string, detail?: string): string {
-  if (status === 401) return "Sessão necessária. Entre com sua senha.";
+  if (status === 401) return "Sessão expirada.";
   // 503 com detail é mensagem específica do backend (ex.: plano abortado sem carteira)
   if (status === 503) return detail || "Servidor sem senha configurada (APP_PASSWORD).";
   if ([502, 504].includes(status)) {
     if (path.includes("/portfolio")) {
-      return "Não consegui falar com o Ghostfolio. Confira se o container dele está no ar "
-        + "(e o GHOSTFOLIO_URL/token no servidor) e tente de novo.";
+      return "Ghostfolio inacessível. Verifique o container e o GHOSTFOLIO_URL.";
     }
-    return "Uma fonte de dados externa está indisponível. Tente de novo em instantes.";
+    return "Fonte externa indisponível.";
   }
   return detail || `Erro ${status} ao acessar ${path}`;
 }
@@ -72,9 +71,9 @@ async function request<T>(path: string, opts: RequestInit = {}, timeoutMs = 1500
   } catch (err) {
     clearTimeout(timer);
     if (err instanceof DOMException && err.name === "AbortError") {
-      throw new ApiError(0, "A operação demorou demais (a brapi grátis costuma ser lenta). Tente de novo.");
+      throw new ApiError(0, "Tempo esgotado (a brapi grátis é lenta).");
     }
-    throw new ApiError(0, "Falha de rede ao acessar o servidor.");
+    throw new ApiError(0, "Sem resposta do servidor.");
   }
   clearTimeout(timer);
   if (!res.ok) {

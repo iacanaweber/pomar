@@ -39,7 +39,7 @@ export function LoginPage() {
             </div>
           )}
           <button className="primary" type="submit" disabled={login.isPending || !password}>
-            {login.isPending ? "Entrando…" : "Entrar"}
+            {login.isPending ? "Entrando" : "Entrar"}
           </button>
         </form>
       </div>

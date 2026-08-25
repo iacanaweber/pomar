@@ -25,7 +25,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="page">
           <div className="banner banner-error">
-            <strong>Algo quebrou ao renderizar.</strong>
+            <strong>Erro ao renderizar a tela.</strong>
             <p style={{ margin: "8px 0 0" }}>{this.state.error.message}</p>
             <button
               className="primary"

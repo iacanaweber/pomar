@@ -33,7 +33,7 @@ const TABS: { to: string; label: string; icon: IconName }[] = [
 function PageFallback() {
   return (
     <main className="page">
-      <p className="muted">Carregando…</p>
+      <p className="muted">Carregando</p>
     </main>
   );
 }

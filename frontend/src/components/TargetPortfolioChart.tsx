@@ -102,7 +102,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
 
       {segments.length === 0 ? (
         <p className="muted">
-          Defina as metas por classe e a composição de cada uma para ver a distribuição.
+          Defina as metas por classe e a composição de cada uma.
         </p>
       ) : (
         <>
@@ -152,7 +152,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
                 )}
                 {v.rows.length > 0 && Math.abs(v.basketSum - 100) > 0.1 && (
                   <span className="tp-class-warn">
-                    composição soma {fmt(v.basketSum)} — as fatias estão proporcionais, mas o
+                    composição soma {fmt(v.basketSum)}: as fatias são proporcionais, mas o
                     valor real só fecha em 100%
                   </span>
                 )}
@@ -162,8 +162,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
         </>
       )}
       <p className="muted tp-note">
-        A % de cada item é sobre a carteira INTEIRA: meta da classe × peso dele na classe. Em
-        renda fixa o item é o indexador, não um ticker.
+        % sobre a carteira inteira: meta da classe × peso na classe.
       </p>
     </section>
   );

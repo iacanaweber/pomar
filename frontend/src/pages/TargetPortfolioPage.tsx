@@ -214,7 +214,7 @@ function BasketEditor({
         ))}
         {rows.length === 0 && (
           <p className="muted">
-            {isRF ? "Nenhum indexador ainda" : "Nenhum ativo ainda"} — adicione o primeiro abaixo.
+            {isRF ? "Nenhum indexador" : "Nenhum ativo"}. Adicione o primeiro abaixo.
           </p>
         )}
       </div>
@@ -268,7 +268,7 @@ function BasketEditor({
 
       <div className="basket-tools">
         <button type="button" className="link-button" onClick={seedFromPortfolio}>
-          {isRF ? "Usar o que já está aplicado" : "Usar pesos atuais da carteira"}
+          {isRF ? "Usar saldos atuais" : "Usar pesos atuais"}
         </button>
         <button
           type="button"
@@ -289,7 +289,7 @@ function BasketEditor({
         {savePrefs.isPending
           ? "Salvando…"
           : rows.length === 0 && Object.keys(saved).length > 0
-            ? "Salvar (remove a composição desta classe)"
+            ? "Salvar (remove a composição)"
             : `Salvar composição de ${label}`}
       </button>
     </div>
@@ -314,10 +314,6 @@ function ClassTargetsEditor({
   return (
     <section className="card target-classes">
       <h2>Metas por classe</h2>
-      <p className="muted">
-        Quanto da carteira cada tipo de ativo deve representar. É o primeiro nível da decisão;
-        a composição de cada classe vem abaixo.
-      </p>
       <div className="adv-row">
         {ALLOCATION_CLASSES.map((cls) => (
           <label className="field" key={cls}>
@@ -362,7 +358,7 @@ function ClassTargetsEditor({
           )
         }
       >
-        {savePrefs.isPending ? "Salvando…" : "Salvar metas por classe"}
+        {savePrefs.isPending ? "Salvando" : "Salvar metas"}
       </button>
     </section>
   );
@@ -439,12 +435,11 @@ export function TargetPortfolioPage() {
     <main className="page">
       <SavedToast show={savedAt} message="Carteira alvo salva." />
       <h1 className="page-title">Carteira alvo</h1>
-      <p className="muted">
-        É daqui que sai toda recomendação do Plantar: o aporte vai para quem está mais longe
-        do peso que você definiu. <Link to="/plano">Voltar ao Plantar →</Link>
+      <p className="link-row">
+        <Link to="/plano">Plantar →</Link>
       </p>
 
-      {preferences.isLoading && <p className="muted">Carregando…</p>}
+      {preferences.isLoading && <p className="muted">Carregando</p>}
 
       {prefs && (
         <>

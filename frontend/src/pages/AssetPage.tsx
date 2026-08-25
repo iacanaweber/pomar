@@ -104,13 +104,11 @@ function AssetLabels({ ticker, assetClass }: { ticker: string; assetClass: strin
       </div>
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
         {geo && geo.source !== "user"
-          ? `Geografia herdada do mapa do app (${geo.name}).`
-          : "Geografia escolhida por você."}{" "}
-        A classificação é por domicílio do ativo, não por origem da receita.
+          ? `Geografia: ${geo.name} (mapa do app).`
+          : "Geografia definida manualmente."}
       </p>
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-        A cesta escolhida à mão tem precedência sobre a classificação automática — é assim
-        que um ETF de renda fixa passa a compor a cesta de renda fixa.
+        Cesta manual tem precedência sobre a automática.
       </p>
     </div>
   );
@@ -157,7 +155,7 @@ export function AssetPage() {
           ← voltar
         </button>
         <div className="banner banner-error">
-          {error instanceof ApiError ? error.userMessage : `Não encontrei dados de ${ticker}.`}
+          {error instanceof ApiError ? error.userMessage : `Sem dados de ${ticker}.`}
         </div>
       </main>
     );
@@ -188,7 +186,7 @@ export function AssetPage() {
         </div>
       </div>
 
-      {asset.stale && <div className="banner banner-warn">⏳ Dados de cache (possivelmente defasados).</div>}
+      {asset.stale && <div className="banner banner-warn">⏳ Dados de cache, possivelmente defasados.</div>}
 
       <CeilingBadge
         ceiling={analysis.bazin_ceiling_price}
@@ -293,7 +291,7 @@ export function AssetPage() {
           />
         </div>
         <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
-          Campo vazio = a fonte não trouxe o dado. Nada é estimado por aqui.
+          Campo vazio: a fonte não trouxe o dado.
         </p>
       </div>
 

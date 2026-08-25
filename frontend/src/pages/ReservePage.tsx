@@ -108,15 +108,9 @@ function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefined }) 
             </label>
           )}
         </div>
-        {index === "ipca" && (
-          <p className="note-desc" style={{ marginTop: 0 }}>
-            Com a correção ligada, o piso sobe alguns reais por mês e o plano pede aportes
-            residuais na renda fixa de tempos em tempos.
-          </p>
-        )}
         <div className="reserve-actions">
           <button className="primary" type="submit" disabled={savePrefs.isPending || dateInvalid}>
-            {savePrefs.isPending ? "Salvando…" : "Salvar piso"}
+            {savePrefs.isPending ? "Salvando" : "Salvar piso"}
           </button>
           <button className="link-button" type="button" onClick={() => setEditing(false)}>
             Cancelar
@@ -130,7 +124,7 @@ function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefined }) 
     return (
       <div className="alloc reserve-goal">
         <p className="muted" style={{ margin: 0 }}>
-          Sem piso definido — nenhum aporte é desviado para a renda fixa.
+          Sem piso definido. Nenhum aporte é desviado para a renda fixa.
         </p>
         <button className="link-button" onClick={open}>
           Definir piso da reserva
@@ -185,11 +179,11 @@ function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefined }) 
       )}
       {floor.index === "ipca" && !floor.index_available && (
         <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-          Correção do IPCA indisponível agora — exibindo o piso nominal.
+          IPCA indisponível. Exibindo o piso nominal.
         </p>
       )}
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-        Só entra aqui o que tem resgate imediato e conta na carteira.
+        Só resgate imediato, e só o que conta na carteira.
       </p>
     </div>
   );
@@ -205,7 +199,7 @@ const ENTRY_LABEL: Record<string, string> = {
 function EntriesList({ accountId }: { accountId: number }) {
   const { data, isLoading } = useEntries(accountId);
   const del = useDeleteEntry();
-  if (isLoading) return <p className="muted" style={{ padding: "0 14px 12px" }}>Carregando lançamentos…</p>;
+  if (isLoading) return <p className="muted" style={{ padding: "0 14px 12px" }}>Carregando</p>;
   const items = data?.items ?? [];
   if (!items.length)
     return <p className="muted" style={{ padding: "0 14px 12px" }}>Nenhum lançamento ainda.</p>;
@@ -407,10 +401,10 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
       </div>
       <p className="note-desc" style={{ marginTop: 0 }}>
         {kind === "balance"
-          ? "Informe o saldo atual — havendo um saldo anterior em OUTRA data, calculamos o rendimento entre as duas."
+          ? "Saldo atual. Com um saldo anterior em outra data, o rendimento sai da diferença."
           : kind === "deposit"
-          ? "Dinheiro novo que você colocou (não conta como rendimento)."
-          : "Dinheiro que você sacou."}
+          ? "Dinheiro novo. Não conta como rendimento."
+          : "Dinheiro sacado."}
       </p>
       {addEntry.isError && (
         <div className="banner banner-error">
@@ -418,7 +412,7 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
         </div>
       )}
       <button className="primary" type="submit" disabled={addEntry.isPending || !(parseBRL(amount) > 0) || dateInvalid}>
-        {addEntry.isPending ? "Salvando…" : "Salvar lançamento"}
+        {addEntry.isPending ? "Salvando" : "Salvar lançamento"}
       </button>
     </form>
   );
@@ -426,12 +420,10 @@ function EntryForm({ account, onDone }: { account: AccountSummary; onDone: () =>
 
 function AccountCard({
   account,
-  cdiAnnual,
   tag,
   autoOpen = false,
 }: {
   account: AccountSummary;
-  cdiAnnual?: number | null;
   tag?: AssignmentOut;
   /** Veio do atalho do Plantar: abre já no formulário de lançamento. */
   autoOpen?: boolean;
@@ -543,12 +535,6 @@ function AccountCard({
       {open && <EntryForm account={account} onDone={() => setOpen(false)} />}
       {showEntries && <EntriesList accountId={account.id} />}
 
-      {annual == null && (
-        <p className="note-desc" style={{ padding: "0 14px 12px" }}>
-          O rendimento aparece quando há um <strong>ponto de partida (aporte ou saldo) e um saldo
-          atual em data posterior</strong>.{cdiAnnual != null ? ` CDI hoje: ${pct(cdiAnnual)} a.a.` : ""}
-        </p>
-      )}
     </li>
   );
 }
@@ -602,7 +588,7 @@ function NewAccountForm() {
   if (!open)
     return (
       <button className="primary" onClick={() => setOpen(true)}>
-        Adicionar conta / aplicação
+        Adicionar conta
       </button>
     );
 
@@ -676,10 +662,7 @@ function NewAccountForm() {
           {dateInvalid && <span className="field-error">Use o formato dd/mm/aaaa.</span>}
         </label>
       </div>
-      <p className="note-desc" style={{ marginTop: 0 }}>
-        Dica: informe o saldo de partida com a <strong>data em que você aplicou</strong> (no passado).
-        Depois, ao <strong>atualizar o saldo</strong> num outro dia, calculamos o rendimento entre as duas datas.
-      </p>
+      <p className="note-desc" style={{ marginTop: 0 }}>Use a data real da aplicação.</p>
       {(create.isError || addEntry.isError) && (
         <div className="banner banner-error">
           <Icon name="alert" size={15} /> {create.error instanceof ApiError ? create.error.userMessage : "Erro ao criar a conta."}
@@ -687,7 +670,7 @@ function NewAccountForm() {
       )}
       <div className="reserve-actions">
         <button className="primary" type="submit" disabled={busy || !name.trim() || dateInvalid}>
-          {busy ? "Criando…" : "Criar conta"}
+          {busy ? "Criando" : "Criar conta"}
         </button>
         <button className="link-button" type="button" onClick={() => setOpen(false)}>
           Cancelar
@@ -725,7 +708,7 @@ export function ReservePage() {
       </button>
       <h2>Renda fixa</h2>
 
-      {isLoading && <p className="muted">Carregando suas aplicações…</p>}
+      {isLoading && <p className="muted">Carregando</p>}
       {error && (
         <div className="banner banner-error">
           <Icon name="alert" size={15} /> {error instanceof ApiError ? error.userMessage : "Erro ao ler a renda fixa."}
@@ -772,15 +755,13 @@ export function ReservePage() {
 
       {data && accounts.length === 0 && (
         <div className="banner banner-warn">
-          Nenhuma aplicação ainda. Adicione sua reserva (conta, CDB, Tesouro) para acompanhar o
-          rendimento e comparar com o CDI.
+          Nenhuma aplicação. Adicione conta, CDB ou Tesouro para acompanhar o rendimento.
         </div>
       )}
 
       {precisaMarcar && !avisoLido && (
         <p className="banner radar-banner">
-          Marque em cada conta se ela conta no patrimônio — nenhuma conta antiga passou a
-          contar sozinha.{" "}
+          Marque em cada conta se ela conta no patrimônio.{" "}
           <button
             className="link-button"
             onClick={() => {
@@ -799,7 +780,6 @@ export function ReservePage() {
             <AccountCard
               key={a.id}
               account={a}
-              cdiAnnual={data?.cdi_annual}
               tag={tagOf.get(String(a.id))}
               autoOpen={a.id === contaDoAtalho}
             />
@@ -841,7 +821,7 @@ export function ReservePage() {
         </div>
       )}
 
-      <p className="disclaimer">Rendimentos calculados a partir dos saldos que você informa.</p>
+      <p className="disclaimer">Rendimento calculado a partir dos saldos informados.</p>
     </main>
   );
 }

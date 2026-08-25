@@ -26,7 +26,7 @@ function StatusChip({ item }: { item: WatchlistItem }) {
   return (
     <span className="ceiling-chip metric-na" aria-label="validando">
       <span aria-hidden="true">⏳</span>
-      <span>validando…</span>
+      <span>Validando</span>
     </span>
   );
 }
@@ -116,8 +116,7 @@ export function WatchlistPage() {
       </p>
 
       <p className="muted" style={{ marginTop: 0 }}>
-        Esta lista é o viveiro: serve para descobrir e acompanhar. Quem entra no aporte é
-        quem você põe na <Link to="/alvo">carteira alvo</Link>.
+        Acompanhamento. O aporte segue a <Link to="/alvo">carteira alvo</Link>.
       </p>
 
       {belowNow.length > 0 && (
@@ -132,7 +131,7 @@ export function WatchlistPage() {
           ))}
         </div>
       )}
-      {radar.isLoading && <p className="muted">Calculando o radar de preço-teto…</p>}
+      {radar.isLoading && <p className="muted">Calculando</p>}
 
       <form className="watchlist-add" onSubmit={submit}>
         <input
@@ -142,21 +141,21 @@ export function WatchlistPage() {
           aria-label="Ticker para adicionar"
         />
         <button className="primary" type="submit" disabled={add.isPending || !ticker.trim() || duplicate}>
-          {add.isPending ? "Adicionando…" : "Adicionar"}
+          {add.isPending ? "Adicionando" : "Adicionar"}
         </button>
       </form>
       {duplicate && <p className="field-error">{ticker.trim().toUpperCase()} já está na sua lista.</p>}
       {add.isError && (
         <div className="banner banner-error">
-          <Icon name="alert" size={15} /> {add.error instanceof ApiError ? add.error.userMessage : "Não consegui adicionar."}
+          <Icon name="alert" size={15} /> {add.error instanceof ApiError ? add.error.userMessage : "Não foi possível adicionar."}
         </div>
       )}
 
-      {isLoading && <p className="muted">Carregando sua lista…</p>}
+      {isLoading && <p className="muted">Carregando</p>}
 
       {!isLoading && items.length === 0 && (
         <div className="banner banner-warn">
-          Sua lista está vazia. Adicione ativos que você quer observar.
+          Lista vazia.
         </div>
       )}
 

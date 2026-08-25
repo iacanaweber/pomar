@@ -22,12 +22,12 @@ function LegacyLine({ plan }: { plan: PlanResponse }) {
       {cobertura != null ? (
         <>
           {" "}
-          — vendê-los cobriria <strong>{pct(Math.min(cobertura, 1))}</strong> do gap de{" "}
+         . Vendê-los cobriria <strong>{pct(Math.min(cobertura, 1))}</strong> do gap de{" "}
           {money(legacy.gap ?? 0, plan.currency)}
           {cobertura > 1 && " (com sobra)"}.
         </>
       ) : (
-        <> — não há gap a cobrir neste momento.</>
+        <>. Sem gap a cobrir.</>
       )}{" "}
       <Link to="/carteira">ver na Carteira →</Link>
     </p>

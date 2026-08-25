@@ -160,13 +160,13 @@ export function PortfolioPage() {
     [groups, by],
   );
 
-  if (isLoading) return <main className="page"><p className="muted">Carregando carteira…</p></main>;
+  if (isLoading) return <main className="page"><p className="muted">Carregando</p></main>;
 
   if (error)
     return (
       <main className="page">
         <div className="banner banner-error">
-          <Icon name="alert" size={15} /> Não consegui ler sua carteira no Ghostfolio:{" "}
+          <Icon name="alert" size={15} /> Carteira indisponível:{" "}
           {error instanceof ApiError ? error.userMessage : "erro desconhecido"}
         </div>
       </main>
@@ -178,7 +178,7 @@ export function PortfolioPage() {
     return (
       <main className="page">
         <div className="banner banner-warn">
-          Nenhuma posição encontrada no Ghostfolio. Confira a conexão e seus lançamentos.
+          Nenhuma posição no Ghostfolio.
         </div>
       </main>
     );
@@ -243,7 +243,7 @@ export function PortfolioPage() {
 
       {by === "rendimento" &&
         (performance.isLoading ? (
-          <p className="muted">Carregando a curva…</p>
+          <p className="muted">Carregando</p>
         ) : performance.data ? (
           <PerformanceChart
             data={performance.data}
@@ -251,7 +251,7 @@ export function PortfolioPage() {
             onWindow={setPerfWindow}
           />
         ) : (
-          <p className="muted">Não consegui ler a curva de rendimento.</p>
+          <p className="muted">Curva de rendimento indisponível.</p>
         ))}
 
       {by !== "target" && by !== "rendimento" && (
@@ -294,8 +294,7 @@ export function PortfolioPage() {
 
       {by === "geography" && (
         <p className="muted pf-note">
-          Classificação por domicílio do ativo, não por origem da receita: empresa brasileira
-          com receita majoritariamente externa continua em Brasil.
+          Por domicílio do ativo, não por origem da receita.
         </p>
       )}
       {FROM_EXPOSURE.includes(by) && (exposure.data?.rf_total ?? 0) > 0 && (
@@ -333,8 +332,7 @@ export function PortfolioPage() {
               })}
           </ul>
           <p className="muted" style={{ fontSize: 12 }}>
-            Retorno = valorização + proventos desde a compra (Ghostfolio). Compare com o CDI do
-            período antes de tirar conclusões — anos ruins fazem parte do método.
+            Retorno = valorização + proventos desde a compra (Ghostfolio).
           </p>
         </div>
       )}

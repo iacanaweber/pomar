@@ -39,7 +39,7 @@ function RegisterBuyButton({ asset, planId }: { asset: PlanAsset; planId?: numbe
         });
       }}
     >
-      {create.isPending ? "registrando…" : "Registrei a compra"}
+      {create.isPending ? "Registrando" : "Registrar compra"}
     </button>
   );
 }
@@ -125,8 +125,7 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
 
       {discounted && !asset.suggested && (
         <p className="card-discount-note">
-          Sem compra sugerida pelo rebalanceamento — mas está abaixo do teto. Antecipar é
-          decisão sua.
+          Abaixo do preço-teto, sem compra sugerida.
         </p>
       )}
 

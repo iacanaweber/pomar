@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import type { PlanRequest, Preferences } from "../types";
 import { useSavePreferences } from "../api/queries";
 import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
-import { money, parseBRL } from "../lib/format";
+import { parseBRL } from "../lib/format";
 import type { SwState } from "../lib/pwa";
 import { usePwa } from "../hooks/usePwa";
 import { SavedToast } from "./SavedToast";
@@ -115,7 +115,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
       <SavedToast show={savedAt} />
 
       <label className="field">
-        <span>Quanto você tem para investir hoje?</span>
+        <span>Aporte</span>
         <div className={`money ${valueInvalid ? "money-invalid" : ""}`}>
           <span>R$</span>
           <input
@@ -127,11 +127,6 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
           />
         </div>
         {valueInvalid && <span className="field-error">Informe um valor maior que zero.</span>}
-        {blank && (
-          <span className="muted field-hint">
-            Em branco? Simulamos com {money(APORTE_PADRAO)}.
-          </span>
-        )}
       </label>
 
       {hasAnyBasket ? (
@@ -163,18 +158,10 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
         </fieldset>
       ) : (
         <div className="card empty-target">
-          <h3>Comece pela carteira alvo</h3>
-          <p className="muted">
-            O Pomar não escolhe ativos por você: ele compra o que está mais longe do peso que{" "}
-            <strong>você</strong> definiu. Diga quais ativos compõem cada classe e com que
-            percentual — depois é só informar quanto tem para investir.
-          </p>
-          <p className="muted">
-            Já tem posições no Ghostfolio? Lá dentro dá para semear a composição com os pesos
-            atuais da carteira em um toque.
-          </p>
+          <h3>Carteira alvo não definida</h3>
+          <p className="muted">O plano precisa de um destino: metas por classe e composição de cada uma.</p>
           <Link className="primary" to="/alvo">
-            Montar carteira alvo →
+            Montar carteira alvo
           </Link>
         </div>
       )}
@@ -204,11 +191,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
               />
             </label>
           </div>
-          <span className="muted">
-            O ticket mínimo é o piso para ABRIR uma posição nova; reforçar o que você já tem
-            não depende dele. O piso da reserva fica na aba{" "}
-            <Link to="/reserva">Reserva</Link>, em reais.
-          </span>
+          <span className="muted">Só para abrir posição nova.</span>
           <OfflineStatusLine />
           <button
             type="button"
@@ -216,17 +199,17 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
             onClick={savePreferences}
             disabled={savePrefs.isPending}
           >
-            {savePrefs.isPending ? "Salvando…" : "Salvar como meu padrão"}
+            {savePrefs.isPending ? "Salvando" : "Salvar padrão"}
           </button>
         </div>
       )}
 
       <button className="primary" type="submit" disabled={loading || usable.length === 0}>
-        {loading ? "Analisando o pomar…" : "Ver recomendações"}
+        {loading ? "Calculando" : "Calcular plano"}
       </button>
       {hasAnyBasket && usable.length === 0 && (
         <span className="field-error">
-          Nenhuma classe marcada tem composição definida — marque outra ou defina a{" "}
+          Nenhuma classe marcada tem composição. Marque outra ou defina a{" "}
           <Link to="/alvo">carteira alvo</Link>.
         </span>
       )}
