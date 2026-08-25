@@ -114,6 +114,15 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "justificar a corretagem e o acompanhamento. Não confundir com o piso da reserva, que "
         "é outra coisa e fica na aba Reserva.",
     },
+    "reserve_floor_share": {
+        "label": "Máximo do aporte para o piso",
+        "definition": "Fatia máxima do aporte que pode ir para o PISO da reserva. Em 50%, "
+        "um aporte de R$ 2.000 manda no máximo R$ 1.000 para o piso, mesmo que falte mais.",
+        "source": "configuração (preferências), aplicada ao primeiro degrau do aporte",
+        "interpretation": "É teto, não cota: com o piso já composto não há déficit e o "
+        "controle não faz nada. O que não vai para o piso disputa o aporte com as demais "
+        "classes, e quem está mais defasado leva a maior fatia.",
+    },
     "reserve_floor": {
         "label": "Piso da reserva",
         "definition": "O mínimo, em reais, que deve ficar em renda fixa de resgate imediato. "

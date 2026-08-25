@@ -399,7 +399,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
         elif split["floor_capped"]:
             # só se chega aqui com o teto em 0% e o piso em déficit: o silêncio esconderia
             # uma decisão de não cobrir o piso
-            nota = f"Nada para o piso da reserva: o {teto_txt}."
+            nota = f"Nada para o piso da reserva: {teto_txt}."
         elif gap["brl"] <= 0:
             # Acima do alvo é uma carteira saudável, não um erro: nada de aviso.
             nota = "Renda fixa no alvo ou acima — o aporte inteiro vai para a renda variável."

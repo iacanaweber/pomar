@@ -117,9 +117,16 @@ com aviso.
 
 ### Ordem de prioridade do aporte
 
-1. **Déficit do piso da reserva** — só cobrível por conta de resgate imediato.
-2. **Déficit percentual da classe Renda fixa**, rateado entre as tags de indexador.
-3. **O que sobrar** vai para a renda variável, pelo rebalanceamento de sempre.
+1. **Déficit do piso da reserva** — só cobrível por conta de resgate imediato, e limitado
+   pelo *máximo do aporte para o piso* (Plantar → Ajustes avançados). Sem esse teto, um
+   déficit grande come aportes inteiros por meses e a bolsa fica parada no período.
+2. **O que sobra** é disputado por todas as classes **proporcionalmente ao déficit em R$**
+   — a renda fixa concorre em pé de igualdade com ações, FIIs e ETFs, e quem está mais
+   defasado leva a maior fatia. A parte que couber à renda fixa é rateada entre as tags de
+   indexador.
+
+O teto é teto, não cota: com o piso já composto não há déficit e ele não faz nada. Em 100%
+(o padrão) o piso tem a prioridade absoluta de sempre.
 
 Como a compra de renda fixa é manual, a saída é uma instrução em reais (nunca quantidade de
 cotas), com atalho para lançar o novo saldo na conta sugerida.
