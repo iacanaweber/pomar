@@ -3,8 +3,10 @@ import {
   applySnap,
   distributeEvenly,
   fromCurrentValues,
+  pctToShare,
   scaleTo100,
   shareOfTotal,
+  shareToPct,
   snapPointFor,
   SNAP_TOLERANCE,
   sumOk,
@@ -156,5 +158,31 @@ describe("applySnap", () => {
 
   it("sem ponto magnético só arredonda", () => {
     expect(applySnap(33.333, null)).toBe(33.33);
+  });
+});
+
+describe("teto do aporte para o piso (pctToShare / shareToPct)", () => {
+  it("converte nos dois sentidos", () => {
+    expect(pctToShare(50)).toBe(0.5);
+    expect(shareToPct(0.25)).toBe(25);
+    expect(shareToPct(pctToShare(35))).toBe(35);
+  });
+
+  it("zero sobrevive — 0% é uma escolha, não ausência de valor", () => {
+    expect(pctToShare(0)).toBe(0);
+    expect(shareToPct(0)).toBe(0);
+  });
+
+  it("grampeia fora da faixa em vez de mandar lixo ao backend", () => {
+    expect(pctToShare(140)).toBe(1);
+    expect(pctToShare(-3)).toBe(0);
+    expect(shareToPct(1.4)).toBe(100);
+    expect(shareToPct(-0.2)).toBe(0);
+  });
+
+  it("valor ausente vira 100% — o comportamento de sempre, não um teto surpresa", () => {
+    expect(shareToPct(undefined)).toBe(100);
+    expect(shareToPct(null)).toBe(100);
+    expect(pctToShare(Number.NaN)).toBe(1);
   });
 });

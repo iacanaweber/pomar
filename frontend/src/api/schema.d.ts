@@ -1851,6 +1851,11 @@ export interface components {
              */
             reserve_floor?: number | null;
             /**
+             * Reserve Floor Share
+             * @description Teto do aporte para o PISO da reserva (0..1). Omitido usa a preferência salva; 1 é prioridade absoluta.
+             */
+            reserve_floor_share?: number | null;
+            /**
              * Allow Empty Portfolio
              * @description Permite gerar plano SEM conseguir ler a carteira (fail-open explícito). Por padrão o plano é abortado: alocar dinheiro real sobre carteira vazia produz sugestões materialmente erradas.
              * @default false
@@ -2077,6 +2082,11 @@ export interface components {
              * @description Se os ativos fora da carteira alvo entram no patrimônio que serve de base para os alvos em R$ das demais classes.
              */
             legacy_in_total?: boolean | null;
+            /**
+             * Reserve Floor Share
+             * @description Teto do aporte para o PISO da reserva (0..1). 1 = prioridade absoluta (padrão). Com o piso já composto não há déficit e o teto não faz nada.
+             */
+            reserve_floor_share?: number | null;
         };
         /**
          * RadarItem

@@ -4,6 +4,7 @@ import type { PlanRequest, Preferences } from "../types";
 import { useSavePreferences } from "../api/queries";
 import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
 import { parseBRL } from "../lib/format";
+import { pctToShare, shareToPct } from "../lib/basket";
 import type { SwState } from "../lib/pwa";
 import { usePwa } from "../hooks/usePwa";
 import { SavedToast } from "./SavedToast";
@@ -48,6 +49,9 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
   const [selected, setSelected] = useState<string[]>([...INVESTABLE_CLASSES]);
 
   const [minTicket, setMinTicket] = useState("100");
+  // Number, não string: um `range` não tem estado intermediário inválido para digitar.
+  // 100% é a prioridade absoluta de sempre — o default nunca muda o plano de ninguém.
+  const [floorSharePct, setFloorSharePct] = useState(100);
 
   const savePrefs = useSavePreferences();
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -56,6 +60,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
   useEffect(() => {
     if (!preferences) return;
     setMinTicket(String(preferences.min_ticket));
+    setFloorSharePct(shareToPct(preferences.reserve_floor_share));
     if (preferences.aporte_default) setAporte(String(preferences.aporte_default));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferences]);
@@ -80,6 +85,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
       aporte: value,
       classes: selected,
       min_ticket: parseBRL(minTicket) || 0,
+      reserve_floor_share: pctToShare(floorSharePct),
       allow_empty_portfolio: false, // fail-closed: sem carteira, o plano é abortado
     };
   };
@@ -95,6 +101,7 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
     savePrefs.mutate(
       {
         min_ticket: parseBRL(minTicket) || 0,
+        reserve_floor_share: pctToShare(floorSharePct),
         ...(parseBRL(aporte) > 0 ? { aporte_default: parseBRL(aporte) } : {}),
       },
       { onSuccess: () => setSavedAt(Date.now()) },
@@ -192,6 +199,30 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
             </label>
           </div>
           <span className="muted">Só para abrir posição nova.</span>
+          <div className="adv-row">
+            <label className="field adv-slider-field">
+              <span className="adv-slider-head">
+                <Tooltip metricKey="reserve_floor_share">
+                  <span>Máximo do aporte para o piso</span>
+                </Tooltip>
+                <span className="adv-slider-value" aria-hidden="true">{floorSharePct}%</span>
+              </span>
+              <div className="weight-slider-wrap">
+                <input
+                  className="weight-slider"
+                  type="range"
+                  min={0}
+                  max={100}
+                  step={5}
+                  value={floorSharePct}
+                  aria-label="Máximo do aporte para o piso da reserva"
+                  /* o leitor de tela anunciaria "50"; o valuetext fecha a unidade */
+                  aria-valuetext={`${floorSharePct}%`}
+                  onChange={(e) => setFloorSharePct(Number(e.target.value))}
+                />
+              </div>
+            </label>
+          </div>
           <OfflineStatusLine />
           <button
             type="button"

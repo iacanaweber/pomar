@@ -118,3 +118,16 @@ export function applySnap(
  */
 export const shareOfTotal = (classPct: number, rowPct: number): number =>
   round2((classPct * rowPct) / 100);
+
+/** Percentual da interface (0..100) -> fração do backend (0..1), grampeado na faixa.
+ *  Entrada inválida cai em 1 (100%), que é o comportamento de sempre — nunca num teto
+ *  surpresa que o usuário não pediu. */
+export const pctToShare = (pct: number): number =>
+  Number.isFinite(pct) ? round2(Math.min(100, Math.max(0, pct))) / 100 : 1;
+
+/** Fração das preferências (0..1) -> percentual do slider. Ausente vira 100%.
+ *  Zero é preservado: 0% é uma escolha ("não mande nada para o piso"), não ausência. */
+export const shareToPct = (share: number | null | undefined): number =>
+  Number.isFinite(share as number)
+    ? round2(Math.min(1, Math.max(0, share as number)) * 100)
+    : 100;

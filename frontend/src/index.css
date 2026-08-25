@@ -441,8 +441,11 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 /* O slider dos ajustes avançados reaproveita o `.weight-slider` do editor de pesos: mesma
    área de toque de 44px e o mesmo polegar desenhado à mão nos dois motores. */
 .adv-slider-field { flex-basis: 100%; }
-.adv-slider-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-8); }
-.adv-slider-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+/* `flex-start`, não `baseline`: com o rótulo quebrando em duas linhas em 360px, o baseline
+   alinharia o valor pela ÚLTIMA linha e ele descia junto. */
+.adv-slider-head { display: flex; align-items: flex-start; justify-content: space-between;
+  gap: var(--sp-8); }
+.adv-slider-value { font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
 .adv-row .field { flex: 1; min-width: 110px; }
 /* `:not([type="range"])` não é preciosismo: esta regra tem especificidade (0,1,1) contra
    os (0,1,0) de `.weight-slider`, então venceria INDEPENDENTEMENTE da ordem no arquivo, e

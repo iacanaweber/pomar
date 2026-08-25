@@ -108,6 +108,8 @@ export interface Preferences {
   reserve_floor_index: "none" | "ipca";
   /** Se os ativos fora da carteira alvo entram na base dos alvos em R$ das demais classes. */
   legacy_in_total: boolean;
+  /** Teto do aporte para o PISO da reserva (0..1). 1 = prioridade absoluta. */
+  reserve_floor_share: number;
 }
 
 export interface WatchlistItem {
