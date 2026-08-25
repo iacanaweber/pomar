@@ -226,6 +226,19 @@ def test_renda_fixa_se_divide_pelo_indexador():
     assert pesos["CDI"] == pytest.approx(0.25)
 
 
+def test_ticker_da_cesta_que_e_o_proxy_do_indice_vira_o_indice():
+    """IMAB11 É o IMA-B desta tela — compará-lo com o CDI esconderia a marcação a mercado."""
+    pesos = bm.compose_weights({"RENDA_FIXA": 1.0}, rf_indexers={"CDI": 0.6, "IMAB11": 0.4})
+    assert pesos["CDI"] == pytest.approx(0.6)
+    assert pesos["IMAB"] == pytest.approx(0.4)
+
+
+def test_ticker_fora_do_mapa_cai_no_cdi_como_qualquer_item_sem_indexador():
+    """Limite dos dados, não escolha: não há série do IMA-B 5+ para comparar o B5P211."""
+    pesos = bm.compose_weights({"RENDA_FIXA": 1.0}, rf_indexers={"B5P211": 1.0})
+    assert pesos == {"CDI": 1.0}
+
+
 def test_renda_fixa_sem_cesta_cai_no_cdi():
     assert bm.compose_weights({"RENDA_FIXA": 1.0}) == {"CDI": 1.0}
 

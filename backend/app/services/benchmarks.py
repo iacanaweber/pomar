@@ -43,6 +43,10 @@ _BRAPI_TICKERS = {
     "SP500BRL": "IVVB11",
 }
 
+# O caminho de volta: o ticker que É o proxy de um índice desta tela. Um item da cesta de
+# renda fixa pode ser exatamente ele — IMAB11 não deve ser comparado com o CDI.
+_INDICE_DO_TICKER = {ticker: code for code, ticker in _BRAPI_TICKERS.items()}
+
 # Séries do Banco Central. O CDI é % ao dia útil e o IPCA é % ao mês: os dois precisam ser
 # ACUMULADOS para virar nível. O dólar já é um nível.
 SGS_CDI, SGS_IPCA, SGS_USD = 12, 433, 1
@@ -73,6 +77,12 @@ def compose_weights(
     * **RENDA_FIXA** se divide pelo indexador: o que está em IPCA vai para o IMA-B, o
       prefixado para o IRF-M, o resto para o CDI. Comparar uma carteira de IPCA+ com o CDI
       esconde justamente o risco que ela assume.
+
+    A cesta de renda fixa também aceita TICKER, e um deles pode ser o próprio proxy de um
+    índice que já está aqui: o IMAB11 É o IMA-B desta tela. Comparar IMAB11 com o CDI seria
+    esconder o risco de marcação a mercado atrás do índice mais liso que existe. Ticker
+    fora do mapa cai no CDI como qualquer outro item sem indexador conhecido — é o limite
+    dos dados, não uma escolha.
     """
     geo = etf_geography or {}
     idx = rf_indexers or {}
@@ -102,7 +112,7 @@ def compose_weights(
                 elif code == "PREFIXADO":
                     add("IRFM", fatia)
                 else:
-                    add("CDI", fatia)
+                    add(_INDICE_DO_TICKER.get(str(code).strip().upper(), "CDI"), fatia)
         else:
             alvo = CLASS_BENCHMARK.get(cls)
             if alvo:
