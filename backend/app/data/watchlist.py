@@ -1,9 +1,9 @@
 """Universo curado de candidatos da B3 (editável).
 
-Mantemos uma lista enxuta de boas pagadoras e ativos líquidos em vez de varrer a B3
-inteira — isso respeita a quota da brapi e mantém as recomendações relevantes. A lista
-prioriza setores perenes (BESST de Barsi) e pagadoras consistentes (Bazin), além de FIIs,
-ETFs e BDRs populares. Ajuste à vontade — é só dado.
+Mantemos uma lista enxuta de pagadoras e ativos líquidos em vez de varrer a B3 inteira —
+isso respeita a quota da brapi e mantém as sugestões da watchlist relevantes. A seleção
+favorece setores de receita previsível (bancos, energia, saneamento, seguros, telecom) e
+pagadoras regulares, além de FIIs, ETFs e BDRs populares. Ajuste à vontade — é só dado.
 """
 from __future__ import annotations
 

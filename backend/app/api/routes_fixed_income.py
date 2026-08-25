@@ -53,6 +53,11 @@ async def fixed_income_summary(include_archived: bool = False) -> FixedIncomeSum
     total = soma(ativas)
     na_carteira = soma([s for s in ativas if s.in_portfolio])
     liquida = soma([s for s in ativas if s.in_portfolio and s.liquidity == "immediate"])
+    earmarked = soma([s for s in ativas if s.purpose == "earmarked"])
+    # Ganho é CAIXA, então soma. A taxa de cada conta fica no cartão dela: taxas de
+    # períodos e capitais diferentes não se somam, e uma média por saldo aqui seria um
+    # número com cara de precisão e sem definição.
+    ganho = sum(to_cents(s.history_yield_gain or 0.0) for s in ativas)
 
     prefs = await preferences_repo.get(db, get_settings())
     piso = await resolve_floor(prefs, from_cents(liquida), get_sgs())
@@ -62,6 +67,9 @@ async def fixed_income_summary(include_archived: bool = False) -> FixedIncomeSum
         portfolio_balance=from_cents(na_carteira),
         liquid_balance=from_cents(liquida),
         excluded_balance=from_cents(total - na_carteira),
+        excluded_unmarked=from_cents(total - na_carteira - earmarked),
+        excluded_earmarked=from_cents(earmarked),
+        total_gain=from_cents(ganho),
         floor=FloorStatus(**piso) if piso["floor_nominal"] > 0 else None,
         cdi_annual=cdi,
     )

@@ -725,11 +725,7 @@ export function ReservePage() {
       <button className="link-button" onClick={() => navigate(-1)}>
         ← voltar
       </button>
-      <h2>Reserva de renda fixa</h2>
-      <p className="muted" style={{ marginTop: 0 }}>
-        No método Barsi/Bazin, a reserva (CDI/Tesouro/CDB) vem antes da renda variável. Acompanhe
-        aqui suas aplicações e o rendimento de cada uma.
-      </p>
+      <h2>Renda fixa</h2>
 
       {isLoading && <p className="muted">Carregando suas aplicações…</p>}
       {error && (
@@ -752,9 +748,19 @@ export function ReservePage() {
               </Tooltip>{" "}
               <strong>{money(data.liquid_balance)}</strong>
             </span>
-            {data.excluded_balance > 0 && (
+            {data.excluded_unmarked > 0 && (
               <span>
-                Fora da carteira <strong>{money(data.excluded_balance)}</strong>
+                Não marcado <strong>{money(data.excluded_unmarked)}</strong>
+              </span>
+            )}
+            {data.excluded_earmarked > 0 && (
+              <span>
+                Reservado p/ outro fim <strong>{money(data.excluded_earmarked)}</strong>
+              </span>
+            )}
+            {data.total_gain !== 0 && (
+              <span>
+                Rendimento acumulado <strong>{money(data.total_gain)}</strong>
               </span>
             )}
           </div>
@@ -834,10 +840,7 @@ export function ReservePage() {
         </div>
       )}
 
-      <p className="disclaimer">
-        Rendimentos calculados a partir dos saldos que você informa. Não é recomendação de
-        investimento.
-      </p>
+      <p className="disclaimer">Rendimentos calculados a partir dos saldos que você informa.</p>
     </main>
   );
 }

@@ -12,8 +12,8 @@ import { Tooltip } from "../components/Tooltip";
 import type { Fundamentals } from "../types";
 import { money, pct } from "../lib/format";
 
-/** Evolução do Yield on Cost (dos snapshots mensais) — a prova visual do método:
- *  as ações que pagam cada vez mais sobre o que você pagou. */
+/** Evolução do Yield on Cost, a partir dos snapshots mensais: quanto a posição rende
+ *  sobre o PREÇO PAGO, e para onde esse número foi desde o primeiro snapshot. */
 function YocEvolution({ ticker }: { ticker: string }) {
   const { data } = useYocHistory(ticker);
   const points = (data ?? []).filter((p) => p.yoc != null);
@@ -31,7 +31,7 @@ function YocEvolution({ ticker }: { ticker: string }) {
       <p style={{ marginTop: 0 }}>
         De <strong>{pct(first.yoc ?? 0)}</strong> em {first.month} para{" "}
         <strong>{pct(last.yoc ?? 0)}</strong> em {last.month}
-        {trend > 0.001 ? " — sua renda sobre o custo está crescendo. 🌱" : ""}
+        {trend > 0.001 ? " — em alta." : trend < -0.001 ? " — em queda." : ""}
       </p>
     </div>
   );

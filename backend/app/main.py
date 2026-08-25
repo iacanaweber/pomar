@@ -1,8 +1,9 @@
 """Pomar — API. Plante seus aportes, colha dividendos. 🌳
 
 App de planejamento de aportes na B3: lê a carteira do Ghostfolio (somente leitura),
-busca dados de mercado (Fundamentus + StatusInvest + brapi) e recomenda compras com base
-em estratégias consagradas (Barsi, Bazin, Graham) — sempre de forma transparente.
+busca dados de mercado (Fundamentus + StatusInvest + brapi) e responde quanto comprar de
+cada ativo para chegar mais perto da CARTEIRA ALVO que o usuário definiu. Não há score
+nem nota: o que decide é a distância até o peso escolhido por ele.
 
 v2: app montado por factory (`create_app`), autenticação por senha única, docs/diagnóstico
 expostos só em DEBUG, e CORS restrito (mesma origem por padrão).

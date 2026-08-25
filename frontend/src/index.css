@@ -731,3 +731,4 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: 10px;
   .fi-indexers li { grid-template-columns: 1fr auto auto; }
   .fi-shortcut { grid-column: auto; }
 }
+.fi-floor { margin: 2px 0 4px; }

@@ -26,7 +26,8 @@ export function streakMonths(dates: (string | null | undefined)[]): number {
 }
 
 /** Histórico de aportes executados ('já comprei') + total investido + disciplina.
- *  A constância é o segundo motor da bola de neve — agora ela é medida e celebrada. */
+ *  A sequência é um FATO sobre o histórico, não um elogio: quantos meses seguidos tiveram
+ *  aporte registrado. */
 export function OrdersHistory() {
   const orders = useOrders();
   const del = useDeleteOrder();

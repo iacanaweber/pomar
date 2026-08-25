@@ -24,7 +24,7 @@ BAZIN_MIN_PAID_YEARS = 3  # nº mínimo de anos pagos para calcular o preço-tet
 BAZIN_AVG_WINDOW = 5  # janela (anos) da média de proventos do preço-teto de Bazin
 BAZIN_SELIC_FACTOR = 0.5  # modo dinâmico: exige DY ≥ 50% do CDI (piso = alvo manual)
 CONSISTENCY_MIN_YEARS = 3  # histórico mínimo para medir consistência (evita 100% trivial)
-ROE_GOOD = 0.15  # ROE consistente acima disto é sinal positivo (Barsi/Bazin)
+ROE_GOOD = 0.15  # limiar convencional de ROE considerado consistentemente bom
 
 # Limiar de endividamento para o PROXY Dív.Líq/EBIT do Fundamentus (EBIT < EBITDA →
 # razão maior). Equivale a ~3/4 sobre EBITDA em empresas típicas.

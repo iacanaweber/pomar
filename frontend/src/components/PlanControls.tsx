@@ -25,7 +25,6 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
   const [selected, setSelected] = useState<string[]>([...INVESTABLE_CLASSES]);
 
   const [minTicket, setMinTicket] = useState("100");
-  const [reserveTargetPct, setReserveTargetPct] = useState(0);
 
   const savePrefs = useSavePreferences();
   const [savedAt, setSavedAt] = useState<number | null>(null);
@@ -34,7 +33,6 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
   useEffect(() => {
     if (!preferences) return;
     setMinTicket(String(preferences.min_ticket));
-    setReserveTargetPct(Math.round((preferences.reserve_target ?? 0) * 100));
     if (preferences.aporte_default) setAporte(String(preferences.aporte_default));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferences]);
@@ -60,7 +58,6 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
       classes: selected,
       min_ticket: parseBRL(minTicket) || 0,
       allow_empty_portfolio: false, // fail-closed: sem carteira, o plano é abortado
-      ...(reserveTargetPct > 0 ? { reserve_target: reserveTargetPct / 100 } : {}),
     };
   };
 
@@ -75,7 +72,6 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
     savePrefs.mutate(
       {
         min_ticket: parseBRL(minTicket) || 0,
-        reserve_target: reserveTargetPct / 100,
         ...(parseBRL(aporte) > 0 ? { aporte_default: parseBRL(aporte) } : {}),
       },
       { onSuccess: () => setSavedAt(Date.now()) },
@@ -176,22 +172,11 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
                 onChange={(e) => setMinTicket(e.target.value)}
               />
             </label>
-            <label className="field">
-              <Tooltip metricKey="reserve_target">
-                <span>Reserva-alvo (%)</span>
-              </Tooltip>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                value={reserveTargetPct}
-                onChange={(e) => setReserveTargetPct(Number(e.target.value))}
-              />
-            </label>
           </div>
           <span className="muted">
             O ticket mínimo é o piso para ABRIR uma posição nova; reforçar o que você já tem
-            não depende dele.
+            não depende dele. O piso da reserva fica na aba{" "}
+            <Link to="/reserva">Reserva</Link>, em reais.
           </span>
           <button
             type="button"

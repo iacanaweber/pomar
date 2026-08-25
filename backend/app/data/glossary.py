@@ -76,7 +76,7 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "label": "Consistência de dividendos",
         "definition": "Há quantos dos últimos anos o ativo pagou dividendos de forma recorrente, "
         "com penalidade para CORTES fortes (queda de mais de 50% de um ano para o outro). "
-        "Recompensa pagadoras regulares (estilo Barsi/Bazin) e desconfia de proventos pontuais.",
+        "Mede regularidade de pagamento, não tamanho do provento.",
         "source": "calculado: anos pagos ÷ anos analisados, ×0,75 por corte >50% (StatusInvest)",
         "interpretation": "Perto de 1 = paga quase todo ano sem cortes bruscos. Baixo = renda "
         "irregular ou em queda, menos confiável para viver de dividendos.",
@@ -98,13 +98,13 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "ele seja ruim. A sobra de arredondamento aparece em 'não alocado'.",
     },
     "reserve_target": {
-        "label": "Reserva-alvo",
-        "definition": "A fração do seu patrimônio total (renda variável + reserva) que deve "
-        "ficar em renda fixa/caixa. Disciplina Barsi: completar a reserva vem ANTES de comprar "
-        "renda variável — o plano desvia parte do aporte para cá até o alvo ser atingido.",
-        "source": "configuração (preferências) + saldo do rastreador de renda fixa",
-        "interpretation": "Ex.: 10% = a cada aporte, a reserva é completada primeiro; o restante "
-        "vai para as compras sugeridas.",
+        "label": "Reserva-alvo (aposentada)",
+        "definition": "Era a fração do patrimônio que deveria ficar em renda fixa. Foi "
+        "substituída por duas coisas independentes: o PESO da classe Renda fixa na carteira "
+        "alvo e o PISO da reserva em reais.",
+        "source": "—",
+        "interpretation": "Mantida no glossário só para quem encontrar o termo em planos "
+        "antigos. O que vale hoje é 'Piso da reserva'.",
     },
     "reserve_floor": {
         "label": "Piso da reserva",
@@ -132,9 +132,9 @@ GLOSSARY: Dict[str, Dict[str, str]] = {
         "aportes e resgates pelo tempo aplicado) e os intervalos são encadeados. Aportar ou "
         "resgatar não move a taxa — só o rendimento do produto move.",
         "source": "calculado: lançamentos da conta (saldos, aportes, resgates) + CDI do Banco Central",
-        "interpretation": "~100% do CDI é o esperado para uma boa reserva líquida. Muito abaixo, "
-        "considere trocar de produto. Atenção ao imposto: o IR retido num resgate sai do saldo e "
-        "aparece aqui como rendimento menor.",
+        "interpretation": "O IR retido num resgate sai do saldo e aparece aqui como rendimento "
+        "menor. LCI e LCA são isentas, então comparar o rendimento delas com o CDI bruto "
+        "subestima o que elas de fato entregam.",
     },
     "net_performance": {
         "label": "Retorno da posição",

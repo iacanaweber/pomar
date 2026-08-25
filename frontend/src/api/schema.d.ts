@@ -1167,6 +1167,24 @@ export interface components {
              * @default 0
              */
             excluded_balance: number;
+            /**
+             * Excluded Unmarked
+             * @description Excluído por não estar marcado (BRL).
+             * @default 0
+             */
+            excluded_unmarked: number;
+            /**
+             * Excluded Earmarked
+             * @description Excluído por ter destino definido — 'earmarked' (BRL).
+             * @default 0
+             */
+            excluded_earmarked: number;
+            /**
+             * Total Gain
+             * @description Rendimento acumulado somado (BRL) das contas ativas. É caixa, então soma; a TAXA de cada conta fica no cartão dela, porque taxas não se somam.
+             * @default 0
+             */
+            total_gain: number;
             /** @description Status do piso da reserva (nulo quando não há piso configurado). */
             floor?: components["schemas"]["FloorStatus"] | null;
             /**

@@ -7,7 +7,6 @@ import { RankedList } from "../components/RankedList";
 import { AllocationSummary } from "../components/AllocationSummary";
 import { HealthBanner } from "../components/HealthBanner";
 import { OrdersHistory } from "../components/OrdersHistory";
-import { ReserveSummaryCard } from "../components/ReserveSummaryCard";
 import { FixedIncomeSuggestionCard } from "../components/FixedIncomeSuggestionCard";
 import type { PlanRequest } from "../types";
 import { classLabel } from "../lib/classes";
@@ -86,11 +85,9 @@ export function PlanPage() {
           {result.fixed_income && (
             <FixedIncomeSuggestionCard
               suggestion={result.fixed_income}
+              reserve={result.reserve}
               currency={result.currency}
             />
-          )}
-          {result.reserve && (
-            <ReserveSummaryCard reserve={result.reserve} currency={result.currency} />
           )}
           <AllocationSummary plan={result} />
           <RankedList plan={result} />

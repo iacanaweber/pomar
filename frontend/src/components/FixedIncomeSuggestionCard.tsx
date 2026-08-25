@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { FixedIncomeSuggestion } from "../types";
+import type { FixedIncomeSuggestion, ReserveSuggestion } from "../types";
 import { money, pct } from "../lib/format";
 import { Tooltip } from "./Tooltip";
 
@@ -16,11 +16,56 @@ const fmtPp = (n: number) => `${n.toFixed(1).replace(".", ",")} p.p.`;
  *  "quanto eu consigo sacar hoje" e "quanto da carteira está em renda fixa" — e uma
  *  aplicação travada responde só à segunda.
  */
+/** Barra do piso: reserva LÍQUIDA contra o piso corrigido. Fica aqui dentro, e não num
+ *  card próprio, porque duas caixas falando do mesmo número na mesma tela é o que faz o
+ *  usuário procurar a diferença entre elas. */
+function FloorBar({
+  reserve,
+  currency,
+}: {
+  reserve: ReserveSuggestion;
+  currency: string;
+}) {
+  const filled = Math.min(Math.round((reserve.pct_filled ?? 0) * 100), 100);
+  const corrigido = reserve.floor_index === "ipca" && reserve.floor_index_available;
+  return (
+    <div className="fi-floor">
+      <div
+        className="goal-bar"
+        role="progressbar"
+        aria-valuenow={filled}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`Reserva líquida: ${filled}% do piso`}
+      >
+        <div className="alloc-track" style={{ height: 16 }}>
+          <div
+            className="alloc-cur"
+            style={{
+              width: `${filled}%`,
+              background: (reserve.gap ?? 0) > 0 ? "var(--leaf)" : "var(--green)",
+            }}
+          />
+        </div>
+        <span className="goal-bar-label">
+          Piso: {money(reserve.current_amount ?? 0, currency)} de{" "}
+          {money(reserve.target_amount ?? 0, currency)} · {filled}%
+          {corrigido && " (corrigido pelo IPCA)"}
+          {reserve.floor_index === "ipca" && !reserve.floor_index_available &&
+            " (IPCA indisponível — valor nominal)"}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function FixedIncomeSuggestionCard({
   suggestion,
+  reserve,
   currency = "BRL",
 }: {
   suggestion: FixedIncomeSuggestion;
+  reserve?: ReserveSuggestion | null;
   currency?: string;
 }) {
   const {
@@ -47,6 +92,8 @@ export function FixedIncomeSuggestionCard({
           {total > 0 ? money(total, currency) : "nada neste aporte"}
         </strong>
       </div>
+
+      {reserve && <FloorBar reserve={reserve} currency={currency} />}
 
       {total > 0 && (piso > 0 || peso > 0) && (
         <ul className="fi-parts">

@@ -166,6 +166,17 @@ class FixedIncomeSummary(BaseModel):
     excluded_balance: float = Field(
         0.0, description="Saldo que não conta na carteira (não marcado ou earmarked)."
     )
+    # O motivo importa: "ainda não marquei" é uma pendência de configuração, "reservado
+    # para outro fim" é uma decisão. Somar os dois num número só apagaria a diferença.
+    excluded_unmarked: float = Field(0.0, description="Excluído por não estar marcado (BRL).")
+    excluded_earmarked: float = Field(
+        0.0, description="Excluído por ter destino definido — 'earmarked' (BRL)."
+    )
+    total_gain: float = Field(
+        0.0,
+        description="Rendimento acumulado somado (BRL) das contas ativas. É caixa, então "
+        "soma; a TAXA de cada conta fica no cartão dela, porque taxas não se somam.",
+    )
     floor: Optional[FloorStatus] = Field(
         None, description="Status do piso da reserva (nulo quando não há piso configurado)."
     )
