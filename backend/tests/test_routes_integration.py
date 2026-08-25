@@ -1035,9 +1035,16 @@ def test_plan_cascade_floor_then_weight_then_equities(authed_client, _stub_cdi, 
     # após o piso a classe tem 10.000 => faltam 400 no segundo degrau
     assert fi["weight_part"] == 400.0
     assert fi["directed_now"] == 1_400.0
-    assert fi["by_indexer"][0]["code"] == "SELIC"
-    assert fi["by_indexer"][0]["account_id"] == selic["id"]
-    assert fi["by_indexer"][0]["account_name"] == "Tesouro Selic"
+    # O piso primeiro, fora da ordenação por valor: a ordem da lista é a ordem em que o
+    # dinheiro é decidido. Uma linha só, sem indexador e sem conta — a escolha é do usuário.
+    assert fi["by_indexer"][0]["kind"] == "floor"
+    assert fi["by_indexer"][0]["amount"] == 1_000.0
+    assert fi["by_indexer"][0]["account_id"] is None
+    # e só o degrau do PESO reparte pela cesta, aí sim com a conta que já tem a tag
+    assert fi["by_indexer"][1]["code"] == "SELIC"
+    assert fi["by_indexer"][1]["amount"] == 400.0
+    assert fi["by_indexer"][1]["account_id"] == selic["id"]
+    assert fi["by_indexer"][1]["account_name"] == "Tesouro Selic"
 
     comprado = sum(x["suggested"]["invested_exact"] for x in r["ranking"] if x["suggested"])
     assert abs(fi["directed_now"] + comprado + r["unallocated"] - 3_000.0) < 0.01
@@ -1184,10 +1191,81 @@ def test_plan_piso_da_reserva_nunca_compra_o_etf_de_renda_fixa(
     fi = r["fixed_income"]
     assert fi["floor_part"] == 3_000.0  # piso 4.000 contra 1.000 => o aporte todo
     assert fi["weight_part"] == 0.0
-    linhas = {i["code"]: i for i in fi["by_indexer"]}
-    assert set(linhas) == {"CDI"}  # nada de ETF: o piso só compra liquidez
-    assert linhas["CDI"]["amount"] == 3_000.0
+    # Uma linha só, do tipo piso: nada de ETF (que liquida em D+2), nada de quebra por
+    # indexador e nenhuma conta apontada — a escolha da conta líquida é do usuário.
+    assert [i["kind"] for i in fi["by_indexer"]] == ["floor"]
+    assert fi["by_indexer"][0]["amount"] == 3_000.0
+    assert fi["by_indexer"][0]["account_id"] is None
     assert next((x for x in r["ranking"] if x["ticker"] == "IMAB11"), {}).get("suggested") is None
+
+
+def test_plan_teto_do_aporte_para_o_piso_e_respeitado_na_linha_e_na_nota(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """`reserve_floor_share` é teto do primeiro degrau, e a linha do piso tem que obedecer.
+
+    Sem o teto, um déficit grande come aportes inteiros por meses e a bolsa nunca recebe
+    nada. Com ele, a nota precisa dizer por que só parte do buraco foi coberta — senão
+    cobrir R$ 1.000 de um déficit de R$ 4.000 parece erro de conta.
+    """
+    c = authed_client
+    acc = _conta(c, "Caixinha", counts_in_portfolio=True).json()
+    _saldo(c, acc["id"], 1_000.0)
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "RENDA_FIXA": 0.5, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 1.0}},
+        "reserve_floor_amount": 6_000.0,
+        "reserve_floor_share": 0.5,
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 5_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 2_000.0, "min_ticket": 10.0}).json()
+
+    fi = r["fixed_income"]
+    piso = next(i for i in fi["by_indexer"] if i["kind"] == "floor")
+    assert piso["amount"] == 1_000.0 == fi["floor_part"]  # metade de 2.000, não os 5.000
+    assert "máximo de 50% do aporte" in fi["note"]
+
+
+def test_plan_piso_e_atribuido_a_conta_liquida_e_nunca_a_aplicacao_travada(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """O degrau do PESO mede o déficit depois do piso — e precisa saber onde ele caiu.
+
+    A estimativa segue os indexadores das contas de resgate IMEDIATO, porque é desse
+    conjunto que a escolha vai sair. Atribuir à LCI travada faria o peso achar que o IPCA
+    já foi atendido e mandar o dinheiro seguinte para o lado errado.
+    """
+    c = authed_client
+    liquida = _conta(c, "Caixinha", counts_in_portfolio=True, liquidity="immediate").json()
+    travada = _conta(c, "LCI 2 anos", counts_in_portfolio=True, liquidity="locked").json()
+    _saldo(c, liquida["id"], 1_000.0)
+    _saldo(c, travada["id"], 1_000.0)
+    for acc, tag in ((liquida, "CDI"), (travada, "IPCA")):
+        c.put("/api/labels/assignments", json={
+            "subject_type": "fi_account", "subject_id": str(acc["id"]),
+            "dimension": "indexer", "items": [{"label_id": _tag(c, tag)}],
+        })
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.2, "RENDA_FIXA": 0.8, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 0.5, "IPCA": 0.5}},
+        "reserve_floor_amount": 3_000.0,
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 2_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 4_000.0, "min_ticket": 10.0}).json()
+
+    fi = r["fixed_income"]
+    assert fi["floor_part"] == 2_000.0  # piso 3.000 contra reserva líquida 1.000
+    peso = {i["code"]: i["amount"] for i in fi["by_indexer"] if i["kind"] == "indexer"}
+    # o piso foi para a conta CDI (a única líquida), então o CDI está em dia e o degrau do
+    # peso manda o que sobrou para o IPCA, que é quem de fato ficou para trás
+    assert peso.get("IPCA", 0.0) > peso.get("CDI", 0.0)
+    assert round(sum(i["amount"] for i in fi["by_indexer"]), 2) == fi["directed_now"]
 
 
 def test_plan_etf_de_renda_fixa_mostra_o_peso_que_o_usuario_deu(
@@ -1445,8 +1523,9 @@ def test_plan_sem_teto_configurado_mantem_a_prioridade_absoluta(
         "reserve_current": 20_000.0,
     }).json()
     assert r["reserve"]["directed_now"] == 1_000.0
-    # sem corte, a nota não ganha parêntese nenhum
-    assert "máximo de" not in r["fixed_income"]["note"]
+    # Sem corte não há nota nenhuma: as linhas já dizem quanto vai para onde, e a nota
+    # existe só para o que elas não dizem — aqui, nada.
+    assert r["fixed_income"]["note"] is None
 
 
 def test_plan_o_patrimonio_do_alocador_e_o_da_rota_sao_o_mesmo(

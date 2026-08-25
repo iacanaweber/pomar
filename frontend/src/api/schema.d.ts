@@ -1441,13 +1441,18 @@ export interface components {
         };
         /**
          * IndexerAllocation
-         * @description Quanto do aporte vai para UM item da cesta de renda fixa.
+         * @description Quanto do aporte vai para UMA instrução de renda fixa.
          *
-         *     Dois tipos de item, uma lista só: a TAG de indexador, que se cumpre lançando dinheiro
-         *     numa conta em qualquer valor, e o TICKER (um ETF de renda fixa), que se cumpre
-         *     comprando cotas, com lote e ticket mínimo. Duas listas separadas obrigariam o leitor a
-         *     re-somar as partes para saber quanto foi para a classe — que é a única pergunta que o
-         *     cartão responde.
+         *     Três tipos, uma lista só. Duas listas separadas obrigariam o leitor a re-somar as
+         *     partes para saber quanto foi para a classe — que é a única pergunta que o cartão
+         *     responde.
+         *
+         *     * `floor` — o piso da reserva. Um valor, a lançar numa conta de resgate imediato; a
+         *       escolha da conta é do usuário, então não vem nem indexador nem conta sugerida. É
+         *       sempre a primeira da lista: é o primeiro degrau da cascata.
+         *     * `indexer` — uma tag da cesta (CDI, IPCA, LCI). Cumpre-se lançando dinheiro numa
+         *       conta, em qualquer valor, e o app aponta a que já tem aquela tag.
+         *     * `ticker` — um ETF de renda fixa. Cumpre-se comprando cotas, com lote e ticket mínimo.
          */
         IndexerAllocation: {
             /** Code */
@@ -1481,7 +1486,7 @@ export interface components {
             account_name?: string | null;
             /**
              * Kind
-             * @description 'indexer' = lançar em conta; 'ticker' = comprar cotas.
+             * @description 'floor' = piso, lançar em conta de resgate imediato (a escolha é do usuário); 'indexer' = lançar na conta sugerida; 'ticker' = comprar cotas.
              * @default indexer
              */
             kind: string;

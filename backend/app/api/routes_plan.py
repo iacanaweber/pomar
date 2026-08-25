@@ -49,6 +49,12 @@ router = APIRouter()
 # Diferença mínima (em pontos percentuais) para dizer que o ativo está "abaixo do alvo".
 GAP_PP_MIN = 0.5
 
+# A linha do piso no cartão de renda fixa. Não é um rótulo de indexador e nunca chega ao
+# banco: é o código da instrução "ponha este valor numa conta de resgate imediato", e o
+# `kind="floor"` é quem a distingue de uma tag na hora de desenhar.
+FLOOR_CODE = "RESERVA_PISO"
+FLOOR_NAME = "Piso da reserva"
+
 
 def _brl(value: float) -> str:
     """Formata em reais no padrão brasileiro (1.234,56) para as frases do plano."""
@@ -362,6 +368,11 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # enquanto gastava parte disso em FII. A frase é sobre dinheiro real.
     rateio_rf: dict[str, float] = {}
     rf_atual_pre: dict[str, float] = {}
+    # A composição da cesta DEPOIS do piso: é ela que mede o déficit do degrau do peso.
+    # Fora do bloco porque o cartão reparte as tags de novo, com o troco de lote junto, e
+    # precisa da mesma régua — senão o piso não conta e o peso sobra para quem já foi
+    # atendido. Sem piso, é igual a `rf_atual_pre`.
+    apos_piso: dict[str, float] = {}
     orc_rf_tickers = 0.0
     if split["rf_total"] > 0 and (rf_tags or rf_tickers):
         db_rf = get_db()
@@ -380,30 +391,33 @@ async def plan(req: PlanRequest) -> PlanResponse:
         )
         # DOIS orçamentos, duas réguas — e não um rateio só sobre a cesta inteira.
         #
-        # O ticker não pode receber dinheiro do PISO. O piso mede o que dá para sacar hoje,
-        # e um ETF liquida em D+2 a preço de mercado: dirigir o piso para ele deixaria o
-        # déficit do piso intacto, e o plano pediria o mesmo dinheiro de novo no mês
-        # seguinte, para sempre. O piso compra liquidez; só a parcela de PESO da classe
-        # disputa com os tickers.
-        rateio_piso = indexers_svc.basket_deficits(
-            rf_tags, rf_atual_pre, split["floor_directed"]
+        # O PISO não reparte nada: ele é uma instrução de um valor só, a lançar numa conta
+        # de resgate imediato, e a escolha da conta é do usuário. Repartir por tag daria a
+        # resposta errada de duas formas — dirigiria o piso para um ticker (que liquida em
+        # D+2 e deixaria o déficit intacto, pedindo o mesmo dinheiro de novo todo mês) e
+        # apontaria a maior conta com aquela tag, que pode ser uma LCI travada. Só a
+        # parcela de PESO da classe disputa entre os itens da cesta.
+        #
+        # Mas o degrau do peso precisa saber onde o dinheiro do piso caiu, senão mede um
+        # déficit maior do que existe. Estimamos pelos indexadores das contas de LIQUIDEZ
+        # IMEDIATA, na proporção do que elas têm hoje: é exatamente desse conjunto que a
+        # escolha vai sair. Sem conta líquida com tag, o piso fica sem atribuição e o peso
+        # vê uma classe um pouco menor — erra para o lado de dirigir mais, que é o lado
+        # seguro quando a classe está em déficit.
+        liquidas = [a for a in contas_rf if fi.is_immediately_liquid(a)]
+        piso_estimado = indexers_svc.basket_deficits(
+            indexers_svc.value_by_indexer(liquidas, tags_conta_pre),
+            {},
+            split["floor_directed"],
         )
-        if split["floor_directed"] > 0 and not rateio_piso:
-            # cesta 100% de tickers: o piso ainda precisa de conta, e dizer "lance em
-            # conta" sem tag é honesto — inventar uma tag que o usuário não deu, não.
-            rateio_piso = {NO_INDEXER_CODE: split["floor_directed"]}
-        # o peso mede o déficit DEPOIS do que o piso acabou de colocar
         apos_piso = {
-            c: from_cents(to_cents(rf_atual_pre.get(c, 0.0)) + to_cents(rateio_piso.get(c, 0.0)))
-            for c in set(rf_atual_pre) | set(rateio_piso)
+            c: from_cents(to_cents(rf_atual_pre.get(c, 0.0)) + to_cents(piso_estimado.get(c, 0.0)))
+            for c in set(rf_atual_pre) | set(piso_estimado)
         }
-        rateio_peso = indexers_svc.basket_deficits(
+        # As linhas da cesta são só as do PESO. A do piso é emitida à parte, no cartão.
+        rateio_rf = indexers_svc.basket_deficits(
             {**rf_tags, **rf_tickers}, apos_piso, split["rf_directed"]
         )
-        rateio_rf = {
-            c: from_cents(to_cents(rateio_piso.get(c, 0.0)) + to_cents(rateio_peso.get(c, 0.0)))
-            for c in set(rateio_piso) | set(rateio_peso)
-        }
         orc_rf_tickers = from_cents(
             sum(to_cents(v) for c, v in rateio_rf.items() if c in rf_tickers)
         )
@@ -475,11 +489,28 @@ async def plan(req: PlanRequest) -> PlanResponse:
     if targets.get(RENDA_FIXA, 0.0) > 0 or floor_nominal > 0:
         gap = cascade.rf_gap(rf_class_target, rf_classe, total_after)
         by_indexer: list[IndexerAllocation] = []
-        if split["rf_total"] > 0:
+        # O PISO primeiro, sempre, e fora da ordenação por valor: ele é o primeiro degrau
+        # da cascata, e a ordem da lista é a ordem em que o dinheiro é decidido. Uma linha
+        # só, sem indexador e sem conta — a escolha da conta é do usuário, e a única
+        # exigência é que ela tenha resgate imediato.
+        if split["floor_directed"] > 0:
+            by_indexer.append(
+                IndexerAllocation(
+                    code=FLOOR_CODE,
+                    name=FLOOR_NAME,
+                    amount=split["floor_directed"],
+                    kind="floor",
+                )
+            )
+        if split["rf_directed"] > 0:
             db = get_db()
             tags_conta = await labels_repo.assignments_by_subject(db, "indexer", "fi_account")
             cesta = all_baskets.get(RENDA_FIXA) or {}
+            # duas grandezas: `atual` é o que EXISTE hoje (vai para a tela) e `regua` é o
+            # que existirá depois do piso (mede o déficit). Confundi-las mandaria o peso
+            # para a tag que o piso acabou de atender.
             atual = rf_atual_pre if cesta else {}
+            regua = apos_piso if cesta else {}
             # O que os tickers de fato consumiram, somado dos CENTAVOS já arredondados de
             # cada compra — e não do orçamento antes do lote. É o que faz a soma das linhas
             # do cartão bater com o dinheiro que sai da conta.
@@ -495,14 +526,14 @@ async def plan(req: PlanRequest) -> PlanResponse:
             # perfeitamente executável — infinitamente melhor que "não alocado".
             sobra_rf = from_cents(to_cents(orc_rf_tickers) - to_cents(gasto_tickers))
             orc_tags = from_cents(
-                to_cents(split["rf_total"]) - to_cents(orc_rf_tickers) + to_cents(sobra_rf)
+                to_cents(split["rf_directed"]) - to_cents(orc_rf_tickers) + to_cents(sobra_rf)
             )
             if rf_tags and orc_tags > 0:
-                rateio_tags = indexers_svc.basket_deficits(rf_tags, atual, orc_tags)
+                rateio_tags = indexers_svc.basket_deficits(rf_tags, regua, orc_tags)
             elif not cesta:
-                # Sem cesta definida, a instrução é o total: dividir por tag exigiria um
-                # alvo que o usuário não deu, e inventá-lo seria pior que não dividir.
-                rateio_tags = {NO_INDEXER_CODE: split["rf_total"]}
+                # Sem cesta definida, a instrução é o total do peso: dividir por tag
+                # exigiria um alvo que o usuário não deu, e inventá-lo seria pior.
+                rateio_tags = {NO_INDEXER_CODE: split["rf_directed"]}
             else:
                 # Cesta 100% de tickers: o troco fica órfão e vai honestamente para a
                 # sobra do aporte, em vez de atravessar a cascata.
@@ -542,17 +573,13 @@ async def plan(req: PlanRequest) -> PlanResponse:
                 )
 
         teto_txt = f"máximo de {floor_share * 100:.0f}% do aporte"
+        # A nota diz só o que as LINHAS não dizem. Enquanto o piso e o peso eram um bloco
+        # de resumo, ela precisava repetir os dois valores; agora a primeira linha é o piso
+        # e o resto é o peso, então repetir viraria o mesmo número duas vezes no cartão.
         if split["rf_total"] > 0:
-            partes = []
-            if split["floor_directed"] > 0:
-                piso_txt = f"{_brl(split['floor_directed'])} para o piso da reserva"
-                # sem isto, cobrir R$ 1.000 de um déficit de R$ 9.501 pareceria erro de conta
-                if split["floor_capped"]:
-                    piso_txt += f" ({teto_txt})"
-                partes.append(piso_txt)
-            if split["rf_directed"] > 0:
-                partes.append(f"{_brl(split['rf_directed'])} para o peso da classe")
-            nota = " e ".join(partes) + "."
+            # O que sobra de único: por que só parte do buraco foi coberta. Sem isso, cobrir
+            # R$ 1.000 de um déficit de R$ 9.501 parece erro de conta.
+            nota = f"Piso limitado ao {teto_txt}." if split["floor_capped"] else None
         elif split["floor_capped"]:
             # só se chega aqui com o teto em 0% e o piso em déficit: o silêncio esconderia
             # uma decisão de não cobrir o piso
