@@ -2,17 +2,23 @@ import { Link } from "react-router-dom";
 import type { FixedIncomeSuggestion, ReserveSuggestion } from "../types";
 import { money, pct } from "../lib/format";
 import { Tooltip } from "./Tooltip";
+import { RegisterBuyButton } from "./RegisterBuyButton";
 
 const fmtPp = (n: number) => `${n.toFixed(1).replace(".", ",")} p.p.`;
 
-/** A parcela de renda fixa do aporte — o primeiro degrau da cascata, e por isso o
- *  primeiro card da tela.
+/** A parcela de renda fixa do aporte: o que fazer com ela, linha a linha.
  *
- *  Duas formas de linha, porque são duas formas de comprar. A TAG de indexador vira uma
- *  instrução em reais — essa compra é manual, feita fora do app — e o atalho leva ao
- *  lançamento do novo saldo na conta sugerida, para não redigitar o que o app já sabe. O
- *  TICKER (um ETF de renda fixa) vira cotas e preço, porque se executa na corretora como
- *  qualquer outra compra.
+ *  Não há mais um resumo "piso × peso" acima da lista. Ele existia porque as linhas não
+ *  distinguiam um do outro; agora a primeira linha É o piso, e repetir o mesmo número duas
+ *  vezes no mesmo cartão só faz procurar a diferença entre eles.
+ *
+ *  Três formas de linha, porque são três formas de cumprir a instrução. O PISO é um valor
+ *  só, a lançar numa conta de resgate imediato: qual conta é decisão do dono da carteira,
+ *  e apontar a maior com determinada tag poderia apontar uma aplicação travada, que não
+ *  serve de reserva. A TAG de indexador vira instrução em reais com o atalho para a conta
+ *  que já tem aquela tag, para não redigitar o que o app já sabe. O TICKER (um ETF de
+ *  renda fixa) vira cotas e preço, porque se executa na corretora como qualquer outra
+ *  compra — e por isso traz o registro de ordem junto.
  *
  *  O piso e o peso da classe aparecem separados de propósito: são perguntas diferentes —
  *  "quanto eu consigo sacar hoje" e "quanto da carteira está em renda fixa" — e uma
@@ -65,15 +71,15 @@ export function FixedIncomeSuggestionCard({
   suggestion,
   reserve,
   currency = "BRL",
+  planId,
 }: {
   suggestion: FixedIncomeSuggestion;
   reserve?: ReserveSuggestion | null;
   currency?: string;
+  planId?: number | null;
 }) {
   const {
     directed_now: total = 0,
-    floor_part: piso = 0,
-    weight_part: peso = 0,
     gap_brl: gap = 0,
     gap_pp: gapPp = 0,
     current_value: atual = 0,
@@ -83,13 +89,17 @@ export function FixedIncomeSuggestionCard({
   } = suggestion;
 
   const noAlvo = gap <= 0;
+  // Sem nada a dirigir, o cartão volta à superfície neutra: ele ainda confirma que a renda
+  // fixa foi considerada, mas quem chama atenção é a instrução, não a confirmação. Mesma
+  // regra de `.reserve-goal.goal-met`.
+  const quiet = total <= 0;
 
   return (
-    <section className="alloc fi-suggestion">
+    <section className={`alloc fi-suggestion${quiet ? " fi-quiet" : ""}`}>
       <div className="goal-head">
         <h3 style={{ margin: 0 }}>
           <Tooltip metricKey="reserve_floor">
-            <span>1. Renda fixa</span>
+            <span>Renda fixa</span>
           </Tooltip>
         </h3>
         <strong className={total > 0 ? "fi-amount" : "muted"}>
@@ -99,26 +109,16 @@ export function FixedIncomeSuggestionCard({
 
       {reserve && <FloorBar reserve={reserve} currency={currency} />}
 
-      {total > 0 && (piso > 0 || peso > 0) && (
-        <ul className="fi-parts">
-          {piso > 0 && (
-            <li>
-              <span className="muted">Piso da reserva</span>
-              <strong>{money(piso, currency)}</strong>
-            </li>
-          )}
-          {peso > 0 && (
-            <li>
-              <span className="muted">Peso da classe</span>
-              <strong>{money(peso, currency)}</strong>
-            </li>
-          )}
-        </ul>
-      )}
-
       <p className="goal-status" style={{ margin: "6px 0 0" }}>
         {noAlvo ? (
-          <span className="risk-verde">✓ No alvo ou acima — nada a aplicar aqui.</span>
+          // "nada a aplicar aqui" só é verdade quando não há linha nenhuma abaixo. O gap
+          // aqui é o do PESO da classe, e o PISO pode estar em déficit ao mesmo tempo —
+          // uma carteira 61% em renda fixa com metade da reserva líquida é exatamente isso.
+          // Sem a distinção, o cartão negava, uma linha acima, os R$ 1.800 que ele mandava
+          // lançar.
+          <span className="risk-verde">
+            ✓ Peso da classe no alvo ou acima{quiet ? " — nada a aplicar aqui." : "."}
+          </span>
         ) : (
           <>
             Faltam <strong>{money(gap, currency)}</strong> ({fmtPp(gapPp)}) para a meta de{" "}
@@ -130,7 +130,7 @@ export function FixedIncomeSuggestionCard({
       {porIndexador.length > 0 && (
         <ul className="fi-indexers">
           {porIndexador.map((i) => (
-            <li key={i.code}>
+            <li key={i.code} className={i.kind === "floor" ? "fi-line-floor" : undefined}>
               <span className="fi-indexer-name">
                 {i.kind === "ticker" && i.ticker ? i.ticker : i.name}
                 {i.target_pct ? (
@@ -138,11 +138,26 @@ export function FixedIncomeSuggestionCard({
                 ) : null}
               </span>
               <strong>{money(i.amount ?? 0, currency)}</strong>
-              {i.kind === "ticker" && i.ticker ? (
-                // cotas e preço, e não "lance em conta": esta compra é da corretora
-                <Link className="link-button fi-shortcut" to={`/ativo/${i.ticker}`}>
-                  {i.shares ?? 0} × {i.price ? money(i.price, currency) : "—"} →
+              {i.kind === "floor" ? (
+                // sem conta apontada: a escolha é do usuário, e a única exigência é a
+                // liquidez — uma aplicação travada não responde por uma emergência
+                <Link className="link-button fi-shortcut" to="/reserva">
+                  lançar numa conta de resgate imediato →
                 </Link>
+              ) : i.kind === "ticker" && i.ticker ? (
+                // cotas e preço, e não "lance em conta": esta compra é da corretora
+                <>
+                  <Link className="link-button fi-shortcut" to={`/ativo/${i.ticker}`}>
+                    {i.shares ?? 0} × {i.price ? money(i.price, currency) : "—"} →
+                  </Link>
+                  <RegisterBuyButton
+                    ticker={i.ticker}
+                    assetClass="RENDA_FIXA"
+                    shares={i.shares ?? 0}
+                    price={i.price}
+                    planId={planId}
+                  />
+                </>
               ) : i.account_id ? (
                 // atalho para não redigitar o que o app já sabe: abre a conta sugerida
                 <Link className="link-button fi-shortcut" to={`/reserva?conta=${i.account_id}`}>

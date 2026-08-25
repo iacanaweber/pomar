@@ -1,4 +1,3 @@
-import { useCreateOrder } from "../api/queries";
 import type { PlanAsset, PlanResponse } from "../types";
 import { classLabel } from "../lib/classes";
 import { money } from "../lib/format";
@@ -6,6 +5,7 @@ import { AssetLink } from "./AssetLink";
 import { CeilingBadge } from "./CeilingBadge";
 import { Tooltip } from "./Tooltip";
 import { Icon } from "./Icon";
+import { RegisterBuyButton } from "./RegisterBuyButton";
 
 const RISK_CLASS: Record<string, string> = {
   verde: "risk-verde",
@@ -14,35 +14,6 @@ const RISK_CLASS: Record<string, string> = {
 };
 
 const pp = (v: number) => `${(v * 100).toFixed(1).replace(".", ",")}%`;
-
-/** Fecha o ciclo do aporte: comprou na corretora → um toque registra a execução
- *  (pré-preenchida com a sugestão do plano) e alimenta histórico + disciplina. */
-function RegisterBuyButton({ asset, planId }: { asset: PlanAsset; planId?: number | null }) {
-  const create = useCreateOrder();
-  const s = asset.suggested;
-  if (!s) return null;
-  if (create.isSuccess) return <span className="order-registered">✓ compra registrada</span>;
-  return (
-    <button
-      className="link-button order-register"
-      disabled={create.isPending}
-      onClick={(e) => {
-        e.stopPropagation();
-        create.mutate({
-          ticker: asset.ticker,
-          asset_class: asset.asset_class ?? "STOCK",
-          shares: s.shares,
-          price: s.price ?? 0,
-          fees: 0,
-          plan_id: planId ?? null,
-          note: "registrado do plano",
-        });
-      }}
-    >
-      {create.isPending ? "Registrando" : "Registrar compra"}
-    </button>
-  );
-}
 
 /** Barra da cesta: onde o ativo está hoje, onde fica depois da compra e onde é o alvo.
  *  Uma linha só responde "por que este valor?" sem abrir nada. */
@@ -139,14 +110,27 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
 
       <div className="card-detail-link">
         <AssetLink ticker={asset.ticker}>ver detalhes de {asset.ticker} →</AssetLink>
-        {asset.suggested && <RegisterBuyButton asset={asset} planId={planId} />}
+        {asset.suggested && (
+          <RegisterBuyButton
+            ticker={asset.ticker}
+            assetClass={asset.asset_class}
+            shares={asset.suggested.shares}
+            price={asset.suggested.price}
+            planId={planId}
+          />
+        )}
       </div>
     </li>
   );
 }
 
 export function RankedList({ plan }: { plan: PlanResponse }) {
-  const ranking = plan.ranking ?? [];
+  // A renda fixa tem cartão próprio, e é lá que ela se resolve por inteiro: o valor do
+  // piso, as tags e as cotas do ETF, somando o total da classe. Repetir o ETF aqui, entre
+  // BBAS3 e VWRA11, quebraria essa soma em dois lugares e faria a lista de compras da
+  // bolsa parecer conter uma compra que não é de bolsa. O `ranking` do backend continua
+  // completo — é o registro do que o plano decidiu.
+  const ranking = (plan.ranking ?? []).filter((a) => a.asset_class !== "RENDA_FIXA");
   const unallocated = plan.unallocated ?? 0;
   const buys = ranking.filter((a) => a.suggested);
   const rest = ranking.filter((a) => !a.suggested);
