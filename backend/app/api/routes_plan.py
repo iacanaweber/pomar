@@ -378,11 +378,32 @@ async def plan(req: PlanRequest) -> PlanResponse:
             tags_ticker_pre,
             basket_tickers=rf_tickers,
         )
-        # UM rateio sobre a cesta inteira: os dois tipos disputam pela mesma régua. Só
-        # depois o resultado é partido pelo tipo.
-        rateio_rf = indexers_svc.basket_deficits(
-            {**rf_tags, **rf_tickers}, rf_atual_pre, split["rf_total"]
+        # DOIS orçamentos, duas réguas — e não um rateio só sobre a cesta inteira.
+        #
+        # O ticker não pode receber dinheiro do PISO. O piso mede o que dá para sacar hoje,
+        # e um ETF liquida em D+2 a preço de mercado: dirigir o piso para ele deixaria o
+        # déficit do piso intacto, e o plano pediria o mesmo dinheiro de novo no mês
+        # seguinte, para sempre. O piso compra liquidez; só a parcela de PESO da classe
+        # disputa com os tickers.
+        rateio_piso = indexers_svc.basket_deficits(
+            rf_tags, rf_atual_pre, split["floor_directed"]
         )
+        if split["floor_directed"] > 0 and not rateio_piso:
+            # cesta 100% de tickers: o piso ainda precisa de conta, e dizer "lance em
+            # conta" sem tag é honesto — inventar uma tag que o usuário não deu, não.
+            rateio_piso = {NO_INDEXER_CODE: split["floor_directed"]}
+        # o peso mede o déficit DEPOIS do que o piso acabou de colocar
+        apos_piso = {
+            c: from_cents(to_cents(rf_atual_pre.get(c, 0.0)) + to_cents(rateio_piso.get(c, 0.0)))
+            for c in set(rf_atual_pre) | set(rateio_piso)
+        }
+        rateio_peso = indexers_svc.basket_deficits(
+            {**rf_tags, **rf_tickers}, apos_piso, split["rf_directed"]
+        )
+        rateio_rf = {
+            c: from_cents(to_cents(rateio_piso.get(c, 0.0)) + to_cents(rateio_peso.get(c, 0.0)))
+            for c in set(rateio_piso) | set(rateio_peso)
+        }
         orc_rf_tickers = from_cents(
             sum(to_cents(v) for c, v in rateio_rf.items() if c in rf_tickers)
         )

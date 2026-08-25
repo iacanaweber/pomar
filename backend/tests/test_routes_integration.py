@@ -1155,6 +1155,41 @@ def test_plan_etf_de_renda_fixa_recebe_cotas_e_o_troco_vira_lancamento(
     assert abs(fi["directed_now"] + comprado - 998.40 + r["unallocated"] - 2_500.0) < 0.01
 
 
+def test_plan_piso_da_reserva_nunca_compra_o_etf_de_renda_fixa(
+    authed_client, _stub_cdi, monkeypatch
+):
+    """O piso mede o que dá para sacar hoje; um ETF liquida em D+2 a preço de mercado.
+
+    Sem esta separação o déficit do piso ficaria intacto depois do aporte, e o plano
+    pediria o mesmo dinheiro de novo no mês seguinte — para sempre.
+    """
+    c = authed_client
+    acc = _conta(c, "Tesouro Selic", counts_in_portfolio=True).json()
+    _saldo(c, acc["id"], 1_000.0)
+    c.put("/api/labels/assignments", json={
+        "subject_type": "fi_account", "subject_id": str(acc["id"]), "dimension": "indexer",
+        "items": [{"label_id": _tag(c, "CDI")}],
+    })
+    c.put("/api/preferences", json={
+        "targets": {"STOCK": 0.5, "RENDA_FIXA": 0.5, "FII": 0.0, "ETF": 0.0, "BDR": 0.0},
+        "class_targets": {"STOCK": {"AAA3": 1.0}, "RENDA_FIXA": {"CDI": 0.6, "IMAB11": 0.4}},
+        "reserve_floor_amount": 4_000.0,
+    })
+    _stub_plan_market(
+        monkeypatch, [_asset("AAA3", "STOCK", 10.0), _asset("IMAB11", "ETF", 83.20)],
+        portfolio=_carteira(monkeypatch, [("AAA3", "STOCK", 5_000.0)]),
+    )
+    r = c.post("/api/plan", json={"aporte": 3_000.0, "min_ticket": 10.0}).json()
+
+    fi = r["fixed_income"]
+    assert fi["floor_part"] == 3_000.0  # piso 4.000 contra 1.000 => o aporte todo
+    assert fi["weight_part"] == 0.0
+    linhas = {i["code"]: i for i in fi["by_indexer"]}
+    assert set(linhas) == {"CDI"}  # nada de ETF: o piso só compra liquidez
+    assert linhas["CDI"]["amount"] == 3_000.0
+    assert next((x for x in r["ranking"] if x["ticker"] == "IMAB11"), {}).get("suggested") is None
+
+
 def test_plan_etf_de_renda_fixa_mostra_o_peso_que_o_usuario_deu(
     authed_client, _stub_cdi, monkeypatch
 ):
