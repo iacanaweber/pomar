@@ -1,6 +1,6 @@
-# 🌳 Pomar
+# Pomar
 
-**Plante seus aportes, colha dividendos.**
+**Planejador de aportes mensais na B3 para uma estratégia de dividendos.**
 
 App web pessoal para planejar aportes na B3. Você define uma **carteira alvo** — quanto cada
 classe (Ações, FIIs, ETFs, BDRs e Renda fixa) deve pesar e, dentro de cada classe, quais itens

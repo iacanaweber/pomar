@@ -1,4 +1,4 @@
-"""Pomar — API. Plante seus aportes, colha dividendos. 🌳
+"""Pomar — API. Planejamento de aportes na B3.
 
 App de planejamento de aportes na B3: lê a carteira do Ghostfolio (somente leitura),
 busca dados de mercado (Fundamentus + StatusInvest + brapi) e responde quanto comprar de
@@ -107,7 +107,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or get_settings()
     app = FastAPI(
         title="Pomar",
-        description="Plante seus aportes, colha dividendos. Recomendações transparentes para a B3.",
+        description="Planejador de aportes na B3.",
         version="2.0.0",
         lifespan=lifespan,
         # Documentação interativa e schema só em DEBUG (não vazar o mapa da API em produção).
@@ -145,7 +145,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @app.get("/api")
     async def root() -> dict:
-        return {"app": "Pomar", "tagline": "Plante seus aportes, colha dividendos.", "version": "2.0.0"}
+        return {"app": "Pomar", "version": "2.0.0"}
 
     return app
 

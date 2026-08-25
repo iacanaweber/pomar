@@ -14,7 +14,6 @@ export function LoginPage() {
           <BrandMark size={40} />
           <div>
             <h1>Pomar</h1>
-            <p className="muted">Plante seus aportes, colha dividendos.</p>
           </div>
         </div>
         <form

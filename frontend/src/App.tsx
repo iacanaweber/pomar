@@ -45,15 +45,9 @@ function AppShell() {
       <header className="header">
         <div className="brand">
           <BrandMark size={26} />
-          <div>
-            <h1>Pomar</h1>
-            <p>Plante seus aportes, colha dividendos.</p>
-          </div>
+          <h1>Pomar</h1>
           <div className="header-actions">
             <ThemeToggle />
-            <button className="header-action" onClick={() => logout.mutate()}>
-              Sair
-            </button>
           </div>
         </div>
       </header>
@@ -89,8 +83,10 @@ function AppShell() {
       </Suspense>
 
       <footer className="footer">
-        Pomar · dados por Fundamentus, StatusInvest e brapi · carteira via Ghostfolio · conteúdo
-        educativo
+        <button className="link-button footer-exit" onClick={() => logout.mutate()}>
+          Sair
+        </button>
+        <span>Fundamentus · StatusInvest · brapi · Ghostfolio</span>
       </footer>
     </>
   );

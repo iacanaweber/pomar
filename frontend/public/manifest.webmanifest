@@ -1,7 +1,7 @@
 {
   "name": "Pomar",
   "short_name": "Pomar",
-  "description": "Plante seus aportes, colha dividendos.",
+  "description": "Planejador de aportes na B3.",
   "lang": "pt-BR",
   "start_url": "/",
   "scope": "/",
