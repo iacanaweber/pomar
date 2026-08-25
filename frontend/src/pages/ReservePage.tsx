@@ -143,7 +143,7 @@ function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefined }) 
   const corrigido = floor.index === "ipca" && floor.index_available;
 
   return (
-    <div className="alloc reserve-goal">
+    <div className={`alloc reserve-goal ${floor.deficit > 0 ? "" : "goal-met"}`}>
       <div className="goal-head">
         <h3 style={{ margin: 0 }}>
           <Tooltip metricKey="reserve_floor">
@@ -163,13 +163,8 @@ function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefined }) 
         aria-label={`Reserva líquida: ${filled}% do piso`}
       >
         <div className="alloc-track" style={{ height: 18 }}>
-          <div
-            className="alloc-cur"
-            style={{
-              width: `${Math.min(100, filled)}%`,
-              background: filled >= 100 ? "var(--green)" : "var(--leaf)",
-            }}
-          />
+          {/* A cor sai do CSS (.goal-met), não de um style inline. */}
+          <div className="alloc-cur" style={{ width: `${Math.min(100, filled)}%` }} />
         </div>
         <span className="goal-bar-label">{filled}% do piso</span>
       </div>
@@ -799,7 +794,7 @@ export function ReservePage() {
       )}
 
       {accounts.length > 0 && (
-        <ul className="cards" style={{ marginBottom: 16 }}>
+        <ul className="cards">
           {accounts.map((a) => (
             <AccountCard
               key={a.id}

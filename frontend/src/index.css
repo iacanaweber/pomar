@@ -241,8 +241,10 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .banner-error { background: var(--err-bg); border: 1px solid var(--err-border); color: var(--err-ink); }
 
 /* Allocation */
+/* margin nos DOIS lados: só com margin-top, um `.alloc` seguido de `.cards` (que tem
+   margin 0) ficava com ZERO de separação — dois retângulos idênticos encostados. */
 .alloc { background: var(--card); border-radius: var(--radius); border: 1px solid var(--line);
-  padding: 16px; margin-top: 16px; }
+  padding: var(--pad-card); margin: var(--sp-16) 0; }
 .alloc-rows { display: flex; flex-direction: column; gap: 10px; }
 .alloc-row { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 10px; }
 .alloc-class { font-weight: 700; font-size: var(--fs-13); }
@@ -589,7 +591,19 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .pf-perf-down { color: var(--danger); }
 
 /* Piso da reserva na própria página */
-.reserve-goal { display: flex; flex-direction: column; gap: 8px; }
+/* ===== Piso da reserva =====
+   Não é mais um item da lista: é o ESTADO-META da tela. Usava `.alloc` puro, exatamente a
+   mesma superfície de um card de conta — mesmo fundo, mesmo raio, mesma borda — e vinha
+   colado no primeiro deles, o que se lia como sobreposição.
+   A superfície vem emprestada do .update-banner, que já é o "estado que pede ação" do app.
+   Cumprido, ele SE CALA: volta para a superfície neutra. Quem grita é o déficit, não a
+   meta batida. */
+.reserve-goal { display: flex; flex-direction: column; gap: var(--sp-8);
+  background: var(--chip-bg); border-color: var(--leaf); }
+.reserve-goal.goal-met { background: var(--surface-soft); border-color: var(--line); }
+.reserve-goal .goal-head h3 { font-size: var(--fs-14); }
+.reserve-goal .alloc-cur { background: var(--leaf); }
+.reserve-goal.goal-met .alloc-cur { background: var(--green); }
 /* Os três recortes do saldo (total, o que conta na carteira, o que resgata hoje) juntos:
    é a diferença entre eles que informa, então eles precisam ser lidos lado a lado. */
 .reserve-totals { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px;
