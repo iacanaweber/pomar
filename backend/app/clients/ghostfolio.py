@@ -60,11 +60,25 @@ class GhostfolioClient:
         positions = []
         by_class: dict[str, float] = {}
         by_sector: dict[str, float] = {}
+        sem_simbolo = 0
         for h in holdings:
             value = float(h.get("valueInBaseCurrency") or h.get("value") or 0)
             if value <= 0:
                 continue
-            raw_type = (h.get("assetSubClass") or h.get("assetClass") or "").upper()
+            symbol = _symbol(h)
+            if not symbol:
+                # Sem símbolo não dá para classificar nem comparar com a carteira alvo.
+                # Antes isto virava um ticker "?", que passava batido pelo app inteiro.
+                sem_simbolo += 1
+                continue
+            profile = _profile(h)
+            raw_type = (
+                profile.get("assetSubClass")
+                or profile.get("assetClass")
+                or h.get("assetSubClass")
+                or h.get("assetClass")
+                or ""
+            ).upper()
             cls = _CLASS_MAP.get(raw_type, "STOCK")
             sector = _first_sector(h)
             weight = value / total if total else 0.0
@@ -75,8 +89,8 @@ class GhostfolioClient:
                 avg = round(cost / float(qty), 4) if float(qty) else None
             positions.append(
                 Position(
-                    ticker=normalize_ticker(h.get("symbol", "?")),
-                    name=h.get("name"),
+                    ticker=normalize_ticker(symbol),
+                    name=profile.get("name") or h.get("name"),
                     asset_class=cls,
                     sector=sector,
                     value=value,
@@ -90,6 +104,16 @@ class GhostfolioClient:
             by_class[cls] = by_class.get(cls, 0.0) + weight
             if sector:
                 by_sector[sector] = by_sector.get(sector, 0.0) + weight
+
+        # Nenhuma posição sobreviveu, mas o Ghostfolio devolveu holdings: o formato mudou.
+        # Falhar alto aqui é o que faz `portfolio_service` servir a última carteira em
+        # cache, em vez de o plano seguir com uma carteira fantasma.
+        if sem_simbolo and not positions:
+            chaves = sorted(holdings[0].keys()) if holdings else []
+            raise RuntimeError(
+                f"Nenhuma das {sem_simbolo} posições do Ghostfolio tem símbolo — o formato "
+                f"da resposta mudou. Chaves recebidas: {chaves}"
+            )
 
         return Portfolio(
             total_value=round(total, 2),
@@ -180,8 +204,25 @@ def _net_perf(holding: dict) -> Optional[float]:
     return None
 
 
+def _profile(holding: dict) -> dict:
+    """Ficha do ativo dentro da holding.
+
+    O Ghostfolio move estes campos de lugar entre versões: hoje (3.53) `symbol`, `name`,
+    `assetSubClass` e `sectors` vêm ANINHADOS em `assetProfile`; versões anteriores os
+    traziam no topo da holding. `get_activities` já lidava com isso — `get_portfolio` não,
+    e o resultado era a carteira inteira virar ticker "?" depois de um upgrade.
+    """
+    profile = holding.get("assetProfile") or holding.get("SymbolProfile") or {}
+    return profile if isinstance(profile, dict) else {}
+
+
+def _symbol(holding: dict) -> Optional[str]:
+    """Símbolo do ativo, aninhado ou no topo. Sem sentinela: ausência devolve None."""
+    return _profile(holding).get("symbol") or holding.get("symbol")
+
+
 def _first_sector(holding: dict) -> Optional[str]:
-    countries = holding.get("sectors") or []
-    if countries and isinstance(countries, list):
-        return countries[0].get("name")
+    sectors = _profile(holding).get("sectors") or holding.get("sectors") or []
+    if sectors and isinstance(sectors, list):
+        return sectors[0].get("name")
     return holding.get("sector")
