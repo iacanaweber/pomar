@@ -5,19 +5,12 @@ import { AssetLink } from "./AssetLink";
 import { AT_TARGET_PP, type Comparison, type ComparisonRow } from "../lib/comparison";
 import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
 import { money, pctPts, signedPp } from "../lib/format";
+import { classHue, step } from "../lib/viz";
 
 /** Mesma matiz por classe do gráfico da Carteira alvo — a cor segue a entidade, e aqui ela
  *  continua significando CLASSE. A polaridade (acima/abaixo do alvo) vem da geometria: o
  *  lado do eixo zero, o sinal do número e o rótulo. Assim nenhuma cor nova precisa ser
  *  inventada e a leitura sobrevive a qualquer tipo de daltonismo. */
-const CLASS_HUE: Record<string, string> = {
-  STOCK: "var(--viz-stock)",
-  FII: "var(--viz-fii)",
-  ETF: "var(--viz-etf)",
-  BDR: "var(--viz-bdr)",
-  RENDA_FIXA: "var(--viz-rf)",
-  UNKNOWN: "var(--muted)",
-};
 
 
 /** Barra 100% da carteira, segmentada por ativo e agrupada por classe (a mesma linguagem
@@ -48,10 +41,7 @@ function StackedBar({
                 className={`tp-seg ${i === 0 && gi > 0 ? "tp-seg-class" : ""}`}
                 style={{
                   flexGrow: Math.max(it.pct, 0.01),
-                  background:
-                    g.items.length <= 1
-                      ? CLASS_HUE[g.cls]
-                      : `color-mix(in oklab, ${CLASS_HUE[g.cls]} ${100 - Math.round((i / (g.items.length - 1)) * 42)}%, var(--card))`,
+                  background: step(classHue(g.cls), i, g.items.length),
                 }}
                 title={`${it.ticker} · ${CLASS_LABEL[g.cls] ?? g.cls}: ${pctPts(it.pct, 2)}`}
               />
@@ -80,7 +70,7 @@ function DeviationRow({ row, scale }: { row: ComparisonRow; scale: number }) {
         <span
           className="cmp-fill"
           style={{
-            background: CLASS_HUE[row.cls] ?? CLASS_HUE.UNKNOWN,
+            background: classHue(row.cls),
             width: `${width}%`,
             ...(below ? { right: "50%" } : { left: "50%" }),
           }}
@@ -330,7 +320,7 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
                   <span
                     className="cmp-fill"
                     style={{
-                      background: CLASS_HUE[b.cls],
+                      background: classHue(b.cls),
                       width: `${(Math.abs(b.deltaPp) / Math.max(...byClass.map((x) => Math.abs(x.deltaPp)), 1)) * 50}%`,
                       ...(b.deltaPp > 0 ? { right: "50%" } : { left: "50%" }),
                     }}

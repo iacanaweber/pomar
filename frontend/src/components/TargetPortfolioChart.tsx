@@ -1,29 +1,10 @@
 import { CLASS_LABEL } from "../lib/classes";
 import { shareOfTotal, sumPct, type Row } from "../lib/basket";
 import { pctPts } from "../lib/format";
-
-/** Cores das CLASSES. Uma matiz por classe, em ordem fixa (nunca cicladas): a cor segue
- *  a entidade, não a posição na lista. Steps validados para as duas superfícies do app
- *  (--card #ffffff / #171c14) na lista de pares adjacentes — que é a que vale para barras
- *  empilhadas. Dentro de cada classe, os ativos são STEPS da mesma matiz (rampa
- *  sequencial: mais escuro = maior peso), então a identidade do ativo vem do rótulo, não
- *  da cor. Trocar um valor aqui exige rodar o validador de paleta de novo. */
-const CLASS_HUE: Record<string, string> = {
-  STOCK: "var(--viz-stock)",
-  FII: "var(--viz-fii)",
-  ETF: "var(--viz-etf)",
-  BDR: "var(--viz-bdr)",
-  RENDA_FIXA: "var(--viz-rf)",
-};
+import { classHue, step } from "../lib/viz";
 
 
-/** Step da rampa sequencial: o maior peso fica na matiz cheia e os menores clareiam em
- *  direção à superfície do card. Monotônico com a magnitude, matiz constante. */
-function step(hue: string, index: number, count: number): string {
-  if (count <= 1) return hue;
-  const mix = 100 - Math.round((index / (count - 1)) * 42); // 100% → 58%
-  return `color-mix(in oklab, ${hue} ${mix}%, var(--card))`;
-}
+
 
 interface ClassRow {
   cls: string;
@@ -70,7 +51,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
       classPct,
       rows,
       basketSum: sumPct(rows),
-      colors: rows.map((_, i) => step(CLASS_HUE[cls], i, rows.length)),
+      colors: rows.map((_, i) => step(classHue(cls), i, rows.length)),
       motivo: classPct <= 0 ? "meta 0%" : rows.length === 0 ? "sem composição" : null,
     };
   });
@@ -133,7 +114,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
             {views.map((v) => (
               <li className={`tp-class-item ${v.motivo ? "tp-class-off" : ""}`} key={v.cls}>
                 <div className="tp-class-head">
-                  <span className="tp-dot" style={{ background: CLASS_HUE[v.cls] }} aria-hidden="true" />
+                  <span className="tp-dot" style={{ background: classHue(v.cls) }} aria-hidden="true" />
                   <span className="tp-class-name">{CLASS_LABEL[v.cls]}</span>
                   <span className="tp-class-pct">
                     {v.motivo ? <span className="muted">{v.motivo}</span> : `${pctPts(v.classPct, 2)} do total`}
