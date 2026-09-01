@@ -12,6 +12,25 @@
     <meta name="theme-color" content="#1b5e20" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#10140f" media="(prefers-color-scheme: dark)" />
     <meta name="description" content="Planejador de aportes na B3." />
+    <!-- As duas fontes entram cedo porque `font-display: optional` só usa a fonte se ela
+         chegar dentro de ~100ms — sem preload, o primeiro carregamento renderiria na
+         fonte do sistema. `crossorigin` é OBRIGATÓRIO mesmo na mesma origem: fonte é
+         sempre buscada em modo CORS, e sem o atributo o preload cai numa partição de
+         cache diferente e o arquivo é baixado DUAS vezes. -->
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin
+      href="/fonts/ibm-plex-sans-var-latin-v1.woff2"
+    />
+    <link
+      rel="preload"
+      as="font"
+      type="font/woff2"
+      crossorigin
+      href="/fonts/fraunces-var-latin-v1.woff2"
+    />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

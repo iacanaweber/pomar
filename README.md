@@ -260,6 +260,44 @@ geografia em `backend/app/data/geography.py`, os rótulos embutidos em
 partir da geometria no próprio script (sem dependência). As variações descartadas ficam em
 `frontend/icons-src/`.
 
+**Fontes:** IBM Plex Sans (corpo, UI e todo número) e Fraunces (marca, título de página e
+h2) são servidas pelo próprio nginx a partir de `frontend/public/fonts/`, com a versão no
+nome do arquivo. Os `.woff2` são commitados, como os PNGs de ícone — subsetar é passo de
+AUTORIA, nunca de build: a imagem `node:20-alpine` não tem Python.
+
+Para regerar (só quando a lista de caracteres ou a escolha de eixos mudar):
+
+```bash
+# 1. ambiente descartável, FORA do repositório — fonttools não é dependência do projeto
+python3 -m venv /tmp/fontenv
+/tmp/fontenv/bin/pip install "fonttools[woff]>=4.50" brotli   # brotli é obrigatório p/ woff2
+
+# 2. a lista de codepoints sai do próprio código
+cd frontend && node scripts/font-charset.mjs
+
+# 3. fixa os eixos que são escolha estética, mantém os que são função
+/tmp/fontenv/bin/fonttools varLib.instancer 'Fraunces[SOFT,WONK,opsz,wght].ttf' \
+  SOFT=12 WONK=1 opsz=14:40 wght=400:700 -o fraunces-inst.ttf
+/tmp/fontenv/bin/fonttools varLib.instancer 'IBMPlexSans[wdth,wght].ttf' \
+  wdth=100 wght=400:700 -o plex-inst.ttf
+
+# 4. subset + compressão
+/tmp/fontenv/bin/pyftsubset <arquivo>-inst.ttf \
+  --unicodes-file=scripts/font-charset.txt --layout-features='*' \
+  --layout-scripts=latn,DFLT --flavor=woff2 --with-zopfli \
+  --output-file=public/fonts/<nome>-v1.woff2
+```
+
+Depois: **subir o `-v1` no nome**, nunca sobrescrever — é o nome versionado que autoriza o
+`Cache-Control: immutable` do `nginx.conf`. E regerar o `unicode-range` do `@font-face` a
+partir do cmap do arquivo pronto, em vez de copiar a faixa `latin` do Google (que não tem
+`→` nem `−`, usados às dezenas aqui). Orçamento atual: 65,8 KB para as duas.
+
+Duas propriedades das fontes que o CSS depende e que um upgrade pode quebrar em silêncio:
+os dígitos da Plex já são tabulares por padrão (avanço 600 para todos), o que sustenta as
+declarações `font-variant-numeric: tabular-nums`; e os da Fraunces são **proporcionais**,
+por isso ela nunca é aplicada a número.
+
 ## Licença
 
 [MIT](LICENSE). Conteúdo educativo; não é recomendação de investimento.

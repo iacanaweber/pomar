@@ -1,4 +1,62 @@
+/* ===== FONTES — duas famílias, servidas pelo próprio nginx =====
+   Nada de CDN: o app roda numa LAN atrás de VPN. Os arquivos são subsets gerados por
+   `scripts/font-charset.mjs` + pyftsubset (receita no README), com a VERSÃO NO NOME.
+   Esse nome versionado é o que torna `Cache-Control: immutable` honesto: trocar a fonte
+   obriga a trocar o nome, então um arquivo cacheado nunca fica errado.
+
+   `font-display: optional` e não `swap`: `optional` tem período de bloqueio de ~100ms e
+   NENHUM período de troca — ou a fonte chegou a tempo, ou aquele carregamento usa a do
+   sistema e pronto. CLS zero por construção. Numa grade financeira densa, e sem nenhuma
+   ferramenta de regressão visual no projeto, `swap` garantiria reflow visível a cada
+   carregamento frio. Os arquivos vêm da LAN e estão em preload: os 100ms sobram.
+
+   Por isso mesmo NÃO há @font-face de fallback com size-adjust: essas métricas existem
+   para suavizar uma troca que aqui nunca acontece.
+
+   `font-weight` em FAIXA, não valor único: sem a faixa o navegador trata o arquivo
+   variável como um 400 e SINTETIZA o negrito nas dezenas de `font-weight: 700` do
+   arquivo — borrão em cima de dígito tabular.
+
+   `unicode-range` é gerado do cmap do subset, nunca copiado do Google (cuja faixa `latin`
+   não tem "→" nem "−", que este app usa às dezenas). O que está fora da faixa — ○ ● │ ⚠
+   ✏ ⏳ ▲ ▼ e os emoji — cai na fonte do sistema de propósito: nenhuma das duas famílias
+   desenha esses símbolos. */
+@font-face {
+  font-family: "IBM Plex Sans";
+  src: url("/fonts/ibm-plex-sans-var-latin-v1.woff2") format("woff2-variations");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: optional;
+  unicode-range: U+0020-007E, U+00A0, U+00AA, U+00B7, U+00BA, U+00C0-00C1, U+00C3, U+00C7,
+    U+00C9-00CA, U+00CD, U+00D3-00D5, U+00D7, U+00DA, U+00E0-00E3, U+00E7, U+00E9-00EA,
+    U+00ED, U+00F3-00F5, U+00F7, U+00FA, U+0394, U+03A3, U+2014, U+201C-201D, U+2022,
+    U+2026, U+2190-2192, U+2194, U+21A9, U+2212, U+2713;
+}
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fonts/fraunces-var-latin-v1.woff2") format("woff2-variations");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: optional;
+  unicode-range: U+0020-007E, U+00A0, U+00AA, U+00B7, U+00BA, U+00C0-00C1, U+00C3, U+00C7,
+    U+00C9-00CA, U+00CD, U+00D3-00D5, U+00D7, U+00DA, U+00E0-00E3, U+00E7, U+00E9-00EA,
+    U+00ED, U+00F3-00F5, U+00F7, U+00FA, U+2014, U+201C-201D, U+2022, U+2026, U+2212;
+}
+
 :root {
+  /* ===== FAMÍLIAS =====
+     Plex no corpo, na UI e em TODO número: seus dígitos já são tabulares por padrão
+     (todos com 600 unidades de avanço), que é o que sustenta as ~20 declarações
+     `font-variant-numeric: tabular-nums` espalhadas por este arquivo. Não existe feature
+     `tnum` na fonte porque ela não precisa de uma.
+
+     Fraunces SÓ em título, e essa é uma regra dura: seus dígitos são PROPORCIONAIS
+     (avanços de 1103 a 1404 unidades). Um número em Fraunces desalinha a coluna abaixo
+     dele. Os eixos SOFT=12 e WONK=1 estão fixados no arquivo — WONK é a perna torta do
+     'g' e do 'y', e é o que separa esta página de mais um serif editorial. */
+  --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+
   --green: #1b5e20;
   --green-light: #2e7d32;
   --leaf: #66bb6a;
@@ -30,16 +88,24 @@
   --fs-12: 12px;  /* metadado, .muted, valor secundário */
   --fs-13: 13px;  /* texto de apoio, banner */
   --fs-14: 14px;  /* corpo de UI: rótulo, item de lista, ticker */
-  --fs-16: 16px;  /* input, botão, título de página */
-  --fs-20: 20px;  /* manchete de seção, campo de aporte */
-  --fs-26: 26px;  /* manchete de valor. UMA por tela. */
-  /* Aliases semânticos: use ESTES em regra nova; os --fs-NN existem para a migração. */
+  --fs-16: 16px;  /* input, botão, subtítulo de cartão */
+  --fs-20: 20px;  /* campo de aporte, valor de destaque em cartão */
+  --fs-22: 22px;  /* manchete de seção (h2) */
+  --fs-26: 26px;  /* título de página */
+  --fs-32: 32px;  /* manchete de valor. UMA por tela. */
+  /* Aliases semânticos: use ESTES em regra nova; os --fs-NN existem para a migração.
+     A hierarquia era plana — h2 tinha 16px, o MESMO tamanho de um botão, e a única coisa
+     que separava um título de seção do corpo era o peso. Agora h2 salta para 22px e o
+     título de página para 26px, que é o que dá à página um topo legível de longe.
+     O topo da escala é 32px e não mais: "R$ 148.203,55" tem 13 caracteres e, a 360px de
+     largura, 38px estouraria a coluna. */
   --fs-caption: var(--fs-11);
   --fs-meta: var(--fs-12);
   --fs-body: var(--fs-14);
   --fs-control: var(--fs-16);
-  --fs-title: var(--fs-16);
-  --fs-hero: var(--fs-26);
+  --fs-section: var(--fs-22);
+  --fs-title: var(--fs-26);
+  --fs-hero: var(--fs-32);
   --lh-tight: 1.25;  /* número e título (prosa fica no 1.45 do body) */
 
   /* ===== FORMA — 3 raios de superfície =====
@@ -176,7 +242,10 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
   outline-offset: 2px;
 }
 body {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
+  /* Um peso fora da faixa 400..700 do arquivo variável deve CAIR para o mais próximo,
+     nunca ser falsificado pelo navegador. */
+  font-synthesis-weight: none;
   background: var(--bg);
   color: var(--ink);
   line-height: 1.45;
@@ -210,7 +279,8 @@ a:visited { color: var(--green); }
   padding-right: calc(var(--sp-16) + env(safe-area-inset-right));
   padding-left: calc(var(--sp-16) + env(safe-area-inset-left));
 }
-.header h1 { margin: 0; font-size: var(--fs-16); font-weight: 700; letter-spacing: -0.01em; }
+.header h1 { margin: 0; font-family: var(--font-display); font-size: var(--fs-20);
+  font-weight: 600; }
 .header-action {
   background: none; color: var(--muted); border: 0; border-radius: var(--radius-sm);
   min-width: 44px; min-height: 44px; display: grid; place-items: center; cursor: pointer;
@@ -221,7 +291,11 @@ a:visited { color: var(--green); }
 /* Layout */
 .page { max-width: 820px; margin: 0 auto;
   padding: 16px calc(16px + env(safe-area-inset-right)) 16px calc(16px + env(safe-area-inset-left)); }
-h2 { font-size: var(--fs-16); margin: var(--sp-24) 0 var(--sp-10); }
+/* A display fica nos TRÊS níveis de página — marca, título e seção — e para por aí.
+   Subtítulo de cartão (h3) segue na Plex: ali o texto é rótulo funcional, não manchete,
+   e serifa em tudo viraria ruído. */
+h2 { font-family: var(--font-display); font-size: var(--fs-section); font-weight: 600;
+  line-height: var(--lh-tight); margin: var(--sp-24) 0 var(--sp-10); }
 h3 { font-size: var(--fs-14); margin: 18px 0 8px; }
 
 /* Controls */
@@ -365,7 +439,8 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .pf-summary { display: flex; flex-direction: column; align-items: center; gap: 2px;
   background: var(--card); border-radius: var(--radius); border: 1px solid var(--line);
   padding: 16px; margin-bottom: 14px; }
-.pf-total { font-variant-numeric: tabular-nums; font-size: var(--fs-26); color: var(--green); }
+.pf-total { font-variant-numeric: tabular-nums; font-size: var(--fs-hero);
+  line-height: var(--lh-tight); color: var(--green); }
 
 /* Segmented control */
 .seg { display: flex; background: var(--track); border-radius: var(--radius-sm); padding: 4px; gap: 4px;
@@ -444,7 +519,8 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 /* Login: é a única tela onde a marca tem trabalho a fazer, então aqui ela vem grande. */
 .login-card .brand { flex-direction: column; align-items: flex-start; gap: var(--sp-6);
   min-height: 0; padding: 0; margin-bottom: var(--sp-16); }
-.login-card h1 { color: var(--green); margin: 0; font-size: var(--fs-26); }
+.login-card h1 { color: var(--green); margin: 0; font-family: var(--font-display);
+  font-size: var(--fs-title); font-weight: 600; }
 .login-card form { display: flex; flex-direction: column; gap: 12px; }
 .login-card input { padding: 12px; border: 2px solid var(--line); border-radius: var(--radius-sm); font-size: var(--fs-16);
   background: var(--card); color: var(--ink); }
@@ -725,7 +801,8 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
   background: var(--chip-bg); white-space: nowrap; }
 
 /* Página Carteira alvo */
-.page-title { font-size: var(--fs-20); margin: 4px 0 6px; }
+.page-title { font-family: var(--font-display); font-size: var(--fs-title);
+  font-weight: 600; line-height: var(--lh-tight); margin: 4px 0 6px; }
 .section-title { margin-top: 24px; }
 .target-classes { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
 .target-classes h2 { margin: 0; }
