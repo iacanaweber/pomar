@@ -1,5 +1,9 @@
 # --- build ---
-FROM node:20-alpine AS build
+# Node 22, não 20: o jsdom traz um `undici` que usa `webidl.util.markAsUncloneable`,
+# disponível só a partir do Node 21. O desenvolvimento já rodava em 22 — construir em
+# 20 era uma divergência silenciosa, e só apareceu quando os testes passaram a rodar
+# dentro da imagem.
+FROM node:22-alpine AS build
 WORKDIR /app
 # O lockfile ENTRA e o install é `npm ci`. Antes só o package.json era copiado e o
 # `npm install` resolvia as versões de novo a cada build: o package-lock.json estava
