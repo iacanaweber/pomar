@@ -57,15 +57,30 @@
   --font-sans: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
 
-  --green: #1b5e20;
-  --green-light: #2e7d32;
-  --leaf: #66bb6a;
-  --amber: #f9a825;
-  --bg: #f6f8f6;
+  /* ===== COR — matizes escolhidas, não de prateleira =====
+     Os valores anteriores eram Material Design puro (#1b5e20 = Green 900, #66bb6a =
+     Green 300, #f9a825 = Amber 800). Funcionavam, mas eram a paleta de qualquer app:
+     nenhum deles tinha sido escolhido para ESTE.
+
+     O eixo semântico é QUENTE = AGIR, FRIO = LER. Ele não foi inventado aqui — é o que
+     o cartão de diagnóstico já fazia com --surface-diag, e agora vale no app inteiro:
+     --seiva só aparece onde dinheiro deve ir, e é a coisa mais alta da interface.
+     Todo valor abaixo passou pelo piso de 4,5:1 sobre --card E sobre --bg (3:1 para uso
+     não-textual, como anel de foco). */
+  --green: #17462a;        /* casca — tinta de marca, valor monetário, link (10,79:1) */
+  --green-light: #2c7245;
+  --leaf: #4e9e62;         /* folha — anel de foco, borda ativa, barra (3,02:1 não-texto) */
+  --amber: #9e5e00;        /* ver --seiva: mesmo valor, nome antigo mantido por ora */
+  --bg: #f4f6f1;           /* terra — off-white com viés vegetal, um grau mais quente */
   --card: #ffffff;
-  --ink: #1c2419;
-  --muted: #6b7a6b;
-  --line: #e2e8e2;
+  --ink: #182014;
+  --muted: #5b6a56;        /* sombra (5,77:1 no card, 5,30:1 no fundo) */
+  --line: #e0e6dd;
+
+  /* Os dois tons do eixo. --seiva é ocre profundo de propósito: terracota tem componente
+     vermelha e no app vermelho já quer dizer erro. */
+  --seiva: #9e5e00;        /* AGIR — falta, plante aqui (5,18:1 card / 4,76:1 fundo) */
+  --sereno: #38658c;       /* LER — diagnóstico, sobra, já está no alvo (6,16:1 card) */
   /* ===== ESPAÇO — 8 degraus =====
      Os degraus são os MODOS REAIS do CSS (8px aparece 23×, 10px 17×, 12px 13×): nada foi
      inventado. Os singletons (7, 9, 11, 15, 18, 22) sobem ou descem para o vizinho.
@@ -140,7 +155,7 @@
      normal para 3,98:1 sobre a fria e 4,10:1 sobre a verde — abaixo de AA. Este passa em
      4,63:1 na pior das duas. Escopo local: no --card branco o de sempre continua valendo. */
   --muted-tinted: #5a695c;
-  --chip-bg: #eef5ee;
+  --chip-bg: #eaf2ea;
   --hover: #f3f7f3;
   --on-accent: #ffffff;
   --danger: #c62828;
@@ -159,9 +174,12 @@
   /* Paleta dos gráficos da carteira alvo — uma matiz por CLASSE, ordem fixa.
      Steps validados (skill dataviz, lista de pares adjacentes) para as duas superfícies
      de card do app. Alterar aqui exige rodar o validador de paleta de novo.
-     Nota do último passe: a lista de TODOS os pares (e não só a dos adjacentes) reprova
-     o par BDR↔Ações no modo escuro (ΔE 9,8 em visão normal). É condição anterior à
-     entrada da renda fixa, e só aparece quando as classes do meio somem do gráfico. */
+     O par BDR↔Ações no escuro era o pior de todos por larga margem. Corrigido: --viz-bdr
+     saiu do azul-violeta para um violeta com mais magenta, e o pior par do conjunto subiu
+     de ΔE 15,7 para 20,3 (CIEDE2000, todos os pares, não só os adjacentes). No claro o
+     pior par é 23,1.
+     Aberto e conhecido: --viz-etf tem 2,82:1 sobre o card branco, abaixo do piso de 3:1
+     para elemento não-textual. Mexer nele exige revalidar o conjunto claro inteiro. */
   --viz-stock: #2a78d6;
   --viz-fii: #eb6834;
   --viz-etf: #1baf7a;
@@ -173,7 +191,7 @@
      categoria); os quatro slots de comparação são fixos por série e validados nos dois
      modos. Nem quatro matizes sobrevivem a daltonismo com linhas que se cruzam, então o
      traço e o rótulo na ponta carregam a identidade junto com a cor. */
-  --perf-hero: #1b5e20;
+  --perf-hero: #17462a;
   --perf-1: #b5347e;
   --perf-2: #2a78d6;
   --perf-3: #eb6834;
@@ -184,15 +202,17 @@
 :root { color-scheme: light; }
 :root[data-theme="dark"] { color-scheme: dark; }
 :root[data-theme="dark"] {
-  --green: #4caf50;
-  --green-light: #66bb6a;
-  --leaf: #4caf50;
-  --amber: #ffb300;
+  --green: #6fc07e;        /* 7,85:1 sobre --card */
+  --green-light: #8ad196;
+  --leaf: #5cb36f;
+  --amber: #e8a33a;
   --bg: #10140f;
   --card: #171c14;
   --ink: #e7efe5;
   --muted: #9bb09b;
   --line: #283026;
+  --seiva: #e8a33a;        /* AGIR (8,02:1) */
+  --sereno: #7fb0d8;       /* LER (7,51:1) */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 10px 28px rgba(0, 0, 0, 0.6);
   --surface-soft: #1c2218;
@@ -218,9 +238,9 @@
   --viz-stock: #3987e5;
   --viz-fii: #d95926;
   --viz-etf: #199e70;
-  --viz-bdr: #9085e9;
+  --viz-bdr: #a97be8;
   --viz-rf: #cf4f95;
-  --perf-hero: #4caf50;
+  --perf-hero: #6fc07e;
   --perf-1: #cf4f95;
   --perf-2: #3987e5;
   --perf-3: #d95926;
