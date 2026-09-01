@@ -293,6 +293,20 @@ _MIGRATIONS: list[tuple[int, str]] = [
         ALTER TABLE preferences ADD COLUMN reserve_floor_share REAL NOT NULL DEFAULT 1.0;
         """,
     ),
+    (
+        12,
+        # v12: `executed_orders` sai. Era o "já comprei" — um registro paralelo de ordens
+        # que NENHUM outro módulo lia: nem a carteira, nem a exposição, nem o TWR (cujos
+        # fluxos vêm de `/api/v1/activities` do Ghostfolio e de `fixed_income_entries`).
+        # O usuário não faz tracking aqui, e a tabela confirmava: zero linhas.
+        #
+        # O CREATE fica na v1, intocado — migração aplicada não se reescreve. Em banco
+        # novo a v1 cria e esta derruba; num banco existente, esta derruba. Correto nos
+        # dois casos, e o `IF EXISTS` cobre o banco que nunca chegou a ter a tabela.
+        """
+        DROP TABLE IF EXISTS executed_orders;
+        """,
+    ),
 ]
 
 

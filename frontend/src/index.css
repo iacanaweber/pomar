@@ -1540,17 +1540,6 @@ select {
 }
 
 /* Registro de compra + histórico de aportes */
-.order-register {
-  padding: 4px 0;
-}
-.order-registered {
-  color: var(--green);
-  font-weight: 600;
-  font-size: var(--fs-13);
-}
-.orders-history .pf-drill-item {
-  align-items: center;
-}
 
 /* Plano restaurado */
 .plan-restored {
@@ -2885,9 +2874,6 @@ select {
   line-height: 1.4;
   color: var(--err-ink);
 }
-.orders-erro {
-  margin: var(--sp-16) 0 0;
-}
 
 /* Confirmação em linha, no lugar de `confirm()`. O botão vira a própria pergunta: um
    toque arma, o segundo executa. Nada bloqueia a tela. */
@@ -2935,4 +2921,56 @@ select {
 .reserve-rename-form input:focus {
   border-color: var(--leaf);
   outline: 0;
+}
+
+/* ===== Tique de conferência =====
+   Conferência, não registro: a posição oficial é o Ghostfolio. Marca o que já foi
+   executado na corretora para não comprar duas vezes nem esquecer uma.
+
+   Mesmo idioma do seletor de classes: <label> carregando a classe base mais o
+   modificador, com o checkbox nativo dentro — Enter, Espaço e o papel vêm de graça. */
+.card-ack {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-6);
+  min-height: 44px;
+  padding: 0 var(--sp-6);
+  margin: calc(-1 * var(--sp-6)) 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.card-ack input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--green);
+  flex-shrink: 0;
+}
+.card-ack-on {
+  color: var(--green);
+  font-weight: 600;
+}
+
+/* O cartão feito RECUA. Sem borda colorida: `.card-discount` já reivindica os 2px de
+   --leaf, e as duas colidiriam no mesmo cartão. */
+.card-feito {
+  opacity: 0.72;
+}
+/* O valor riscado é o segundo canal, além da opacidade — cor sozinha nunca basta. */
+.card-feito .card-buy strong {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.ranked-progresso {
+  margin: calc(-1 * var(--sp-6)) 0 var(--sp-10);
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+/* Cumprido, se cala: volta ao neutro em vez de continuar contando. */
+.ranked-progresso-fim {
+  color: var(--green);
+  font-weight: 600;
 }

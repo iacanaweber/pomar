@@ -126,10 +126,10 @@ class GhostfolioClient:
     async def get_activities(self) -> list[dict]:
         """Transações da carteira — os FLUXOS externos que o TWR precisa neutralizar.
 
-        O `executed_orders` do Pomar só tem o que o usuário registrou no app e só compras;
-        o Ghostfolio é a fonte autoritativa da renda variável. (A renda fixa não passa por
-        aqui: os aportes e resgates dela vivem em `fixed_income_entries`, e é justamente o
-        dinheiro que nunca esteve no Ghostfolio.)
+        O Ghostfolio é a fonte autoritativa da renda variável — o app não mantém registro
+        próprio de ordens. (A renda fixa não passa por aqui: os aportes e resgates dela
+        vivem em `fixed_income_entries`, e é justamente o dinheiro que nunca esteve no
+        Ghostfolio.)
 
         O endpoint mudou de nome entre versões (`/api/v1/order` nas antigas,
         `/api/v1/activities` a partir da 2.x), então tentamos os dois: um 404 aqui é uma

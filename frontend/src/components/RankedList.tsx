@@ -1,10 +1,10 @@
 import type { PlanAsset, PlanResponse } from "../types";
 import { classLabel, temMetricasDeAcao } from "../lib/classes";
 import { money, pct } from "../lib/format";
+import { useComprasFeitas } from "../hooks/useComprasFeitas";
 import { AssetLink } from "./AssetLink";
 import { Tooltip } from "./Tooltip";
 import { Icon } from "./Icon";
-import { RegisterBuyButton } from "./RegisterBuyButton";
 
 const RISK_CLASS: Record<string, string> = {
   verde: "risk-verde",
@@ -42,7 +42,15 @@ function BasketBar({ asset }: { asset: PlanAsset }) {
   );
 }
 
-function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null }) {
+function AssetCard({
+  asset,
+  feito,
+  onAlternar,
+}: {
+  asset: PlanAsset;
+  feito: boolean;
+  onAlternar: () => void;
+}) {
   const reasons = asset.reasons ?? [];
   const redFlags = asset.red_flags ?? [];
   const riskClass = RISK_CLASS[asset.risk_level ?? "verde"] ?? "";
@@ -52,7 +60,7 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
   // logo abaixo, na BasketBar.
   const discounted = temMetricasDeAcao(asset.asset_class) && asset.bazin_below_ceiling === true;
   return (
-    <li className={`card ${discounted ? "card-discount" : ""}`}>
+    <li className={`card ${discounted ? "card-discount" : ""} ${feito ? "card-feito" : ""}`}>
       <div className="card-head card-head-static">
         <span className="card-id">
           <span className="card-ticker">{asset.ticker}</span>
@@ -95,14 +103,14 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
 
       <div className="card-detail-link">
         <AssetLink ticker={asset.ticker}>ver detalhes de {asset.ticker} →</AssetLink>
+        {/* Conferência, não registro: a posição oficial é o Ghostfolio. Isto só marca o
+            que já foi executado na corretora, para não comprar duas vezes nem esquecer
+            uma. Mesmo idioma de checkbox do seletor de classes (`.class-chip`). */}
         {asset.suggested && (
-          <RegisterBuyButton
-            ticker={asset.ticker}
-            assetClass={asset.asset_class}
-            shares={asset.suggested.shares}
-            price={asset.suggested.price}
-            planId={planId}
-          />
+          <label className={`card-ack ${feito ? "card-ack-on" : ""}`}>
+            <input type="checkbox" checked={feito} onChange={onAlternar} />
+            <span>já comprei</span>
+          </label>
         )}
       </div>
     </li>
@@ -119,6 +127,12 @@ export function RankedList({ plan }: { plan: PlanResponse }) {
   const unallocated = plan.unallocated ?? 0;
   const buys = ranking.filter((a) => a.suggested);
   const rest = ranking.filter((a) => !a.suggested);
+
+  const comprei = useComprasFeitas(plan.plan_id);
+  // Só as compras sugeridas contam no progresso: o que está no alvo não tem nada a fazer.
+  const feitas = buys.filter((a) => comprei.feito(a.ticker)).length;
+  const tudoFeito = buys.length > 0 && feitas === buys.length;
+
   return (
     <div className="ranked">
       {buys.length > 0 && (
@@ -127,9 +141,22 @@ export function RankedList({ plan }: { plan: PlanResponse }) {
             Compras sugeridas para {money(plan.aporte)}
             {unallocated > 0 && <span className="muted"> · sobra {money(unallocated)}</span>}
           </h2>
+          {/* Cumprido, se cala: com tudo marcado a frase para de contar e confirma —
+              mesmo idioma de `.reserve-goal.goal-met`. */}
+          <p
+            className={`ranked-progresso ${tudoFeito ? "ranked-progresso-fim" : ""}`}
+            role="status"
+          >
+            {tudoFeito ? "Tudo comprado." : `${feitas} de ${buys.length} feitas`}
+          </p>
           <ul className="cards">
             {buys.map((a) => (
-              <AssetCard key={a.ticker} asset={a} planId={plan.plan_id} />
+              <AssetCard
+                key={a.ticker}
+                asset={a}
+                feito={comprei.feito(a.ticker)}
+                onAlternar={() => comprei.alternar(a.ticker)}
+              />
             ))}
           </ul>
         </>
@@ -139,7 +166,12 @@ export function RankedList({ plan }: { plan: PlanResponse }) {
           <h3 className="muted">No alvo (sem compra sugerida)</h3>
           <ul className="cards">
             {rest.map((a) => (
-              <AssetCard key={a.ticker} asset={a} planId={plan.plan_id} />
+              <AssetCard
+                key={a.ticker}
+                asset={a}
+                feito={comprei.feito(a.ticker)}
+                onAlternar={() => comprei.alternar(a.ticker)}
+              />
             ))}
           </ul>
         </>

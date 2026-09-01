@@ -5,7 +5,6 @@ import type {
   AssignmentsIn,
   EntryIn,
   LabelDimension,
-  OrderIn,
   PlanRequest,
   PreferencesBody,
 } from "../types";
@@ -19,7 +18,6 @@ export const keys = {
   watchlist: ["watchlist"] as const,
   income: ["income"] as const,
   fixedIncome: ["fixed-income"] as const,
-  orders: ["orders"] as const,
   planLatest: ["plan-latest"] as const,
   watchlistRadar: ["watchlist-radar"] as const,
   labels: ["labels"] as const,
@@ -214,25 +212,6 @@ export const usePerformance = (window = "all") =>
     queryFn: () => api.performance(window),
     staleTime: 30 * 60 * 1000,
   });
-
-// --- Ordens ("já comprei") ---
-export const useOrders = () => useQuery({ queryKey: keys.orders, queryFn: api.orders });
-
-export function useCreateOrder() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: OrderIn) => api.createOrder(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.orders }),
-  });
-}
-
-export function useDeleteOrder() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (id: number) => api.deleteOrder(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.orders }),
-  });
-}
 
 export const useAsset = (ticker: string) =>
   useQuery({ queryKey: ["asset", ticker], queryFn: () => api.asset(ticker), enabled: !!ticker });

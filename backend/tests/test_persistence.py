@@ -29,9 +29,12 @@ async def test_migrations_create_tables(db):
     rows = await db.fetchall("SELECT name FROM sqlite_master WHERE type='table'")
     names = {r["name"] for r in rows}
     assert {
-        "preferences", "watchlist", "scenarios", "plan_history", "executed_orders", "alerts",
+        "preferences", "watchlist", "scenarios", "plan_history", "alerts",
         "fixed_income_accounts", "fixed_income_entries", "portfolio_snapshots",
     } <= names
+    # v12 derrubou o "já comprei": era registro paralelo de ordens que nenhum outro
+    # módulo lia, e o Ghostfolio é a fonte autoritativa da renda variável.
+    assert "executed_orders" not in names
     ver = await db.fetchone("SELECT MAX(version) AS v FROM schema_migrations")
     assert ver["v"] == max(v for v, _ in db_module._MIGRATIONS)
 

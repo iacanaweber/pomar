@@ -61,11 +61,6 @@ export interface FixedIncomeEntry {
   note?: string | null;
 }
 
-// --- Ordens ("já comprei") ---
-export type OrderIn = Schemas["OrderIn"];
-export type OrderOut = Schemas["OrderOut"];
-export type OrdersListResponse = Schemas["OrdersListResponse"];
-
 // --- Tipos de respostas que o FastAPI devolve como dict livre (sem response_model),
 //     portanto não vêm tipados no OpenAPI; declarados aqui manualmente. ---
 export interface GlossaryEntry {

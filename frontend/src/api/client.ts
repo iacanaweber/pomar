@@ -16,9 +16,6 @@ import type {
   IndexersResponse,
   LabelDimension,
   LabelOut,
-  OrderIn,
-  OrderOut,
-  OrdersListResponse,
   PerformanceResponse,
   PlanRequest,
   PlanResponse,
@@ -156,11 +153,6 @@ export const api = {
   },
   setAssignments: (body: AssignmentsIn) =>
     request<AssignmentOut[]>("/api/labels/assignments", { ...json(body), method: "PUT" }),
-
-  // ordens ("já comprei")
-  orders: () => request<OrdersListResponse>("/api/orders"),
-  createOrder: (body: OrderIn) => request<OrderOut>("/api/orders", json(body)),
-  deleteOrder: (id: number) => request<{ ok: boolean }>(`/api/orders/${id}`, { method: "DELETE" }),
 
   // plano (mais lento -> timeout maior)
   plan: (req: PlanRequest) => request<PlanResponse>("/api/plan", json(req), 60000),

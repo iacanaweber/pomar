@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
 import type { FixedIncomeSuggestion, ReserveSuggestion } from "../types";
 import { money, num, pct } from "../lib/format";
+import { useComprasFeitas } from "../hooks/useComprasFeitas";
 import { Tooltip } from "./Tooltip";
-import { RegisterBuyButton } from "./RegisterBuyButton";
 
 /** A parcela de renda fixa do aporte: o que fazer com ela, linha a linha.
  *
@@ -69,8 +69,10 @@ export function FixedIncomeSuggestionCard({
   suggestion: FixedIncomeSuggestion;
   reserve?: ReserveSuggestion | null;
   currency?: string;
+  /** Escopa o checklist de conferência: aporte novo começa com a lista limpa. */
   planId?: number | null;
 }) {
+  const comprei = useComprasFeitas(planId);
   const {
     directed_now: total = 0,
     gap_brl: gap = 0,
@@ -143,13 +145,14 @@ export function FixedIncomeSuggestionCard({
                   <Link className="link-button fi-shortcut" to={`/ativo/${i.ticker}`}>
                     {i.shares ?? 0} × {i.price ? money(i.price, currency) : "—"} →
                   </Link>
-                  <RegisterBuyButton
-                    ticker={i.ticker}
-                    assetClass="RENDA_FIXA"
-                    shares={i.shares ?? 0}
-                    price={i.price}
-                    planId={planId}
-                  />
+                  <label className={`card-ack ${comprei.feito(i.ticker) ? "card-ack-on" : ""}`}>
+                    <input
+                      type="checkbox"
+                      checked={comprei.feito(i.ticker)}
+                      onChange={() => comprei.alternar(i.ticker!)}
+                    />
+                    <span>já comprei</span>
+                  </label>
                 </>
               ) : i.account_id ? (
                 // atalho para não redigitar o que o app já sabe: abre a conta sugerida

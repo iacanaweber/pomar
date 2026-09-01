@@ -36,7 +36,6 @@ _V5_COLS = {
         "month, total_value, annual_income, monthly_income, portfolio_yield, "
         "yield_on_cost, snapshot_json"
     ),
-    "executed_orders": "id, ticker, asset_class, shares, price, fees, executed_at",
 }
 
 _TARGETS = {"STOCK": 0.50, "FII": 0.30, "ETF": 0.15, "BDR": 0.05}
@@ -97,12 +96,6 @@ async def _seed_v5(path: str) -> None:
              json.dumps({"AAA3": {"yoc": 0.094, "annual_income": 1_200.0}})),
         )
 
-    await d.execute(
-        """INSERT INTO executed_orders
-               (ticker, asset_class, shares, price, fees, executed_at, note)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        ("AAA3", "STOCK", 100, 28.75, 3.2, "2026-04-03T14:30:00+00:00", "aporte de abril"),
-    )
     await d.close()
 
 

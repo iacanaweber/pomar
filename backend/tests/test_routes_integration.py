@@ -376,17 +376,6 @@ class _StubSgs:
         return self._ipca
 
 
-def test_orders_crud(authed_client):
-    c = authed_client
-    r = c.post("/api/orders", json={"ticker": "bbas3", "shares": 100, "price": 25.0, "fees": 2.0}).json()
-    assert r["ticker"] == "BBAS3" and r["shares"] == 100
-    lst = c.get("/api/orders").json()
-    assert lst["total_invested"] == 100 * 25.0 + 2.0
-    assert len(lst["items"]) == 1
-    assert c.delete(f"/api/orders/{r['id']}").status_code == 200
-    assert c.get("/api/orders").json()["items"] == []
-
-
 def test_asset_detail_returns_factual_analysis(authed_client, monkeypatch):
     """/asset devolve a leitura factual (teto, consistência, flags) — sem nota nem ranking."""
     async def _assets(*a, **k):

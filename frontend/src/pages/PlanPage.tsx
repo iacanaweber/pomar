@@ -13,7 +13,6 @@ import { RankedList } from "../components/RankedList";
 import { HojeVsAlvo } from "../components/HojeVsAlvo";
 import { buildComparison } from "../lib/comparison";
 import { HealthBanner } from "../components/HealthBanner";
-import { OrdersHistory } from "../components/OrdersHistory";
 import { FixedIncomeSuggestionCard } from "../components/FixedIncomeSuggestionCard";
 import type { PlanRequest } from "../types";
 import { classLabel } from "../lib/classes";
@@ -139,8 +138,6 @@ export function PlanPage() {
           <RankedList plan={result} />
         </>
       )}
-
-      <OrdersHistory />
     </main>
   );
 }
