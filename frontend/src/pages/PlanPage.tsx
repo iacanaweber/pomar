@@ -95,6 +95,16 @@ export function PlanPage() {
         onSubmit={submit}
       />
 
+      {/* O plano leva até 60 segundos. Sem região viva, quem usa leitor de tela aperta o
+          botão e nada mais é anunciado — nem o fim do cálculo. */}
+      <p className="sr-only" role="status">
+        {plan.isPending
+          ? "Calculando o plano de aporte."
+          : plan.isSuccess
+            ? "Plano pronto."
+            : ""}
+      </p>
+
       {plan.isError && (
         <div className="banner banner-error">
           <Icon name="alert" size={15} /> {planError ? planError.userMessage : "Erro ao gerar o plano"}

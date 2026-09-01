@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/client";
+import { ConfirmButton } from "../components/ConfirmButton";
 import { MutationError } from "../components/MutationError";
 import {
   useAddEntry,
@@ -212,17 +213,14 @@ function EntriesList({ accountId }: { accountId: number }) {
           <span className={`reserve-entry-tag tag-${e.kind}`}>{ENTRY_LABEL[e.kind] ?? e.kind}</span>
           <span className="reserve-entry-date">{isoToBR(e.entry_date)}</span>
           <strong className="reserve-entry-amount">{money(e.amount)}</strong>
-          <button
+          <ConfirmButton
             className="link-button reserve-archive"
-            aria-label={`Remover ${ENTRY_LABEL[e.kind] ?? "lançamento"} de ${isoToBR(e.entry_date)}`}
+            rotulo={`Remover ${ENTRY_LABEL[e.kind] ?? "lançamento"} de ${isoToBR(e.entry_date)}`}
+            pergunta="Remover? Saldo e rendimento serão recalculados."
+            icone="trash"
             disabled={del.isPending}
-            onClick={() => {
-              if (confirm("Remover este lançamento? O saldo e o rendimento serão recalculados."))
-                del.mutate({ accountId, entryId: e.id });
-            }}
-          >
-            <Icon name="trash" size={18} />
-          </button>
+            onConfirm={() => del.mutate({ accountId, entryId: e.id })}
+          />
         </li>
       ))}
       <MutationError error={del.error} acao="remover o lançamento" />
@@ -459,22 +457,61 @@ function AccountCard({
     account.last_yield_from != null &&
     account.last_yield_from !== account.history_yield_from;
 
-  const rename = () => {
-    const name = window.prompt("Novo nome da conta:", account.name);
-    if (name && name.trim() && name.trim() !== account.name) {
-      update.mutate({ id: account.id, body: { name: name.trim() } });
-    }
-  };
+  // Renomear em linha, não por `window.prompt`: a caixa nativa bloqueia, não é
+  // estilizável nem testável, e em standalone aparece com o nome do host no título.
+  const [renomeando, setRenomeando] = useState(false);
+  const [nomeNovo, setNomeNovo] = useState(account.name);
 
   return (
     <li className="card">
       <div className="reserve-card-head">
         <div className="card-id">
           <span className="card-ticker">
-            {account.name}{" "}
-            <button className="link-button reserve-rename" onClick={rename} aria-label={`Renomear ${account.name}`}>
-              ✏️
-            </button>
+            {renomeando ? (
+              <form
+                className="reserve-rename-form"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  const nome = nomeNovo.trim();
+                  if (nome && nome !== account.name) update.mutate({ id: account.id, body: { name: nome } });
+                  setRenomeando(false);
+                }}
+              >
+                <input
+                  value={nomeNovo}
+                  onChange={(e) => setNomeNovo(e.target.value)}
+                  aria-label={`Novo nome de ${account.name}`}
+                  autoFocus
+                />
+                <button type="submit" className="link-button">
+                  Salvar
+                </button>
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => {
+                    setNomeNovo(account.name);
+                    setRenomeando(false);
+                  }}
+                >
+                  Cancelar
+                </button>
+              </form>
+            ) : (
+              <>
+                {account.name}{" "}
+                {/* O ícone `pencil` já existia e nunca era usado, enquanto aqui havia um
+                    emoji cru como rótulo inteiro do botão — exatamente o que Icon.tsx
+                    proíbe por escrito. */}
+                <button
+                  className="link-button reserve-rename"
+                  onClick={() => setRenomeando(true)}
+                  aria-label={`Renomear ${account.name}`}
+                >
+                  <Icon name="pencil" size={16} />
+                </button>
+              </>
+            )}
           </span>
           <span className="card-name">
             {[account.institution, account.kind ? KIND_LABEL[account.kind] ?? account.kind : null]
@@ -523,17 +560,12 @@ function AccountCard({
         <button className="link-button" onClick={() => setShowEntries((v) => !v)}>
           {showEntries ? "Ocultar lançamentos" : "Ver lançamentos"}
         </button>
-        <button
-          className="link-button reserve-archive"
-          onClick={() => {
-            if (confirm(`Arquivar "${account.name}"? Os lançamentos ficam guardados e dá para desarquivar depois.`))
-              archive.mutate(account.id);
-          }}
+        <ConfirmButton
+          rotulo="Arquivar"
+          pergunta="Arquivar? Os lançamentos ficam guardados."
           disabled={archive.isPending}
-          aria-label={`Arquivar conta ${account.name} (reversível)`}
-        >
-          Arquivar
-        </button>
+          onConfirm={() => archive.mutate(account.id)}
+        />
       </div>
 
       <MutationError error={archive.error} acao={`arquivar ${account.name}`} />
@@ -712,9 +744,9 @@ export function ReservePage() {
       <button className="link-button" onClick={() => navigate(-1)}>
         ← voltar
       </button>
-      <h2>Renda fixa</h2>
+      <h1 className="page-title">Renda fixa</h1>
 
-      {isLoading && <p className="muted">Carregando</p>}
+      {isLoading && <p className="muted" role="status">Carregando</p>}
       {error && (
         <div className="banner banner-error">
           <Icon name="alert" size={15} /> {error instanceof ApiError ? error.userMessage : "Erro ao ler a renda fixa."}
@@ -817,7 +849,7 @@ export function ReservePage() {
                       disabled={update.isPending}
                       onClick={() => update.mutate({ id: a.id, body: { archived: false } })}
                     >
-                      ↩ Desarquivar
+                      Desarquivar
                     </button>
                   </div>
                   <MutationError error={update.error} acao={`desarquivar ${a.name}`} />

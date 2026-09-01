@@ -112,7 +112,7 @@ function WeightRow({
         aria-label={`Remover ${row.ticker} da carteira alvo de ${label}`}
         onClick={onRemove}
       >
-        ✕
+        <Icon name="close" size={18} />
       </button>
     </div>
   );

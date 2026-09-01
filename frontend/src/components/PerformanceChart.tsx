@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import type { PerformanceResponse } from "../types";
 import { money, signedPct } from "../lib/format";
+import { Icon } from "./Icon";
 import { Tooltip } from "./Tooltip";
 
 /** Quatro comparações por vez, no máximo.
@@ -66,6 +67,7 @@ export function PerformanceChart({
 }) {
   const [on, setOn] = useState<string[]>(DEFAULT_ON);
   const [hover, setHover] = useState<number | null>(null);
+  const [tabela, setTabela] = useState(false);
 
   const points = data.points ?? [];
   const disponiveis = data.benchmarks ?? [];
@@ -154,12 +156,11 @@ export function PerformanceChart({
     <section className="card perf">
       <div className="perf-head">
         <h3>Curva de rendimento</h3>
-        <div className="seg perf-window" role="tablist" aria-label="Janela">
+        <div className="seg perf-window" aria-label="Janela">
           {WINDOWS.map((w) => (
             <button
               key={w.key}
-              role="tab"
-              aria-selected={window_ === w.key}
+              aria-pressed={window_ === w.key}
               className={`seg-btn ${window_ === w.key ? "seg-on" : ""}`}
               onClick={() => onWindow(w.key)}
             >
@@ -253,10 +254,7 @@ export function PerformanceChart({
                   height={H}
                   fill="transparent"
                   onMouseEnter={() => setHover(i)}
-                  onFocus={() => setHover(i)}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`Semana de ${p.week_end}: ${signedPct(p.twr_cumulative)}`}
+                  aria-hidden="true"
                 />
               ))}
               {hover != null && (
@@ -327,6 +325,24 @@ export function PerformanceChart({
           );
         })}
       </ul>
+
+      {/* Os retângulos de hover do SVG deixaram de ser paradas de tabulação: eram uma
+          POR SEMANA de histórico, anunciadas como botão, e nenhuma fazia nada ao ser
+          acionada. Os números seguem alcançáveis pelo teclado — aqui, na tabela que já
+          existia para o caso de poucos pontos. */}
+      {!poucosPontos && (
+        <>
+          <button
+            type="button"
+            className="link-button"
+            aria-expanded={tabela}
+            onClick={() => setTabela((v) => !v)}
+          >
+            <Icon name="chevron" size={16} /> {tabela ? "Ocultar os números" : "Ver os números"}
+          </button>
+          {tabela && <PerformanceTable data={data} series={series} />}
+        </>
+      )}
 
       <p className="muted perf-note">
         Séries partem de zero no início da janela.

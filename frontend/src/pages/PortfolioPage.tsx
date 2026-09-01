@@ -146,7 +146,7 @@ export function PortfolioPage() {
   // um do outro, e porcentagens que não fechavam 100%.
   const slicesTotal = useMemo(() => slices.reduce((s, x) => s + x.value, 0), [slices]);
 
-  if (isLoading) return <main className="page"><p className="muted">Carregando</p></main>;
+  if (isLoading) return <main className="page"><p className="muted" role="status">Carregando</p></main>;
 
   if (error)
     return (
@@ -182,6 +182,7 @@ export function PortfolioPage() {
 
   return (
     <main className="page">
+      <h1 className="page-title">Carteira</h1>
       <div className="pf-summary">
         <span className="muted">Patrimônio total</span>
         <strong className="pf-total">{money(total)}</strong>
@@ -204,12 +205,14 @@ export function PortfolioPage() {
         </div>
       )}
 
-      <div className="seg" role="tablist">
+      {/* `aria-pressed`, e não o contrato de abas: `role="tablist"` exige tabpanel,
+          aria-controls e navegação por setas, e nada disso existia — meio contrato é
+          pior que nenhum, porque promete ao leitor de tela um comportamento ausente. */}
+      <div className="seg" aria-label="Como agrupar a carteira">
         {GROUPS.map((g) => (
           <button
             key={g.key}
-            role="tab"
-            aria-selected={by === g.key}
+            aria-pressed={by === g.key}
             className={`seg-btn ${by === g.key ? "seg-on" : ""}`}
             onClick={() => {
               setBy(g.key);
@@ -232,7 +235,7 @@ export function PortfolioPage() {
 
       {by === "rendimento" &&
         (performance.isLoading ? (
-          <p className="muted">Carregando</p>
+          <p className="muted" role="status">Carregando</p>
         ) : performance.data ? (
           <PerformanceChart
             data={performance.data}
@@ -248,21 +251,17 @@ export function PortfolioPage() {
         <div className="pf-chart-pie">
           <PieChart slices={slices} active={active} onActive={setActive} ariaLabel={ariaLabel} />
         </div>
-        <ul className="legend" role="list">
+        {/* Um <button> de verdade dentro do <li>: Enter e Espaço vêm de graça, o papel
+            é anunciado certo, e some o par role="list"/role="listitem" redundante. */}
+        <ul className="legend">
           {slices.map((s, i) => (
-            <li
-              key={s.label}
-              role="listitem"
-              tabIndex={0}
+            <li key={s.label}>
+            <button
+              type="button"
+              aria-pressed={active === i}
               aria-label={`${s.label}: ${money(s.value)}, ${pct(s.value / slicesTotal)}`}
               className={`legend-item ${active != null && active !== i ? "dim" : ""} ${active === i ? "legend-on" : ""}`}
               onClick={() => setActive(active === i ? null : i)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  setActive(active === i ? null : i);
-                }
-              }}
             >
               <span className="legend-dot" style={{ background: s.color }} />
               <span className="legend-label">{s.label}</span>
@@ -275,6 +274,7 @@ export function PortfolioPage() {
                   </span>
                 )}
               </span>
+            </button>
             </li>
           ))}
         </ul>

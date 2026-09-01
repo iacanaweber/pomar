@@ -385,7 +385,12 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 
 /* Tooltip */
 .tip { position: relative; display: inline-block; }
-.tip-anchor { cursor: help; text-decoration: underline dotted; text-underline-offset: 3px; }
+/* A âncora é só marcação visual — quem recebe o foco é o botão ao lado. */
+.tip-anchor { text-decoration: underline dotted; text-underline-offset: 3px; }
+/* O GATILHO. Botão de verdade, com o ícone dentro: o valor deixou de ser parada de
+   tabulação anunciada como botão. */
+.tip-trigger { background: none; border: 0; padding: 0; cursor: help; color: inherit;
+  font: inherit; line-height: 1; vertical-align: baseline; }
 /* O ⓘ era um glifo de 10px com `vertical-align: super` e um hack de padding para chegar
    perto de tocável. Como SVG de 14px ele alinha na linha e é alvo de verdade. */
 .tip-mark { opacity: 0.65; margin-left: var(--sp-4); display: inline-block;
@@ -1083,7 +1088,7 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
    a área fantasma é o preço, e é menor que o de um alvo que não se acerta.
    Onde o destino PODE sair da prosa, ele sai: vira `.link-row`, com 44px de caixa real e
    nenhuma sobreposição. */
-.asset-link, .tip-anchor, .page p a, .class-chip-meta a, .cmp-note a, .field-hint a {
+.asset-link, .tip-trigger, .page p a, .class-chip-meta a, .cmp-note a, .field-hint a {
   display: inline-block;
   padding-top: 14px;
   padding-bottom: 14px;
@@ -1258,3 +1263,22 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
   margin: var(--sp-6) 0 0; font-size: var(--fs-meta); line-height: 1.4;
   color: var(--err-ink); }
 .orders-erro { margin: var(--sp-16) 0 0; }
+
+/* Confirmação em linha, no lugar de `confirm()`. O botão vira a própria pergunta: um
+   toque arma, o segundo executa. Nada bloqueia a tela. */
+.confirm { display: inline-flex; align-items: center; flex-wrap: wrap;
+  gap: var(--sp-6); font-size: var(--fs-meta); }
+.confirm-pergunta { color: var(--muted); }
+.confirm-sim { min-height: 44px; padding: 0 var(--sp-12); font-size: var(--fs-meta);
+  font-weight: 600; color: var(--on-accent); background: var(--danger);
+  border: 0; border-radius: var(--radius-sm); cursor: pointer; }
+
+/* Renomear conta em linha. 16px no campo é o piso de sempre — abaixo disso o Safari iOS
+   dá zoom ao focar. */
+.reserve-rename-form { display: inline-flex; align-items: center; gap: var(--sp-6);
+  flex-wrap: wrap; }
+.reserve-rename-form input { font-size: var(--fs-control); min-height: 44px;
+  padding: 0 var(--sp-10); border: 2px solid var(--line);
+  border-radius: var(--radius-sm); background: var(--card); color: var(--ink);
+  min-width: 0; max-width: 12rem; }
+.reserve-rename-form input:focus { border-color: var(--leaf); outline: 0; }

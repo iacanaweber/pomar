@@ -1,6 +1,7 @@
 import { useDeleteOrder, useOrders } from "../api/queries";
 import { AssetLink } from "./AssetLink";
 import { isoToBR, money } from "../lib/format";
+import { ConfirmButton } from "./ConfirmButton";
 import { MutationError } from "./MutationError";
 
 /** Histórico de aportes executados ('já comprei') e total investido. */
@@ -37,18 +38,13 @@ export function OrdersHistory() {
               {o.executed_at ? ` · ${isoToBR(o.executed_at.slice(0, 10))}` : ""}
             </span>
             <span className="pf-drill-val">{money(o.shares * o.price + (o.fees ?? 0))}</span>
-            <button
-              className="link-button"
-              aria-label={`Excluir registro de ${o.ticker}`}
+            <ConfirmButton
+              rotulo={`Excluir registro de ${o.ticker}`}
+              pergunta="Excluir? Não afeta o Ghostfolio."
+              icone="close"
               disabled={del.isPending}
-              onClick={() => {
-                if (window.confirm(`Excluir o registro de ${o.ticker}? (não afeta o Ghostfolio)`)) {
-                  del.mutate(o.id);
-                }
-              }}
-            >
-              ✕
-            </button>
+              onConfirm={() => del.mutate(o.id)}
+            />
           </li>
         ))}
       </ul>

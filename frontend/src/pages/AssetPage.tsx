@@ -158,7 +158,7 @@ export function AssetPage() {
   if (isLoading)
     return (
       <main className="page">
-        <p className="muted">Carregando {ticker}…</p>
+        <p className="muted" role="status">Carregando {ticker}…</p>
       </main>
     );
   if (error || !data)
@@ -190,7 +190,7 @@ export function AssetPage() {
 
       <div className="asset-head">
         <div>
-          <h2 style={{ margin: 0 }}>{asset.ticker}</h2>
+          <h1 className="page-title" style={{ margin: 0 }}>{asset.ticker}</h1>
           <p className="muted" style={{ margin: 0 }}>
             {asset.name ?? asset.sector ?? asset.asset_class} · {asset.asset_class}
             {asset.sector ? ` · ${asset.sector}` : ""}
