@@ -1,8 +1,7 @@
 import type { PlanAsset, PlanResponse } from "../types";
-import { classLabel } from "../lib/classes";
+import { classLabel, temMetricasDeAcao } from "../lib/classes";
 import { money, pct } from "../lib/format";
 import { AssetLink } from "./AssetLink";
-import { CeilingBadge } from "./CeilingBadge";
 import { Tooltip } from "./Tooltip";
 import { Icon } from "./Icon";
 import { RegisterBuyButton } from "./RegisterBuyButton";
@@ -44,9 +43,11 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
   const reasons = asset.reasons ?? [];
   const redFlags = asset.red_flags ?? [];
   const riskClass = RISK_CLASS[asset.risk_level ?? "verde"] ?? "";
-  // Desconto é ortogonal ao rebalanceamento: destaca mesmo com compra sugerida zero —
-  // forçar um desbalanceamento temporário para aproveitar o preço é decisão do usuário.
-  const discounted = asset.bazin_below_ceiling === true;
+  // Preço-teto só aparece em ação e FII — o legado. Numa carteira de ETF de acumulação
+  // ele não dirige compra nenhuma, e liderar o card com ele era a interface contando uma
+  // estratégia que não é mais a do usuário. O que dirige a compra é o peso na cesta,
+  // logo abaixo, na BasketBar.
+  const discounted = temMetricasDeAcao(asset.asset_class) && asset.bazin_below_ceiling === true;
   return (
     <li className={`card ${discounted ? "card-discount" : ""}`}>
       <div className="card-head card-head-static">
@@ -70,33 +71,12 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
 
       <BasketBar asset={asset} />
 
-      {asset.bazin_ceiling_price != null && (
-        <div className="card-ceiling">
-          <CeilingBadge
-            ceiling={asset.bazin_ceiling_price}
-            price={asset.price ?? asset.suggested?.price ?? null}
-            margin={asset.bazin_margin}
-            belowCeiling={asset.bazin_below_ceiling}
-            variant="chip"
-          />
-          {discounted && !asset.suggested && (
-            <span className="discount-seal">Abaixo do preço-teto</span>
-          )}
-        </div>
-      )}
-
       {reasons.length > 0 && (
         <ul className="card-reasons">
           {reasons.map((r, i) => (
             <li key={i}>{r}</li>
           ))}
         </ul>
-      )}
-
-      {discounted && !asset.suggested && (
-        <p className="card-discount-note">
-          Abaixo do preço-teto, sem compra sugerida.
-        </p>
       )}
 
       {redFlags.length > 0 && (
@@ -133,7 +113,6 @@ export function RankedList({ plan }: { plan: PlanResponse }) {
   const unallocated = plan.unallocated ?? 0;
   const buys = ranking.filter((a) => a.suggested);
   const rest = ranking.filter((a) => !a.suggested);
-  const discountedRest = rest.filter((a) => a.bazin_below_ceiling === true).length;
   return (
     <div className="ranked">
       {buys.length > 0 && (
@@ -151,12 +130,7 @@ export function RankedList({ plan }: { plan: PlanResponse }) {
       )}
       {rest.length > 0 && (
         <>
-          <h3 className="muted">
-            No alvo (sem compra sugerida)
-            {discountedRest > 0 && (
-              <span className="muted"> · {discountedRest} abaixo do preço-teto</span>
-            )}
-          </h3>
+          <h3 className="muted">No alvo (sem compra sugerida)</h3>
           <ul className="cards">
             {rest.map((a) => (
               <AssetCard key={a.ticker} asset={a} planId={plan.plan_id} />

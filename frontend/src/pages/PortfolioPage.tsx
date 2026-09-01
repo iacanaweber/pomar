@@ -3,7 +3,6 @@ import { ApiError } from "../api/client";
 import {
   useExposure,
   useFixedIncome,
-  useIncome,
   usePerformance,
   usePortfolio,
   usePreferences,
@@ -12,15 +11,15 @@ import type { Position } from "../types";
 import { PieChart, type Slice } from "../components/PieChart";
 import { AssetLink } from "../components/AssetLink";
 import { Tooltip } from "../components/Tooltip";
-import { YocCell } from "../components/YocCell";
 import { money, pct, signedPp } from "../lib/format";
-import { PALETTE } from "../lib/palette";
+import { categoricalHue } from "../lib/viz";
 import { PortfolioVsTarget } from "../components/PortfolioVsTarget";
+import { Canteiro } from "../components/Canteiro";
 import { PerformanceChart } from "../components/PerformanceChart";
 import { buildComparison } from "../lib/comparison";
 import { Icon } from "../components/Icon";
 
-type GroupBy = "target" | "rendimento" | "asset" | "class" | "geography" | "sector";
+type GroupBy = "target" | "rendimento" | "asset" | "class" | "geography";
 
 const GROUPS: { key: GroupBy; label: string }[] = [
   { key: "target", label: "Atual × alvo" },
@@ -28,12 +27,11 @@ const GROUPS: { key: GroupBy; label: string }[] = [
   { key: "asset", label: "Por ativo" },
   { key: "class", label: "Por classe" },
   { key: "geography", label: "Por geografia" },
-  { key: "sector", label: "Por setor" },
 ];
 
 /** Dimensões cuja composição vem do backend: elas incluem a renda fixa marcada, e a
  *  aritmética (rateio de exposição parcial, metas, desvios) é testada lá. */
-const FROM_EXPOSURE: GroupBy[] = ["class", "geography", "sector"];
+const FROM_EXPOSURE: GroupBy[] = ["class", "geography"];
 
 // Desvio em p.p. com sinal (`signedPp`, importado de lib/format): a meta secundária é
 // informativa, então o número aparece do lado do valor em vez de virar barra ou alerta.
@@ -46,43 +44,36 @@ interface Member {
 interface Group {
   label: string;
   value: number;
-  members: Member[];
+  /** Só as dimensões vindas do backend (classe, geografia) têm composição e painel de
+   *  detalhe. Em "por ativo" o grupo É o ativo — não há o que abrir. */
+  members?: Member[];
   targetPct?: number | null;
   deviationPp?: number | null;
 }
 
-/** Agrega as POSIÇÕES (renda variável) — usado só na visão "por ativo". */
+/** Agrega as POSIÇÕES por ticker — usado só na visão "por ativo".
+ *
+ *  Não monta `members`: montava, e todo objeto era descartado. O painel de detalhe é
+ *  vedado por `by !== "asset"` e `aggregate` só roda quando `by === "asset"`, então o
+ *  conteúdo do grupo "Outros" era inalcançável por construção. Em "por ativo" a lista
+ *  completa aparece abaixo do gráfico de qualquer jeito. */
 function aggregate(positions: Position[]): Group[] {
   const map = new Map<string, Group>();
-  const add = (key: string, m: Member) => {
-    let g = map.get(key);
-    if (!g) {
-      g = { label: key, value: 0, members: [] };
-      map.set(key, g);
-    }
-    g.value += m.value;
-    g.members.push(m);
-  };
-
   for (const p of positions) {
-    add(p.ticker, { ticker: p.ticker, name: p.name ?? null, value: p.value });
+    const g = map.get(p.ticker);
+    if (g) g.value += p.value;
+    else map.set(p.ticker, { label: p.ticker, value: p.value });
   }
 
-  let items = Array.from(map.values()).sort((a, b) => b.value - a.value);
-  // muitos itens: agrupa os menores em "Outros" (mantendo seus ativos no detalhamento)
-  if (items.length > 12) {
-    const head = items.slice(0, 11);
-    const tail = items.slice(11);
-    head.push({
-      label: `Outros (${tail.length})`,
-      value: tail.reduce((s, x) => s + x.value, 0),
-      members: tail.flatMap((g) => g.members),
-    });
-    items = head;
-  }
-  // ativos de cada grupo ordenados por valor
-  items.forEach((g) => g.members.sort((a, b) => b.value - a.value));
-  return items;
+  const items = Array.from(map.values()).sort((a, b) => b.value - a.value);
+  if (items.length <= 12) return items;
+  const head = items.slice(0, 11);
+  const cauda = items.slice(11);
+  head.push({
+    label: `Outros (${cauda.length})`,
+    value: cauda.reduce((s, x) => s + x.value, 0),
+  });
+  return head;
 }
 
 export function PortfolioPage() {
@@ -90,21 +81,12 @@ export function PortfolioPage() {
   const exposure = useExposure();
   const [perfWindow, setPerfWindow] = useState<string>("all");
   const performance = usePerformance(perfWindow);
-  const income = useIncome();
   const fixedIncome = useFixedIncome(); // só pelo CDI de referência (SGS/BCB)
   const preferences = usePreferences();
   // abre na comparação: "como estou em relação ao que planejei" é a pergunta da aba
   const [by, setBy] = useState<GroupBy>("target");
   const [active, setActive] = useState<number | null>(null);
 
-  // DY/YoC por ticker, a partir da renda passiva (única fonte com DY de mercado por ativo).
-  const yieldByTicker = useMemo(() => {
-    const m = new Map<string, { dy?: number | null; yoc?: number | null }>();
-    for (const a of income.data?.by_asset ?? []) {
-      m.set(a.ticker, { dy: a.dividend_yield, yoc: a.yield_on_cost });
-    }
-    return m;
-  }, [income.data]);
 
   const positions = pf?.positions ?? [];
   const groups = useMemo(() => {
@@ -153,7 +135,7 @@ export function PortfolioPage() {
       groups.map((g, i) => ({
         label: g.label,
         value: g.value,
-        color: PALETTE[i % PALETTE.length],
+        color: categoricalHue(i),
       })),
     [groups],
   );
@@ -176,8 +158,6 @@ export function PortfolioPage() {
       </main>
     );
 
-  if (!pf) return <main className="page"><p className="muted">Carregando carteira…</p></main>;
-
   if (positions.length === 0)
     return (
       <main className="page">
@@ -188,8 +168,13 @@ export function PortfolioPage() {
     );
 
   const selected = active != null ? groups[active] : null;
-  const portfolioYoc = income.data?.yield_on_cost ?? null;
-  const portfolioDy = income.data?.portfolio_yield ?? null;
+
+  // Falha de rede não pode se disfarçar de configuração ausente: sem as preferências,
+  // `buildComparison` recebe {} e a comparação anuncia "Defina sua carteira alvo".
+  const falhasDeLeitura = [
+    preferences.isError && "as metas da carteira alvo",
+    exposure.isError && "a exposição por classe e geografia",
+  ].filter(Boolean) as string[];
 
   const ariaLabel = `Distribuição da carteira por ${
     GROUPS.find((g) => g.key === by)?.label ?? by
@@ -207,24 +192,17 @@ export function PortfolioPage() {
               {money(exposure.data!.rf_total)}</>
           )}
         </span>
-        {(portfolioDy != null || portfolioYoc != null) && (
-          <span className="pf-yields">
-            {portfolioYoc != null && (
-              <Tooltip metricKey="yield_on_cost">
-                <span>YoC carteira <strong>{pct(portfolioYoc)}</strong></span>
-              </Tooltip>
-            )}
-            {portfolioDy != null && (
-              <Tooltip metricKey="div_yield">
-                <span> · DY <strong>{pct(portfolioDy)}</strong></span>
-              </Tooltip>
-            )}
-            {fixedIncome.data?.cdi_annual != null && (
-              <span className="muted"> · CDI referência {pct(fixedIncome.data.cdi_annual)} a.a.</span>
-            )}
-          </span>
+        {fixedIncome.data?.cdi_annual != null && (
+          <span className="muted">CDI referência {pct(fixedIncome.data.cdi_annual)} a.a.</span>
         )}
       </div>
+
+      {falhasDeLeitura.length > 0 && (
+        <div className="banner banner-warn" role="status">
+          <Icon name="alert" size={15} /> Não foi possível carregar {falhasDeLeitura.join(" e ")}.
+          Os números abaixo estão incompletos.
+        </div>
+      )}
 
       <div className="seg" role="tablist">
         {GROUPS.map((g) => (
@@ -243,7 +221,14 @@ export function PortfolioPage() {
         ))}
       </div>
 
-      {by === "target" && <PortfolioVsTarget comparison={comparison} />}
+      {by === "target" && (
+        <>
+          {/* O canteiro resume; a lista por ativo abaixo detalha. Mesmo objeto do
+              Plantar, mesma conta — o desvio tem de bater entre as duas telas. */}
+          <Canteiro comparison={comparison} />
+          <PortfolioVsTarget comparison={comparison} />
+        </>
+      )}
 
       {by === "rendimento" &&
         (performance.isLoading ? (
@@ -309,19 +294,17 @@ export function PortfolioPage() {
 
       {by === "asset" && (
         <div className="pf-drill">
-          <h3>Por ativo · DY, Yield on Cost e retorno</h3>
+          <h3>Por ativo · valor e retorno</h3>
           <ul className="pf-drill-list">
             {[...positions]
               .sort((a, b) => b.value - a.value)
               .map((p) => {
-                const y = yieldByTicker.get(p.ticker);
                 return (
                   <li key={p.ticker} className="pf-drill-item pf-asset-row">
                     <span className="pf-drill-ticker"><AssetLink ticker={p.ticker} /></span>
                     <span className="pf-asset-val">
                       {money(p.value)} <span className="muted">· {pct(p.value / total)}</span>
                     </span>
-                    <YocCell dividendYield={y?.dy} yieldOnCost={y?.yoc} />
                     {p.net_performance_pct != null && (
                       <Tooltip metricKey="net_performance">
                         <span
@@ -341,17 +324,17 @@ export function PortfolioPage() {
         </div>
       )}
 
-      {selected && by !== "asset" && (
+      {selected && by !== "asset" && (selected.members?.length ?? 0) > 0 && (
         <div className="pf-drill">
           <h3>
             Ativos em <span className="pf-drill-group">{selected.label}</span>{" "}
             <span className="muted">
-              · {selected.members.length}{" "}
-              {selected.members.length === 1 ? "ativo" : "ativos"} · {money(selected.value)}
+              · {selected.members!.length}{" "}
+              {selected.members!.length === 1 ? "ativo" : "ativos"} · {money(selected.value)}
             </span>
           </h3>
           <ul className="pf-drill-list">
-            {selected.members.map((m) => (
+            {selected.members!.map((m) => (
               <li key={m.ticker} className="pf-drill-item">
                 <span className="pf-drill-ticker"><AssetLink ticker={m.ticker} /></span>
                 {m.name && <span className="pf-drill-name">{m.name}</span>}

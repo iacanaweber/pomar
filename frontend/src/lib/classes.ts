@@ -20,6 +20,19 @@ export const CLASS_LABEL: Record<string, string> = {
 
 export const classLabel = (cls: string): string => CLASS_LABEL[cls] ?? cls;
 
+/** Classes em que as métricas de stock-picking dizem alguma coisa: preço-teto de Bazin,
+ *  Yield on Cost, DY, P/L, P/VP, ROE, proventos por ano.
+ *
+ *  A carteira migrou para ETF de acumulação. Essas métricas viraram leitura do LEGADO —
+ *  das ações e FIIs que sobraram da estratégia anterior — e não fazem sentido para um
+ *  ETF: ele não tem lucro por ação nem histórico de dividendo que sustente um teto.
+ *  Exibi-las vazias em /ativo/BOVA11 era pior do que não exibir.
+ *
+ *  O backend segue calculando tudo; a decisão de MOSTRAR é daqui. */
+export function temMetricasDeAcao(assetClass?: string | null): boolean {
+  return assetClass === "STOCK" || assetClass === "FII";
+}
+
 /** Ordena por PESO DECRESCENTE, com desempate ESTÁVEL pela ordem de entrada.
  *
  *  A ordem canônica (ALLOCATION_CLASSES) continua sendo a verdade de tudo que o usuário

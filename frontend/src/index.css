@@ -1244,3 +1244,9 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
    diz, e repetir em texto seria ruído para quem enxerga. */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+/* Ativo sem métricas de ação (ETF, BDR): diz por que a página é curta em vez de só
+   ficar curta. */
+.asset-sem-metricas { font-size: var(--fs-body); line-height: 1.5;
+  padding: var(--pad-card); background: var(--surface-soft);
+  border: 1px solid var(--line); border-radius: var(--radius); }
