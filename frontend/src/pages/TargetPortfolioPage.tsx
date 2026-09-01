@@ -23,10 +23,9 @@ import {
   type SumState,
 } from "../lib/basket";
 import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
-import { parseBRL } from "../lib/format";
+import { num, parseBRL } from "../lib/format";
 import { Icon } from "../components/Icon";
 
-const fmtPct = (n: number) => n.toFixed(2).replace(".", ",");
 const SUM_CLASS: Record<SumState, string> = { over: "sum-over", under: "sum-under", ok: "sum-ok" };
 
 /** Uma linha do editor: ticker, slider e campo — os três amarrados ao mesmo peso. */
@@ -49,7 +48,7 @@ function WeightRow({
   // O campo tem estado próprio enquanto está sendo digitado: normalizar a cada tecla
   // impediria de apagar para redigitar ("2" → "" → "21,23").
   const [draft, setDraft] = useState<string | null>(null);
-  const shown = draft ?? fmtPct(row.pct);
+  const shown = draft ?? num(row.pct);
 
   const commit = (text: string) => {
     const n = parseBRL(text);
@@ -73,7 +72,7 @@ function WeightRow({
           aria-label={
             snap == null
               ? `Peso de ${row.ticker} em ${label}`
-              : `Peso de ${row.ticker} em ${label} — fecha 100% em ${fmtPct(snap)}%`
+              : `Peso de ${row.ticker} em ${label} — fecha 100% em ${num(snap)}%`
           }
           onChange={(e) => {
             setDraft(null);
@@ -85,7 +84,7 @@ function WeightRow({
           <span
             className={`weight-snap ${SUM_CLASS[state]}`}
             style={{ left: `calc(${snap} * (100% - var(--thumb)) / 100 + var(--thumb) / 2)` }}
-            title={`Fecha 100% em ${fmtPct(snap)}%`}
+            title={`Fecha 100% em ${num(snap)}%`}
             aria-hidden="true"
           />
         )}
@@ -250,13 +249,13 @@ function BasketEditor({
 
       {rows.length > 0 && (
         <div className={`basket-sum ${SUM_CLASS[state]}`}>
-          <span className="basket-sum-value">soma: {fmtPct(total)}%</span>
+          <span className="basket-sum-value">soma: {num(total)}%</span>
           <span className="basket-sum-note">
             {state === "ok"
               ? "✓ fechado"
               : state === "over"
-                ? `passou ${fmtPct(round2(total - 100))} p.p. — precisa fechar em 100%`
-                : `faltam ${fmtPct(round2(100 - total))} p.p. — precisa fechar em 100%`}
+                ? `passou ${num(round2(total - 100))} p.p. — precisa fechar em 100%`
+                : `faltam ${num(round2(100 - total))} p.p. — precisa fechar em 100%`}
           </span>
           {!ok && (
             <button type="button" className="link-button" onClick={() => onChange(scaleTo100(rows))}>
@@ -331,7 +330,7 @@ function ClassTargetsEditor({
         ))}
       </div>
       <div className={`basket-sum ${SUM_CLASS[state]}`}>
-        <span className="basket-sum-value">soma: {fmtPct(total)}%</span>
+        <span className="basket-sum-value">soma: {num(total)}%</span>
         <span className="basket-sum-note">
           {state === "ok" ? "✓ fechado" : "precisa fechar em 100%"}
         </span>
@@ -470,7 +469,7 @@ export function TargetPortfolioPage() {
                       <span className="card-ticker">{CLASS_LABEL[cls]}</span>
                       <span className="card-name">
                         {n > 0
-                          ? `${n} ativo${n > 1 ? "s" : ""} · soma ${fmtPct(sum)}%${closed ? " ✓" : " ⚠"}`
+                          ? `${n} ativo${n > 1 ? "s" : ""} · soma ${num(sum)}%${closed ? " ✓" : " ⚠"}`
                           : "sem composição"}
                       </span>
                     </span>

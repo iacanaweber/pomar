@@ -4,7 +4,7 @@ import { usePreferences, useSavePreferences } from "../api/queries";
 import { AssetLink } from "./AssetLink";
 import { AT_TARGET_PP, type Comparison, type ComparisonRow } from "../lib/comparison";
 import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
-import { money } from "../lib/format";
+import { money, pctPts, signedPp } from "../lib/format";
 
 /** Mesma matiz por classe do gráfico da Carteira alvo — a cor segue a entidade, e aqui ela
  *  continua significando CLASSE. A polaridade (acima/abaixo do alvo) vem da geometria: o
@@ -19,8 +19,6 @@ const CLASS_HUE: Record<string, string> = {
   UNKNOWN: "var(--muted)",
 };
 
-const fmt = (n: number) => `${n.toFixed(2).replace(".", ",")}%`;
-const signed = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(2).replace(".", ",")}`;
 
 /** Barra 100% da carteira, segmentada por ativo e agrupada por classe (a mesma linguagem
  *  do gráfico da Carteira alvo). `pct` são % sobre o mesmo denominador da barra. */
@@ -55,7 +53,7 @@ function StackedBar({
                       ? CLASS_HUE[g.cls]
                       : `color-mix(in oklab, ${CLASS_HUE[g.cls]} ${100 - Math.round((i / (g.items.length - 1)) * 42)}%, var(--card))`,
                 }}
-                title={`${it.ticker} · ${CLASS_LABEL[g.cls] ?? g.cls}: ${fmt(it.pct)}`}
+                title={`${it.ticker} · ${CLASS_LABEL[g.cls] ?? g.cls}: ${pctPts(it.pct, 2)}`}
               />
             )),
           )}
@@ -89,9 +87,9 @@ function DeviationRow({ row, scale }: { row: ComparisonRow; scale: number }) {
         />
       </span>
       <span className="cmp-nums">
-        <span className="cmp-delta">{signed(deltaPp)} p.p.</span>
+        <span className="cmp-delta">{signedPp(deltaPp, 2)}</span>
         <span className="muted cmp-detail">
-          {fmt(row.currentPct)} → {fmt(row.targetPct ?? 0)}
+          {pctPts(row.currentPct, 2)} → {pctPts(row.targetPct ?? 0, 2)}
         </span>
       </span>
       <span className="cmp-brl">
@@ -118,7 +116,7 @@ function TargetAccess({ comparison }: { comparison: Comparison }) {
   const problema = !hasTarget
     ? "Nenhuma classe tem composição definida."
     : desbalanceado
-      ? `As metas por classe somam ${fmt(targetSumPct)}, não 100%.`
+      ? `As metas por classe somam ${pctPts(targetSumPct, 2)}, não 100%.`
       : null;
 
   if (problema) {
@@ -184,7 +182,7 @@ function OffTargetSection({ comparison }: { comparison: Comparison }) {
       <div className="cmp-list-head">
         <h3>Fora do alvo</h3>
         <span className="muted cmp-scale">
-          {money(legacyValue)} · {fmt(legacyPct)} do patrimônio
+          {money(legacyValue)} · {pctPts(legacyPct, 2)} do patrimônio
         </span>
       </div>
       <ul className="cmp-rows">
@@ -196,7 +194,7 @@ function OffTargetSection({ comparison }: { comparison: Comparison }) {
             <span className="muted cmp-legacy-class">{CLASS_LABEL[r.cls] ?? r.cls}</span>
             <span className="cmp-brl">
               <span>{money(r.currentValue)}</span>
-              <span className="muted cmp-detail">{fmt(r.portfolioPct)} do patrimônio</span>
+              <span className="muted cmp-detail">{pctPts(r.portfolioPct, 2)} do patrimônio</span>
             </span>
           </li>
         ))}
@@ -288,7 +286,7 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
           groups={[...group((r) => r.targetPct ?? 0), ...rfBar(rf?.targetPct ?? 0)]}
           caption={
             Math.abs(targetSumPct - 100) > 0.5
-              ? `metas somam ${fmt(targetSumPct)} — ajuste na Carteira alvo`
+              ? `metas somam ${pctPts(targetSumPct, 2)} — ajuste na Carteira alvo`
               : "metas somam 100%"
           }
         />
@@ -339,9 +337,9 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
                   />
                 </span>
                 <span className="cmp-nums">
-                  <span className="cmp-delta">{signed(b.deltaPp)} p.p.</span>
+                  <span className="cmp-delta">{signedPp(b.deltaPp, 2)}</span>
                   <span className="muted cmp-detail">
-                    {fmt(b.currentPct)} → {fmt(b.targetPct)}
+                    {pctPts(b.currentPct, 2)} → {pctPts(b.targetPct, 2)}
                   </span>
                 </span>
                 <span className="cmp-brl">

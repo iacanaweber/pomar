@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { PerformanceResponse } from "../types";
-import { money } from "../lib/format";
+import { money, signedPct } from "../lib/format";
 import { Tooltip } from "./Tooltip";
 
 /** Quatro comparações por vez, no máximo.
@@ -31,9 +31,6 @@ const WINDOWS = [
   { key: "12m", label: "12 meses" },
   { key: "all", label: "Tudo" },
 ] as const;
-
-const fmtPct = (v: number | null | undefined) =>
-  v == null ? "—" : `${v >= 0 ? "+" : "−"}${(Math.abs(v) * 100).toFixed(1).replace(".", ",")}%`;
 
 const shortWeek = (weekEnd: string) => {
   const [, m, d] = weekEnd.split("-");
@@ -180,16 +177,16 @@ export function PerformanceChart({
             <span className="muted">TWR</span>
           </Tooltip>
           <strong className={(data.twr ?? 0) >= 0 ? "perf-up" : "perf-down"}>
-            {fmtPct(data.twr)}
+            {signedPct(data.twr)}
           </strong>
           {data.twr_annualized != null && (
-            <span className="muted">{fmtPct(data.twr_annualized)} a.a.</span>
+            <span className="muted">{signedPct(data.twr_annualized)} a.a.</span>
           )}
         </div>
         <div className="perf-stat">
           <span className="muted">XIRR · quanto o seu dinheiro rendeu</span>
           <strong className={(data.xirr ?? 0) >= 0 ? "perf-up" : "perf-down"}>
-            {data.xirr == null ? "—" : `${fmtPct(data.xirr)} a.a.`}
+            {data.xirr == null ? "—" : `${signedPct(data.xirr)} a.a.`}
           </strong>
           <span className="muted">não se compara a índice</span>
         </div>
@@ -208,7 +205,7 @@ export function PerformanceChart({
               viewBox={`0 0 ${W} ${H}`}
               className="perf-svg"
               role="img"
-              aria-label={`Retorno acumulado: sua carteira ${fmtPct(data.twr)} em ${points.length} semanas`}
+              aria-label={`Retorno acumulado: sua carteira ${signedPct(data.twr)} em ${points.length} semanas`}
               onMouseLeave={() => setHover(null)}
             >
               {/* zero é a única linha de grade que carrega significado: acima dela é ganho */}
@@ -242,7 +239,7 @@ export function PerformanceChart({
                     y={y(ultimo) + 4}
                     className={`perf-label ${s.hero ? "perf-label-hero" : ""}`}
                   >
-                    {fmtPct(ultimo)}
+                    {signedPct(ultimo)}
                   </text>
                 );
               })}
@@ -259,7 +256,7 @@ export function PerformanceChart({
                   onFocus={() => setHover(i)}
                   tabIndex={0}
                   role="button"
-                  aria-label={`Semana de ${p.week_end}: ${fmtPct(p.twr_cumulative)}`}
+                  aria-label={`Semana de ${p.week_end}: ${signedPct(p.twr_cumulative)}`}
                 />
               ))}
               {hover != null && (
@@ -292,7 +289,7 @@ export function PerformanceChart({
             {series.map((s) => (
               <span key={s.code} className="perf-readout-item">
                 <span className="perf-swatch" style={{ background: s.color }} aria-hidden="true" />
-                {s.label} {fmtPct(s.values[ativo])}
+                {s.label} {signedPct(s.values[ativo])}
               </span>
             ))}
           </p>
@@ -380,7 +377,7 @@ function PerformanceTable({
               <td>{money(p.total_value)}</td>
               <td>{p.flow_net ? money(p.flow_net) : "—"}</td>
               {series.map((s) => (
-                <td key={s.code}>{fmtPct(s.values[i])}</td>
+                <td key={s.code}>{signedPct(s.values[i])}</td>
               ))}
             </tr>
           ))}

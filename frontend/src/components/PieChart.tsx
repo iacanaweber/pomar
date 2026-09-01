@@ -1,13 +1,12 @@
 import { useState } from "react";
 
+import { money, pct } from "../lib/format";
+
 export interface Slice {
   label: string;
   value: number;
   color: string;
 }
-
-const brl = (v: number) =>
-  v.toLocaleString("pt-br", { style: "currency", currency: "BRL" });
 
 function polar(cx: number, cy: number, r: number, angleDeg: number): [number, number] {
   const a = ((angleDeg - 90) * Math.PI) / 180;
@@ -92,11 +91,11 @@ export function PieChart({
           {cur ? cur.label : "Total"}
         </text>
         <text x={cx} y={cy + 14} textAnchor="middle" className="pie-center-value">
-          {cur ? brl(cur.value) : brl(total)}
+          {cur ? money(cur.value) : money(total)}
         </text>
         {cur && (
           <text x={cx} y={cy + 32} textAnchor="middle" className="pie-center-pct">
-            {((cur.value / total) * 100).toFixed(1)}%
+            {pct(cur.value / total)}
           </text>
         )}
       </svg>

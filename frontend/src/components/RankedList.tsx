@@ -1,6 +1,6 @@
 import type { PlanAsset, PlanResponse } from "../types";
 import { classLabel } from "../lib/classes";
-import { money } from "../lib/format";
+import { money, pct } from "../lib/format";
 import { AssetLink } from "./AssetLink";
 import { CeilingBadge } from "./CeilingBadge";
 import { Tooltip } from "./Tooltip";
@@ -13,7 +13,6 @@ const RISK_CLASS: Record<string, string> = {
   vermelho: "risk-vermelho",
 };
 
-const pp = (v: number) => `${(v * 100).toFixed(1).replace(".", ",")}%`;
 
 /** Barra da cesta: onde o ativo está hoje, onde fica depois da compra e onde é o alvo.
  *  Uma linha só responde "por que este valor?" sem abrir nada. */
@@ -28,14 +27,14 @@ function BasketBar({ asset }: { asset: PlanAsset }) {
   const grew = after != null && after > current + 0.0001;
   return (
     <div className="basket-bar-wrap">
-      <div className="basket-bar" role="img" aria-label={`peso na cesta: ${pp(current)}, alvo ${pp(target)}`}>
+      <div className="basket-bar" role="img" aria-label={`peso na cesta: ${pct(current)}, alvo ${pct(target)}`}>
         {grew && <span className="basket-bar-after" style={{ width: w(after) }} />}
         <span className="basket-bar-now" style={{ width: w(current) }} />
         <span className="basket-bar-target" style={{ left: w(target) }} />
       </div>
       <span className="basket-bar-legend muted">
-        na cesta de {classLabel(asset.asset_class ?? "")}: {pp(current)}
-        {grew ? ` → ${pp(after!)}` : ""} · alvo {pp(target)}
+        na cesta de {classLabel(asset.asset_class ?? "")}: {pct(current)}
+        {grew ? ` → ${pct(after!)}` : ""} · alvo {pct(target)}
       </span>
     </div>
   );

@@ -13,7 +13,7 @@ import { PieChart, type Slice } from "../components/PieChart";
 import { AssetLink } from "../components/AssetLink";
 import { Tooltip } from "../components/Tooltip";
 import { YocCell } from "../components/YocCell";
-import { money, pct } from "../lib/format";
+import { money, pct, signedPp } from "../lib/format";
 import { PALETTE } from "../lib/palette";
 import { PortfolioVsTarget } from "../components/PortfolioVsTarget";
 import { PerformanceChart } from "../components/PerformanceChart";
@@ -35,10 +35,8 @@ const GROUPS: { key: GroupBy; label: string }[] = [
  *  aritmética (rateio de exposição parcial, metas, desvios) é testada lá. */
 const FROM_EXPOSURE: GroupBy[] = ["class", "geography", "sector"];
 
-/** Desvio em pontos percentuais, com sinal — a meta secundária é informativa, então o
- *  número aparece do lado do valor em vez de virar barra ou alerta. */
-const signedPp = (n: number) =>
-  `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(1).replace(".", ",")} p.p.`;
+// Desvio em p.p. com sinal (`signedPp`, importado de lib/format): a meta secundária é
+// informativa, então o número aparece do lado do valor em vez de virar barra ou alerta.
 
 interface Member {
   ticker: string;
@@ -157,8 +155,14 @@ export function PortfolioPage() {
         value: g.value,
         color: PALETTE[i % PALETTE.length],
       })),
-    [groups, by],
+    [groups],
   );
+
+  // O denominador da rosca é a soma do que ela DESENHA, e a legenda usa o mesmo.
+  // Antes a legenda dividia por `total` (patrimônio, com renda fixa) enquanto a rosca
+  // dividia pela soma das fatias (só renda variável em "Por ativo"): dois totais a 100px
+  // um do outro, e porcentagens que não fechavam 100%.
+  const slicesTotal = useMemo(() => slices.reduce((s, x) => s + x.value, 0), [slices]);
 
   if (isLoading) return <main className="page"><p className="muted">Carregando</p></main>;
 
@@ -189,7 +193,7 @@ export function PortfolioPage() {
 
   const ariaLabel = `Distribuição da carteira por ${
     GROUPS.find((g) => g.key === by)?.label ?? by
-  }: ${slices.map((s) => `${s.label} ${pct(s.value / total)}`).join(", ")}`;
+  }: ${slices.map((s) => `${s.label} ${pct(s.value / slicesTotal)}`).join(", ")}`;
 
   return (
     <main className="page">
@@ -265,7 +269,7 @@ export function PortfolioPage() {
               key={s.label}
               role="listitem"
               tabIndex={0}
-              aria-label={`${s.label}: ${money(s.value)}, ${pct(s.value / total)}`}
+              aria-label={`${s.label}: ${money(s.value)}, ${pct(s.value / slicesTotal)}`}
               className={`legend-item ${active != null && active !== i ? "dim" : ""} ${active === i ? "legend-on" : ""}`}
               onClick={() => setActive(active === i ? null : i)}
               onKeyDown={(e) => {
@@ -278,7 +282,7 @@ export function PortfolioPage() {
               <span className="legend-dot" style={{ background: s.color }} />
               <span className="legend-label">{s.label}</span>
               <span className="legend-val">
-                {money(s.value)} <span className="muted">· {pct(s.value / total)}</span>
+                {money(s.value)} <span className="muted">· {pct(s.value / slicesTotal)}</span>
                 {groups[i]?.deviationPp != null && (
                   <span className="muted legend-target">
                     {" "}

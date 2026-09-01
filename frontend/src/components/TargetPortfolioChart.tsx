@@ -1,5 +1,6 @@
 import { CLASS_LABEL } from "../lib/classes";
 import { shareOfTotal, sumPct, type Row } from "../lib/basket";
+import { pctPts } from "../lib/format";
 
 /** Cores das CLASSES. Uma matiz por classe, em ordem fixa (nunca cicladas): a cor segue
  *  a entidade, não a posição na lista. Steps validados para as duas superfícies do app
@@ -15,7 +16,6 @@ const CLASS_HUE: Record<string, string> = {
   RENDA_FIXA: "var(--viz-rf)",
 };
 
-const fmt = (n: number) => `${n.toFixed(2).replace(".", ",")}%`;
 
 /** Step da rampa sequencial: o maior peso fica na matiz cheia e os menores clareiam em
  *  direção à superfície do card. Monotônico com a magnitude, matiz constante. */
@@ -96,7 +96,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
       <div className="tp-chart-head">
         <h2>Distribuição da carteira alvo</h2>
         <span className={`muted tp-chart-sum ${Math.abs(totalMeta - 100) > 0.5 ? "warn" : ""}`}>
-          metas somam {fmt(totalMeta)}
+          metas somam {pctPts(totalMeta, 2)}
         </span>
       </div>
 
@@ -111,8 +111,8 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
             role="img"
             aria-label={`Carteira alvo: ${views
               .filter((v) => !v.motivo)
-              .map((v) => `${CLASS_LABEL[v.cls]} ${fmt(v.classPct)}`)
-              .join(", ")}${unallocated > 0.05 ? `, ${fmt(unallocated)} sem alocação` : ""}`}
+              .map((v) => `${CLASS_LABEL[v.cls]} ${pctPts(v.classPct, 2)}`)
+              .join(", ")}${unallocated > 0.05 ? `, ${pctPts(unallocated, 2)} sem alocação` : ""}`}
           >
             <div className="tp-bar">
               {segments.map((s) => (
@@ -120,7 +120,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
                   key={`${s.cls}-${s.ticker}`}
                   className={`tp-seg ${s.firstOfClass ? "tp-seg-class" : ""}`}
                   style={{ flexGrow: Math.max(s.sharePct, 0.01), background: s.color }}
-                  title={`${s.ticker} · ${CLASS_LABEL[s.cls]}: ${fmt(s.sharePct)} do total`}
+                  title={`${s.ticker} · ${CLASS_LABEL[s.cls]}: ${pctPts(s.sharePct, 2)} do total`}
                 />
               ))}
               {unallocated > 0.05 && (
@@ -136,7 +136,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
                   <span className="tp-dot" style={{ background: CLASS_HUE[v.cls] }} aria-hidden="true" />
                   <span className="tp-class-name">{CLASS_LABEL[v.cls]}</span>
                   <span className="tp-class-pct">
-                    {v.motivo ? <span className="muted">{v.motivo}</span> : `${fmt(v.classPct)} do total`}
+                    {v.motivo ? <span className="muted">{v.motivo}</span> : `${pctPts(v.classPct, 2)} do total`}
                   </span>
                 </div>
                 {v.rows.length > 0 && (
@@ -145,14 +145,14 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
                       <li key={r.ticker}>
                         <span className="tp-dot" style={{ background: v.colors[i] }} aria-hidden="true" />
                         <span className="tp-legend-ticker">{r.ticker}</span>
-                        <span className="tp-legend-pct">{fmt(shareOfTotal(v.classPct, r.pct))}</span>
+                        <span className="tp-legend-pct">{pctPts(shareOfTotal(v.classPct, r.pct), 2)}</span>
                       </li>
                     ))}
                   </ul>
                 )}
                 {v.rows.length > 0 && Math.abs(v.basketSum - 100) > 0.1 && (
                   <span className="tp-class-warn">
-                    composição soma {fmt(v.basketSum)}: as fatias são proporcionais, mas o
+                    composição soma {pctPts(v.basketSum, 2)}: as fatias são proporcionais, mas o
                     valor real só fecha em 100%
                   </span>
                 )}

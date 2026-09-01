@@ -1,10 +1,9 @@
 import { Link } from "react-router-dom";
 import type { FixedIncomeSuggestion, ReserveSuggestion } from "../types";
-import { money, pct } from "../lib/format";
+import { money, num, pct } from "../lib/format";
 import { Tooltip } from "./Tooltip";
 import { RegisterBuyButton } from "./RegisterBuyButton";
 
-const fmtPp = (n: number) => `${n.toFixed(1).replace(".", ",")} p.p.`;
 
 /** A parcela de renda fixa do aporte: o que fazer com ela, linha a linha.
  *
@@ -121,7 +120,7 @@ export function FixedIncomeSuggestionCard({
           </span>
         ) : (
           <>
-            Faltam <strong>{money(gap, currency)}</strong> ({fmtPp(gapPp)}) para a meta de{" "}
+            Faltam <strong>{money(gap, currency)}</strong> ({num(gapPp, 1)} p.p.) para a meta de{" "}
             {money(alvo, currency)}; hoje há {money(atual, currency)}.
           </>
         )}

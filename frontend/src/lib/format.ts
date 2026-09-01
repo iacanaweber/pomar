@@ -4,8 +4,38 @@ export function money(value: number, currency = "BRL"): string {
   return value.toLocaleString("pt-BR", { style: "currency", currency });
 }
 
+/** Decimal em pt-BR, sem unidade: 12.345 -> "12,35". Base de todo o resto.
+ *  `toFixed` e não `toLocaleString`: aqui não se quer separador de milhar. */
+export function num(value: number, digits = 2): string {
+  return value.toFixed(digits).replace(".", ",");
+}
+
+/** Sinal explícito. O menos é U+2212 (−), não o hífen: alinha com dígitos tabulares. */
+function withSign(value: number, digits: number): string {
+  const sign = value > 0 ? "+" : value < 0 ? "−" : "";
+  return `${sign}${num(Math.abs(value), digits)}`;
+}
+
+/** FRAÇÃO (0..1) -> "12,3%". Para valor já em pontos percentuais, use `pctPts`.
+ *  Devolvia ponto decimal até 2026-08 — daí as sete cópias locais que faziam
+ *  `.replace(".", ",")` à mão e a frase "R$ 32,45 · DY 8.7% · teto R$ 35,10". */
 export function pct(value: number, digits = 1): string {
-  return `${(value * 100).toFixed(digits)}%`;
+  return `${num(value * 100, digits)}%`;
+}
+
+/** Valor JÁ em pontos percentuais (0..100) -> "12,3%". */
+export function pctPts(value: number, digits = 1): string {
+  return `${num(value, digits)}%`;
+}
+
+/** Fração com sinal -> "+12,3%". `null` vira travessão (não há dado). */
+export function signedPct(value: number | null | undefined, digits = 1): string {
+  return value == null ? "—" : `${withSign(value * 100, digits)}%`;
+}
+
+/** Diferença em pontos percentuais -> "+2,3 p.p.". Entrada já em p.p. */
+export function signedPp(value: number, digits = 1): string {
+  return `${withSign(value, digits)} p.p.`;
 }
 
 /** Converte texto de dinheiro em número, aceitando pt-BR ("1.234,56") e o ponto
