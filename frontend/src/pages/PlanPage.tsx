@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../api/client";
-import { usePlan, usePlanLatest, usePreferences } from "../api/queries";
+import {
+  useFixedIncome,
+  usePlan,
+  usePlanLatest,
+  usePortfolio,
+  usePreferences,
+} from "../api/queries";
 import { PlanControls } from "../components/PlanControls";
 import { RankedList } from "../components/RankedList";
-import { AllocationSummary } from "../components/AllocationSummary";
+import { Canteiro } from "../components/Canteiro";
+import { buildComparison } from "../lib/comparison";
 import { HealthBanner } from "../components/HealthBanner";
 import { UpdateBanner } from "../components/UpdateBanner";
 import { OrdersHistory } from "../components/OrdersHistory";
@@ -18,12 +25,44 @@ export function PlanPage() {
   const preferences = usePreferences();
   const plan = usePlan();
   const latest = usePlanLatest();
+  const portfolio = usePortfolio();
+  const fixedIncome = useFixedIncome();
   const [lastReq, setLastReq] = useState<PlanRequest | null>(null);
 
   // Plano recém-gerado tem prioridade; senão, o último plano PERSISTIDO — gerar plano,
   // ir à corretora e voltar não perde mais nada (nem repete o POST de 60s).
   const result = plan.data ?? latest.data;
   const isRestored = !plan.data && !!latest.data;
+
+  // A MESMA conta que a Carteira faz. Deliberado: o desvio precisa bater entre as duas
+  // telas, e `buildComparison` é a única implementação testada dele.
+  const comparison = useMemo(
+    () =>
+      buildComparison(
+        portfolio.data?.positions ?? [],
+        portfolio.data?.total_value ?? 0,
+        preferences.data?.targets ?? {},
+        preferences.data?.class_targets ?? {},
+        {
+          rendaFixaValue: fixedIncome.data?.portfolio_balance ?? 0,
+          legacyInTotal: preferences.data?.legacy_in_total ?? true,
+        },
+      ),
+    [portfolio.data, preferences.data, fixedIncome.data],
+  );
+
+  // Quanto o plano manda para cada classe — a camada clara em cima do canteiro.
+  const aportePorClasse = useMemo(() => {
+    if (!result) return undefined;
+    const soma: Record<string, number> = {};
+    for (const a of result.ranking ?? []) {
+      const brl = a.suggested?.invested_exact ?? 0;
+      if (brl > 0) soma[a.asset_class] = (soma[a.asset_class] ?? 0) + brl;
+    }
+    const rf = result.fixed_income?.directed_now ?? 0;
+    if (rf > 0) soma.RENDA_FIXA = (soma.RENDA_FIXA ?? 0) + rf;
+    return soma;
+  }, [result]);
 
   const planError = plan.error instanceof ApiError ? plan.error : null;
   const portfolioUnavailable = planError?.status === 503;
@@ -37,6 +76,19 @@ export function PlanPage() {
     <main className="page">
       <UpdateBanner />
       <HealthBanner />
+
+      {/* Diagnóstico antes de ação, e agora com um objeto só: o canteiro É a carteira
+          alvo, e o vazio de cada cova é a pergunta que o formulário abaixo responde.
+          Esta tela não tinha título NENHUM — o primeiro heading era o h2 do RankedList,
+          que só existe quando há compras a fazer. */}
+      <h1 className="page-title">Plantar</h1>
+      {!portfolio.isPending && <Canteiro
+          comparison={comparison}
+          aporte={aportePorClasse}
+          coberturaLegado={result?.legacy?.gap_coverage}
+          gapLegado={result?.legacy?.gap}
+          moeda={result?.currency}
+        />}
 
       <PlanControls
         preferences={preferences.data}
@@ -83,11 +135,8 @@ export function PlanPage() {
               ))}
             </div>
           )}
-          {/* Diagnóstico, depois ação. O desvio por classe é o que explica TODAS as
-              sugestões abaixo dele — ler primeiro o remédio e só depois o sintoma obriga a
-              subir a tela de volta. Dentro da ação, a renda fixa vem antes por ser o
-              primeiro degrau da cascata. */}
-          <AllocationSummary plan={result} />
+          {/* O diagnóstico subiu para o canteiro, no topo. Aqui fica só a ação, e dentro
+              dela a renda fixa vem antes por ser o primeiro degrau da cascata. */}
           {result.fixed_income && (
             <FixedIncomeSuggestionCard
               suggestion={result.fixed_income}

@@ -46,7 +46,9 @@ function AppShell() {
       <header className="header">
         <div className="brand">
           <BrandMark size={26} />
-          <h1>Pomar</h1>
+          {/* Marca do app, não título da página: um <h1> aqui fica em TODA tela e rouba o
+              nível de quem deveria tê-lo. O h1 de cada página é o nome da própria tela. */}
+          <span className="brand-name">Pomar</span>
           <div className="header-actions">
             <ThemeToggle />
           </div>

@@ -299,7 +299,7 @@ a:visited { color: var(--green); }
   padding-right: calc(var(--sp-16) + env(safe-area-inset-right));
   padding-left: calc(var(--sp-16) + env(safe-area-inset-left));
 }
-.header h1 { margin: 0; font-family: var(--font-display); font-size: var(--fs-20);
+.brand-name { margin: 0; font-family: var(--font-display); font-size: var(--fs-20);
   font-weight: 600; }
 .header-action {
   background: none; color: var(--muted); border: 0; border-radius: var(--radius-sm);
@@ -355,17 +355,10 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
    margin 0) ficava com ZERO de separação — dois retângulos idênticos encostados. */
 .alloc { background: var(--card); border-radius: var(--radius); border: 1px solid var(--line);
   padding: var(--pad-card); margin: var(--sp-16) 0; }
-.alloc-rows { display: flex; flex-direction: column; gap: 10px; }
-.alloc-row { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 10px; }
-.alloc-class { font-weight: 700; font-size: var(--fs-13); }
 .alloc-track { position: relative; height: 14px; background: var(--track); border-radius: var(--radius-pill); }
 .alloc-cur { height: 100%; background: var(--leaf); border-radius: var(--radius-pill); }
 .alloc-tgt { position: absolute; top: -3px; width: 3px; height: 20px; background: var(--amber); }
-.alloc-nums { font-variant-numeric: tabular-nums; font-size: var(--fs-12); white-space: nowrap; }
-.alloc-legend { font-size: var(--fs-12); color: var(--muted); margin: 10px 0 0; }
 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; vertical-align: middle; }
-.dot-cur { background: var(--leaf); }
-.dot-tgt { background: var(--amber); }
 
 /* Cards */
 .cards { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -1042,20 +1035,8 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
   .cmp-legacy .cmp-row-legacy { grid-template-columns: 96px 1fr auto; gap: 12px;
     grid-template-areas: "ticker class brl"; }
 }
-/* Linha do legado no plano: aritmética, não recomendação — por isso texto, sem selo. */
-.plan-legacy { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line);
-  line-height: 1.5; }
-.plan-legacy strong { color: var(--ink); }
 
 /* ===== Plantar: a parcela de renda fixa (1º degrau da cascata) ===== */
-
-/* ===== Os dois tons do Plantar =====
-   Tom não é decoração aqui: ele separa LER de FAZER. O diagnóstico vem primeiro e fica
-   frio e recessivo; a instrução vem depois e usa o verde que no app inteiro significa
-   "dinheiro se move aqui". Sem nada a dirigir, a instrução se cala e volta ao neutro —
-   mesma regra de `.reserve-goal.goal-met`, logo acima. */
-.alloc-summary { background: var(--surface-diag);
-  --track: var(--track-diag); --muted: var(--muted-tinted); }
 
 .fi-suggestion { display: flex; flex-direction: column; gap: 8px; margin-top: 0; }
 /* Pela negação, e não desfazendo em `.fi-quiet`: `--track: var(--track)` ali seria uma
@@ -1195,3 +1176,71 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
   .perf-head { flex-direction: row; align-items: center; justify-content: space-between; }
   .perf-window { max-width: 340px; }
 }
+
+/* ===== O CANTEIRO =====
+   A carteira alvo é o leito e o que você tem preenche cada cova. Largura = peso alvo,
+   altura preenchida = quanto já existe. Vazio é onde plantar.
+
+   Substitui .alloc-summary (Plantar), .tp-* (/alvo) e a barra empilhada de .cmp-*
+   (Carteira) — três desenhos da mesma pergunta, cada um com sua cópia das cores. */
+.canteiro { display: flex; flex-direction: column; gap: var(--sp-12); }
+
+.canteiro-leito { display: flex; align-items: flex-end; gap: var(--sp-4); }
+
+.canteiro-cova { display: flex; flex-direction: column; gap: var(--sp-4);
+  min-width: 0; height: 100%; }
+
+/* A calha É a cova vazia: o que falta plantar. Fundo de trilho, borda embaixo para o
+   leito ter chão mesmo quando a classe está zerada. */
+.canteiro-terra { position: relative; flex: 1; background: var(--track);
+  border-radius: var(--radius-sm); overflow: hidden; }
+
+.canteiro-cheio { position: absolute; left: 0; right: 0; bottom: 0; }
+/* O aporte entra COMO CAMADA CLARA em cima do preenchimento atual: onde o dinheiro cai. */
+.canteiro-aporte { position: absolute; left: 0; right: 0; opacity: 0.45; }
+
+/* Acima do alvo não vira barra de 130% — vira uma marca na borda de cima. Uma barra que
+   passa de 100% não quer dizer nada. */
+.canteiro-excesso { position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--sereno); z-index: 1; }
+
+.canteiro-nome { font-size: var(--fs-caption); color: var(--muted); text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* O ÚNICO movimento novo do app: as covas crescem do chão, uma vez, na montagem.
+   Escalonado por transition-delay no componente. */
+@media (prefers-reduced-motion: no-preference) {
+  .canteiro-cheio, .canteiro-aporte { transition: height 600ms cubic-bezier(.22,1,.36,1); }
+}
+
+.canteiro-tabela-wrap { overflow-x: auto; }
+.canteiro-tabela { width: 100%; border-collapse: collapse; font-size: var(--fs-meta);
+  font-variant-numeric: tabular-nums; }
+.canteiro-tabela th, .canteiro-tabela td { padding: var(--sp-6) var(--sp-8);
+  text-align: right; white-space: nowrap; }
+.canteiro-tabela thead th { font-size: var(--fs-caption); font-weight: 600;
+  color: var(--muted); border-bottom: 1px solid var(--line); }
+.canteiro-tabela tbody th { text-align: left; font-weight: 600; }
+.canteiro-tabela th:first-child, .canteiro-tabela td:first-child { text-align: left; }
+.canteiro-tabela tbody tr + tr th, .canteiro-tabela tbody tr + tr td {
+  border-top: 1px solid var(--line); }
+
+.canteiro-marca { display: inline-block; width: 8px; height: 8px; border-radius: 2px;
+  margin-right: var(--sp-6); vertical-align: baseline; }
+
+/* Quente = agir. É a cor mais alta da interface e só aparece onde dinheiro deve ir. */
+.canteiro-plantar { color: var(--seiva); font-weight: 600; }
+/* Frio = ler. Estar acima do alvo não é erro: é informação. */
+.canteiro-sobra { color: var(--sereno); }
+
+.canteiro-fora { font-size: var(--fs-meta); color: var(--muted); margin: 0;
+  line-height: 1.5; }
+
+.canteiro-vazio { padding: var(--pad-card); }
+.canteiro-vazio h3 { margin-top: 0; }
+.canteiro-vazio p { margin-bottom: 0; }
+
+/* Legenda de tabela só para leitor de tela: o leito acima já diz visualmente o que ela
+   diz, e repetir em texto seria ruído para quem enxerga. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
