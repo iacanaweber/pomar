@@ -17,18 +17,22 @@ const WatchlistPage = lazy(() =>
 const ReservePage = lazy(() =>
   import("./pages/ReservePage").then((m) => ({ default: m.ReservePage })),
 );
-// Carteira alvo é configuração estrutural: entra por link do Plantar, não vira aba.
 const TargetPortfolioPage = lazy(() =>
   import("./pages/TargetPortfolioPage").then((m) => ({ default: m.TargetPortfolioPage })),
 );
 
 // O ícone só aparece na barra inferior do celular, onde o rótulo sozinho fica apertado
 // em 360px. No desktop ele some e o texto continua sendo a âncora.
+// "Descobrir" saiu da barra: ela existia para achar ação pagadora abaixo do preço-teto
+// de Bazin, pergunta que a estratégia atual (acumulação em ETF) não faz mais. Segue
+// existindo em /watchlist, alcançável por link, até virar outra coisa. No lugar dela
+// entrou /alvo, que DEFINE tudo o que o Plantar calcula e só era acessível por link de
+// dentro das páginas — a tela mais estrutural do app era a única sem porta.
 const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: "/plano", label: "Plantar", icon: "plant" },
   { to: "/carteira", label: "Carteira", icon: "basket" },
+  { to: "/alvo", label: "Alvo", icon: "target" },
   { to: "/reserva", label: "Reserva", icon: "vault" },
-  { to: "/watchlist", label: "Descobrir", icon: "search" },
 ];
 
 function PageFallback() {

@@ -13,7 +13,6 @@ import { RankedList } from "../components/RankedList";
 import { Canteiro } from "../components/Canteiro";
 import { buildComparison } from "../lib/comparison";
 import { HealthBanner } from "../components/HealthBanner";
-import { UpdateBanner } from "../components/UpdateBanner";
 import { OrdersHistory } from "../components/OrdersHistory";
 import { FixedIncomeSuggestionCard } from "../components/FixedIncomeSuggestionCard";
 import type { PlanRequest } from "../types";
@@ -74,7 +73,6 @@ export function PlanPage() {
 
   return (
     <main className="page">
-      <UpdateBanner />
       <HealthBanner />
 
       {/* Diagnóstico antes de ação, e agora com um objeto só: o canteiro É a carteira
