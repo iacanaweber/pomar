@@ -1,17 +1,30 @@
 import { useDeleteOrder, useOrders } from "../api/queries";
 import { AssetLink } from "./AssetLink";
 import { isoToBR, money } from "../lib/format";
+import { MutationError } from "./MutationError";
 
 /** Histórico de aportes executados ('já comprei') e total investido. */
 export function OrdersHistory() {
   const orders = useOrders();
   const del = useDeleteOrder();
   const items = orders.data?.items ?? [];
+  // Falha e vazio eram a MESMA coisa (`isLoading || length === 0` devolvia null), então
+  // um histórico que não carregou parecia um histórico que não existe.
+  if (orders.isError)
+    return (
+      <p className="muted orders-erro" role="status">
+        Histórico de aportes indisponível.{" "}
+        <button className="link-button" onClick={() => orders.refetch()}>
+          Tentar de novo
+        </button>
+      </p>
+    );
   if (orders.isLoading || items.length === 0) return null;
 
   return (
     <div className="alloc orders-history">
       <h3>Histórico de aportes</h3>
+      <MutationError error={del.error} acao="apagar o registro" />
       <p className="muted" style={{ marginTop: 0 }}>
         Total registrado: <strong>{money(orders.data?.total_invested ?? 0)}</strong>
       </p>

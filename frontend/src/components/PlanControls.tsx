@@ -5,6 +5,7 @@ import { useSavePreferences } from "../api/queries";
 import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, INVESTABLE_CLASSES } from "../lib/classes";
 import { parseBRL } from "../lib/format";
 import { pctToShare, shareToPct } from "../lib/basket";
+import { MutationError } from "./MutationError";
 import { SavedToast } from "./SavedToast";
 import { Tooltip } from "./Tooltip";
 import { Icon } from "./Icon";
@@ -219,6 +220,7 @@ export function PlanControls({ preferences, preferencesPending, loading, onSubmi
           >
             {savePrefs.isPending ? "Salvando" : "Salvar padrão"}
           </button>
+          <MutationError error={savePrefs.error} acao="salvar os ajustes" />
         </div>
       )}
 

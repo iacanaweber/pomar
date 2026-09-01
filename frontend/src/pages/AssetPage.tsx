@@ -8,6 +8,7 @@ import {
   useYocHistory,
 } from "../api/queries";
 import { CeilingBadge } from "../components/CeilingBadge";
+import { MutationError } from "../components/MutationError";
 import { Tooltip } from "../components/Tooltip";
 import type { Fundamentals, LabelOut } from "../types";
 import { money, pct } from "../lib/format";
@@ -120,6 +121,8 @@ function AssetLabels({ ticker, assetClass }: { ticker: string; assetClass: strin
       <p className="muted" style={{ fontSize: 12, margin: 0 }}>
         Cesta manual tem precedência sobre a automática.
       </p>
+      {/* Sem isto, mudar a cesta e falhar revertia no próximo refetch, sem explicação. */}
+      <MutationError error={setAssignments.error} acao="salvar a classificação" />
     </div>
   );
 }

@@ -9,6 +9,8 @@ import {
   useWatchlist,
 } from "../api/queries";
 import { SavedToast } from "../components/SavedToast";
+import { ApiError } from "../api/client";
+import { MutationError } from "../components/MutationError";
 import { TargetPortfolioChart } from "../components/TargetPortfolioChart";
 import {
   applySnap,
@@ -291,6 +293,7 @@ function BasketEditor({
             ? "Salvar (remove a composição)"
             : `Salvar composição de ${label}`}
       </button>
+      <MutationError error={savePrefs.error} acao={`salvar a composição de ${label}`} />
     </div>
   );
 }
@@ -359,6 +362,7 @@ function ClassTargetsEditor({
       >
         {savePrefs.isPending ? "Salvando" : "Salvar metas"}
       </button>
+      <MutationError error={savePrefs.error} acao="salvar as metas por classe" />
     </section>
   );
 }
@@ -438,7 +442,25 @@ export function TargetPortfolioPage() {
         <Link to="/plano">Plantar →</Link>
       </p>
 
-      {preferences.isLoading && <p className="muted">Carregando</p>}
+      {preferences.isLoading && (
+        <p className="muted" role="status">
+          Carregando
+        </p>
+      )}
+
+      {/* Sem isto a tela ficava com título, um link e NADA — uma página em branco que
+          parecia carteira não configurada. */}
+      {preferences.isError && (
+        <div className="banner banner-error" role="alert">
+          <Icon name="alert" size={15} />{" "}
+          {preferences.error instanceof ApiError
+            ? preferences.error.userMessage
+            : "Não foi possível carregar a carteira alvo."}{" "}
+          <button className="link-button" onClick={() => preferences.refetch()}>
+            Tentar de novo
+          </button>
+        </div>
+      )}
 
       {prefs && (
         <>

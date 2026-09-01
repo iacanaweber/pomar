@@ -4,6 +4,7 @@ import { ApiError } from "../api/client";
 import { useAddWatchlist, useRemoveWatchlist, useWatchlist, useWatchlistRadar } from "../api/queries";
 import { AssetLink } from "../components/AssetLink";
 import { CeilingBadge } from "../components/CeilingBadge";
+import { MutationError } from "../components/MutationError";
 import type { RadarItem, WatchlistItem } from "../types";
 import { money, pct, shortDateTime } from "../lib/format";
 import { classLabel } from "../lib/classes";
@@ -74,6 +75,8 @@ function WatchlistRow({ item, radar }: { item: WatchlistItem; radar?: RadarItem 
           <Icon name="trash" size={18} />
         </button>
       </div>
+      {/* Antes, clicar na lixeira durante uma falha não fazia absolutamente nada. */}
+      <MutationError error={remove.error} acao={`remover ${item.ticker}`} />
     </li>
   );
 }
@@ -128,7 +131,21 @@ export function WatchlistPage() {
           ))}
         </div>
       )}
-      {radar.isLoading && <p className="muted">Calculando</p>}
+      {radar.isLoading && (
+        <p className="muted" role="status">
+          Calculando
+        </p>
+      )}
+      {/* Sem isto a página degradava para chips de validação, sem explicar por que os
+          preços sumiram. */}
+      {radar.isError && (
+        <p className="muted" role="status">
+          Preços e preço-teto indisponíveis agora.{" "}
+          <button className="link-button" onClick={() => radar.refetch()}>
+            Tentar de novo
+          </button>
+        </p>
+      )}
 
       <form className="watchlist-add" onSubmit={submit}>
         <input

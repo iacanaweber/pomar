@@ -1250,3 +1250,11 @@ select { padding: 11px 12px; border: 2px solid var(--line); border-radius: var(-
 .asset-sem-metricas { font-size: var(--fs-body); line-height: 1.5;
   padding: var(--pad-card); background: var(--surface-soft);
   border: 1px solid var(--line); border-radius: var(--radius); }
+
+/* Aviso de escrita que falhou. Discreto porque acompanha o controle que a disparou —
+   não é banner de página. Cor de erro, e o ícone garante que a cor não seja o único
+   canal. */
+.mutation-error { display: flex; align-items: center; gap: var(--sp-6);
+  margin: var(--sp-6) 0 0; font-size: var(--fs-meta); line-height: 1.4;
+  color: var(--err-ink); }
+.orders-erro { margin: var(--sp-16) 0 0; }

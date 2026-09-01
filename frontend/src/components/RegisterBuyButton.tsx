@@ -1,4 +1,5 @@
 import { useCreateOrder } from "../api/queries";
+import { MutationError } from "./MutationError";
 
 /** Fecha o ciclo do aporte: comprou na corretora → um toque registra a execução
  *  (pré-preenchida com a sugestão do plano) e alimenta histórico + disciplina.
@@ -21,23 +22,27 @@ export function RegisterBuyButton({
   const create = useCreateOrder();
   if (create.isSuccess) return <span className="order-registered">✓ compra registrada</span>;
   return (
-    <button
-      className="link-button order-register"
-      disabled={create.isPending}
-      onClick={(e) => {
-        e.stopPropagation();
-        create.mutate({
-          ticker,
-          asset_class: assetClass ?? "STOCK",
-          shares,
-          price: price ?? 0,
-          fees: 0,
-          plan_id: planId ?? null,
-          note: "registrado do plano",
-        });
-      }}
-    >
-      {create.isPending ? "Registrando" : "Registrar compra"}
-    </button>
+    <>
+      <button
+        className="link-button order-register"
+        disabled={create.isPending}
+        onClick={(e) => {
+          e.stopPropagation();
+          create.mutate({
+            ticker,
+            asset_class: assetClass ?? "STOCK",
+            shares,
+            price: price ?? 0,
+            fees: 0,
+            plan_id: planId ?? null,
+            note: "registrado do plano",
+          });
+        }}
+      >
+        {create.isPending ? "Registrando" : "Registrar compra"}
+      </button>
+      {/* Sem isto, uma falha ficava idêntica a não ter clicado. */}
+      <MutationError error={create.error} acao={`registrar a compra de ${ticker}`} />
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ApiError } from "../api/client";
+import { MutationError } from "../components/MutationError";
 import {
   useAddEntry,
   useArchiveAccount,
@@ -112,6 +113,7 @@ function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefined }) 
           <button className="primary" type="submit" disabled={savePrefs.isPending || dateInvalid}>
             {savePrefs.isPending ? "Salvando" : "Salvar piso"}
           </button>
+          <MutationError error={savePrefs.error} acao="salvar o piso da reserva" />
           <button className="link-button" type="button" onClick={() => setEditing(false)}>
             Cancelar
           </button>
@@ -223,6 +225,7 @@ function EntriesList({ accountId }: { accountId: number }) {
           </button>
         </li>
       ))}
+      <MutationError error={del.error} acao="remover o lançamento" />
     </ul>
   );
 }
@@ -344,6 +347,7 @@ function AccountClassification({
               </select>
             </label>
           </div>
+          <MutationError error={setAssignments.error} acao="salvar o indexador" />
           {update.isError && (
             <div className="banner banner-error">
               <Icon name="alert" size={15} />{" "}
@@ -531,6 +535,8 @@ function AccountCard({
           Arquivar
         </button>
       </div>
+
+      <MutationError error={archive.error} acao={`arquivar ${account.name}`} />
 
       {open && <EntryForm account={account} onDone={() => setOpen(false)} />}
       {showEntries && <EntriesList accountId={account.id} />}
@@ -814,6 +820,7 @@ export function ReservePage() {
                       ↩ Desarquivar
                     </button>
                   </div>
+                  <MutationError error={update.error} acao={`desarquivar ${a.name}`} />
                 </li>
               ))}
             </ul>
