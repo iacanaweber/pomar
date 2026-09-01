@@ -131,9 +131,7 @@ export function buildComparison(
   const rvPositions = positions.filter((p) => p.asset_class !== RENDA_FIXA);
   const rendaFixaValue =
     rendaFixaAccounts +
-    positions
-      .filter((p) => p.asset_class === RENDA_FIXA)
-      .reduce((s, p) => s + p.value, 0);
+    positions.filter((p) => p.asset_class === RENDA_FIXA).reduce((s, p) => s + p.value, 0);
 
   const currentByTicker = new Map<string, PositionLike>();
   for (const p of rvPositions) currentByTicker.set(p.ticker.toUpperCase(), p);
@@ -193,7 +191,8 @@ export function buildComparison(
 
   // maior desvio primeiro: o topo da lista é o que precisa de decisão
   rows.sort(
-    (a, b) => Math.abs(b.deltaPp ?? 0) - Math.abs(a.deltaPp ?? 0) || a.ticker.localeCompare(b.ticker),
+    (a, b) =>
+      Math.abs(b.deltaPp ?? 0) - Math.abs(a.deltaPp ?? 0) || a.ticker.localeCompare(b.ticker),
   );
   legacy.sort((a, b) => b.currentValue - a.currentValue || a.ticker.localeCompare(b.ticker));
 
@@ -226,9 +225,7 @@ export function buildComparison(
     legacyPct: share(legacyValue, patrimonio),
     targetBase,
     legacyInTotal,
-    targetSumPct: round2(
-      ALLOCATION_CLASSES.reduce((s, c) => s + (targets[c] ?? 0) * 100, 0),
-    ),
+    targetSumPct: round2(ALLOCATION_CLASSES.reduce((s, c) => s + (targets[c] ?? 0) * 100, 0)),
     hasTarget: targetPctByTicker.size > 0 || rfTargetPct > 0,
   };
 }

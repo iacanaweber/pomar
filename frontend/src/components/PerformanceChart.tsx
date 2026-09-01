@@ -69,8 +69,9 @@ export function PerformanceChart({
   const [hover, setHover] = useState<number | null>(null);
   const [tabela, setTabela] = useState(false);
 
-  const points = data.points ?? [];
-  const disponiveis = data.benchmarks ?? [];
+  // Idem: sem memo, os `?? []` refazem o useMemo das séries a cada render.
+  const points = useMemo(() => data.points ?? [], [data.points]);
+  const disponiveis = useMemo(() => data.benchmarks ?? [], [data.benchmarks]);
 
   const series: Serie[] = useMemo(() => {
     const carteira: Serie = {
@@ -210,13 +211,7 @@ export function PerformanceChart({
               onMouseLeave={() => setHover(null)}
             >
               {/* zero é a única linha de grade que carrega significado: acima dela é ganho */}
-              <line
-                x1={ML}
-                x2={W - MR}
-                y1={zeroY}
-                y2={zeroY}
-                className="perf-zero"
-              />
+              <line x1={ML} x2={W - MR} y1={zeroY} y2={zeroY} className="perf-zero" />
               {series.map((s) => (
                 <path
                   key={s.code}
@@ -258,13 +253,7 @@ export function PerformanceChart({
                 />
               ))}
               {hover != null && (
-                <line
-                  x1={x(hover)}
-                  x2={x(hover)}
-                  y1={MT}
-                  y2={H - MB}
-                  className="perf-crosshair"
-                />
+                <line x1={x(hover)} x2={x(hover)} y1={MT} y2={H - MB} className="perf-crosshair" />
               )}
               {points.map((p, i) =>
                 p.late ? (
@@ -296,7 +285,11 @@ export function PerformanceChart({
 
       <ul className="perf-legend">
         <li className="perf-legend-item perf-legend-hero">
-          <span className="perf-swatch" style={{ background: "var(--perf-hero)" }} aria-hidden="true" />
+          <span
+            className="perf-swatch"
+            style={{ background: "var(--perf-hero)" }}
+            aria-hidden="true"
+          />
           <span>Sua carteira (TWR)</span>
         </li>
         {disponiveis.map((b) => {
@@ -360,13 +353,7 @@ export function PerformanceChart({
 
 /** Com menos de quatro pontos a tabela é mais honesta que a linha: ela informa sem
  *  desenhar uma inclinação que ainda não significa nada. */
-function PerformanceTable({
-  data,
-  series,
-}: {
-  data: PerformanceResponse;
-  series: Serie[];
-}) {
+function PerformanceTable({ data, series }: { data: PerformanceResponse; series: Serie[] }) {
   const points = data.points ?? [];
   return (
     <div className="perf-table-wrap">

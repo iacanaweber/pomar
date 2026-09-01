@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildComparison } from "./comparison";
 
-const pos = (ticker: string, asset_class: string, value: number) => ({ ticker, asset_class, value });
+const pos = (ticker: string, asset_class: string, value: number) => ({
+  ticker,
+  asset_class,
+  value,
+});
 
 // carteira alvo: Ações 50% (AAA3 60% / BBB3 40%) e FIIs 50% (CCC11 100%)
 // => alvos sobre o total: AAA3 30%, BBB3 20%, CCC11 50%
@@ -19,8 +23,15 @@ const legacyRow = (c: ReturnType<typeof buildComparison>, ticker: string) =>
 /** Nenhum número exibível pode ser Infinity ou NaN — é a regressão que o bloco pede. */
 const finito = (c: ReturnType<typeof buildComparison>) => {
   for (const r of [...c.rows, ...c.legacy]) {
-    for (const v of [r.currentPct, r.portfolioPct, r.currentValue, r.targetPct, r.targetBrl,
-                     r.deltaPp, r.deltaBrl]) {
+    for (const v of [
+      r.currentPct,
+      r.portfolioPct,
+      r.currentValue,
+      r.targetPct,
+      r.targetBrl,
+      r.deltaPp,
+      r.deltaBrl,
+    ]) {
       if (v !== null) expect(Number.isFinite(v)).toBe(true);
     }
   }
@@ -29,8 +40,14 @@ const finito = (c: ReturnType<typeof buildComparison>) => {
       expect(Number.isFinite(v)).toBe(true);
     }
   }
-  for (const v of [c.totalValue, c.alignedValue, c.legacyValue, c.legacyPct, c.targetBase,
-                   c.targetSumPct]) {
+  for (const v of [
+    c.totalValue,
+    c.alignedValue,
+    c.legacyValue,
+    c.legacyPct,
+    c.targetBase,
+    c.targetSumPct,
+  ]) {
     expect(Number.isFinite(v)).toBe(true);
   }
 };
@@ -109,8 +126,12 @@ describe("buildComparison", () => {
 
     it("ticker com posição e ausente de qualquer cesta é LEGACY", () => {
       const c = buildComparison(
-        [pos("AAA3", "STOCK", 300), pos("BBB3", "STOCK", 200), pos("CCC11", "FII", 400),
-         pos("LEGADO3", "STOCK", 100)],
+        [
+          pos("AAA3", "STOCK", 300),
+          pos("BBB3", "STOCK", 200),
+          pos("CCC11", "FII", 400),
+          pos("LEGADO3", "STOCK", 100),
+        ],
         1000,
         TARGETS,
         BASKETS,
@@ -145,8 +166,12 @@ describe("buildComparison", () => {
 
     it("classe inteira com alvo 0% e várias posições: nenhuma divisão por zero", () => {
       const c = buildComparison(
-        [pos("AAA3", "STOCK", 200), pos("BBB3", "STOCK", 150), pos("CCC3", "STOCK", 150),
-         pos("DDD11", "FII", 500)],
+        [
+          pos("AAA3", "STOCK", 200),
+          pos("BBB3", "STOCK", 150),
+          pos("CCC3", "STOCK", 150),
+          pos("DDD11", "FII", 500),
+        ],
         1000,
         { STOCK: 0, FII: 1.0, ETF: 0, BDR: 0 },
         { STOCK: { AAA3: 0.4, BBB3: 0.3, CCC3: 0.3 }, FII: { DDD11: 1.0 } },
@@ -181,8 +206,11 @@ describe("buildComparison", () => {
   // --- legacy_in_total: a base dos alvos em R$ ---
 
   describe("legacyInTotal", () => {
-    const posicoes = [pos("AAA3", "STOCK", 250), pos("CCC11", "FII", 250),
-                      pos("LEGADO3", "STOCK", 500)];
+    const posicoes = [
+      pos("AAA3", "STOCK", 250),
+      pos("CCC11", "FII", 250),
+      pos("LEGADO3", "STOCK", 500),
+    ];
     const alvos = { STOCK: 0.5, FII: 0.5, ETF: 0, BDR: 0 };
     const cestas = { STOCK: { AAA3: 1.0 }, FII: { CCC11: 1.0 } };
 
@@ -307,8 +335,12 @@ describe("buildComparison", () => {
   });
 
   it("casa tickers em maiúsculas independentemente de como vieram", () => {
-    const c = buildComparison([pos("aaa3", "STOCK", 1000)], 1000,
-      { STOCK: 1.0 }, { STOCK: { aaa3: 1.0 } });
+    const c = buildComparison(
+      [pos("aaa3", "STOCK", 1000)],
+      1000,
+      { STOCK: 1.0 },
+      { STOCK: { aaa3: 1.0 } },
+    );
     expect(c.rows).toHaveLength(1);
     expect(row(c, "AAA3").status).toBe("ok");
     finito(c);

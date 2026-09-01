@@ -15,8 +15,7 @@ import {
   type Row,
 } from "./basket";
 
-const rows = (...pcts: number[]): Row[] =>
-  pcts.map((pct, i) => ({ ticker: `T${i}`, pct }));
+const rows = (...pcts: number[]): Row[] => pcts.map((pct, i) => ({ ticker: `T${i}`, pct }));
 
 describe("scaleTo100", () => {
   it("preserva as proporções relativas ao cortar o excesso", () => {

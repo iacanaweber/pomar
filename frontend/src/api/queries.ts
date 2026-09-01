@@ -5,7 +5,6 @@ import type {
   AssignmentsIn,
   EntryIn,
   LabelDimension,
-  LabelIn,
   OrderIn,
   PlanRequest,
   PreferencesBody,
@@ -203,14 +202,6 @@ export function useSetAssignments() {
       qc.invalidateQueries({ queryKey: keys.indexers });
       qc.invalidateQueries({ queryKey: keys.portfolio });
     },
-  });
-}
-
-export function useCreateLabel() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: (body: LabelIn) => api.createLabel(body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: keys.labels }),
   });
 }
 

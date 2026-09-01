@@ -14,16 +14,17 @@ export function YocCell({
 }) {
   return (
     <span className="yoc-cell">
-      {dividendYield != null && (
-        <span className="yoc-dy">DY {pct(dividendYield)}</span>
-      )}
+      {dividendYield != null && <span className="yoc-dy">DY {pct(dividendYield)}</span>}
       <Tooltip metricKey="yield_on_cost">
         <span className="yoc-yoc">
           {yieldOnCost != null ? (
             <>
               YoC {pct(yieldOnCost)}
               {dividendYield != null && yieldOnCost > dividendYield ? (
-                <span className="yoc-up" aria-label="acima do DY de mercado"> ↑</span>
+                <span className="yoc-up" aria-label="acima do DY de mercado">
+                  {" "}
+                  ↑
+                </span>
               ) : null}
             </>
           ) : (

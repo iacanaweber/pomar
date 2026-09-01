@@ -128,6 +128,4 @@ export const pctToShare = (pct: number): number =>
 /** Fração das preferências (0..1) -> percentual do slider. Ausente vira 100%.
  *  Zero é preservado: 0% é uma escolha ("não mande nada para o piso"), não ausência. */
 export const shareToPct = (share: number | null | undefined): number =>
-  Number.isFinite(share as number)
-    ? round2(Math.min(1, Math.max(0, share as number)) * 100)
-    : 100;
+  Number.isFinite(share as number) ? round2(Math.min(1, Math.max(0, share as number)) * 100) : 100;

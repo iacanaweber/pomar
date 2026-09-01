@@ -40,13 +40,7 @@ interface Props {
   moeda?: string;
 }
 
-export function Canteiro({
-  comparison,
-  aporte,
-  coberturaLegado,
-  gapLegado,
-  moeda = "BRL",
-}: Props) {
+export function Canteiro({ comparison, aporte, coberturaLegado, gapLegado, moeda = "BRL" }: Props) {
   const { byClass, legacy, legacyValue, legacyPct, targetBase, hasTarget } = comparison;
 
   if (!hasTarget || byClass.length === 0) {
@@ -54,8 +48,7 @@ export function Canteiro({
       <div className="canteiro-vazio card">
         <h3>Sem carteira alvo</h3>
         <p className="muted">
-          O canteiro desenha as metas por classe. Defina-as e o Plantar passa a dizer onde
-          aportar.
+          O canteiro desenha as metas por classe. Defina-as e o Plantar passa a dizer onde aportar.
         </p>
       </div>
     );
@@ -97,9 +90,10 @@ function Leito({
   // Uma única animação de entrada, e só ela: as covas crescem do chão. `prefers-reduced-
   // motion` é respeitado no CSS, e aqui o estado começa já preenchido quando o usuário
   // pediu menos movimento — senão a barra ficaria em zero para sempre.
-  const [entrou, setEntrou] = useState(() =>
-    typeof window !== "undefined" &&
-    window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
+  const [entrou, setEntrou] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches,
   );
   const jaAnimou = useRef(false);
   useEffect(() => {
@@ -129,8 +123,7 @@ function Leito({
         const excedeu = razao > 1 + AT_TARGET_PP / 100;
 
         const somaBrl = aporte?.[c.cls] ?? 0;
-        const somaPct =
-          alvoBrl > 0 ? Math.min(somaBrl / alvoBrl, 1 - preenchido / 100) * 100 : 0;
+        const somaPct = alvoBrl > 0 ? Math.min(somaBrl / alvoBrl, 1 - preenchido / 100) * 100 : 0;
 
         return (
           <div
@@ -254,8 +247,8 @@ function ForaDoCanteiro({
       {cobertura != null && gap != null && gap > 0 && (
         <>
           {" "}
-          Vender tudo cobriria <strong>{pctPts(Math.min(cobertura, 1) * 100, 0)}</strong> do
-          que falta ({money(gap, moeda)}){cobertura > 1 && ", com sobra"}.
+          Vender tudo cobriria <strong>{pctPts(Math.min(cobertura, 1) * 100, 0)}</strong> do que
+          falta ({money(gap, moeda)}){cobertura > 1 && ", com sobra"}.
         </>
       )}
     </p>

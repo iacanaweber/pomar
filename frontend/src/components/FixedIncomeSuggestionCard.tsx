@@ -4,7 +4,6 @@ import { money, num, pct } from "../lib/format";
 import { Tooltip } from "./Tooltip";
 import { RegisterBuyButton } from "./RegisterBuyButton";
 
-
 /** A parcela de renda fixa do aporte: o que fazer com ela, linha a linha.
  *
  *  Não há mais um resumo "piso × peso" acima da lista. Ele existia porque as linhas não
@@ -26,13 +25,7 @@ import { RegisterBuyButton } from "./RegisterBuyButton";
 /** Barra do piso: reserva LÍQUIDA contra o piso corrigido. Fica aqui dentro, e não num
  *  card próprio, porque duas caixas falando do mesmo número na mesma tela é o que faz o
  *  usuário procurar a diferença entre elas. */
-function FloorBar({
-  reserve,
-  currency,
-}: {
-  reserve: ReserveSuggestion;
-  currency: string;
-}) {
+function FloorBar({ reserve, currency }: { reserve: ReserveSuggestion; currency: string }) {
   const filled = Math.min(Math.round((reserve.pct_filled ?? 0) * 100), 100);
   const corrigido = reserve.floor_index === "ipca" && reserve.floor_index_available;
   return (
@@ -58,7 +51,8 @@ function FloorBar({
           Piso: {money(reserve.current_amount ?? 0, currency)} de{" "}
           {money(reserve.target_amount ?? 0, currency)} · {filled}%
           {corrigido && " (corrigido pelo IPCA)"}
-          {reserve.floor_index === "ipca" && !reserve.floor_index_available &&
+          {reserve.floor_index === "ipca" &&
+            !reserve.floor_index_available &&
             " (IPCA indisponível — valor nominal)"}
         </span>
       </div>

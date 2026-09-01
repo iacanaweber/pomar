@@ -155,7 +155,9 @@ export function PlanControls({ preferences, preferencesPending, loading, onSubmi
       ) : (
         <div className="card empty-target">
           <h3>Carteira alvo não definida</h3>
-          <p className="muted">O plano precisa de um destino: metas por classe e composição de cada uma.</p>
+          <p className="muted">
+            O plano precisa de um destino: metas por classe e composição de cada uma.
+          </p>
           <Link className="primary" to="/alvo">
             Montar carteira alvo
           </Link>
@@ -194,7 +196,9 @@ export function PlanControls({ preferences, preferencesPending, loading, onSubmi
                 <Tooltip metricKey="reserve_floor_share">
                   <span>Máximo do aporte para o piso</span>
                 </Tooltip>
-                <span className="adv-slider-value" aria-hidden="true">{floorSharePct}%</span>
+                <span className="adv-slider-value" aria-hidden="true">
+                  {floorSharePct}%
+                </span>
               </span>
               <div className="weight-slider-wrap">
                 <input

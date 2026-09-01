@@ -15,13 +15,13 @@ import type { SVGProps } from "react";
 const PATHS = {
   // --- Navegação: silhuetas que se distinguem a 20px, sem detalhe interno ---
   // Broto: caule + duas folhas. É a marca reduzida ao que sobrevive nesse tamanho.
-  plant:
-    "M12 21v-7M12 14c0-3.3 2.7-6 6-6 0 3.3-2.7 6-6 6ZM12 14c0-2.8-2.2-5-5-5 0 2.8 2.2 5 5 5Z",
+  plant: "M12 21v-7M12 14c0-3.3 2.7-6 6-6 0 3.3-2.7 6-6 6ZM12 14c0-2.8-2.2-5-5-5 0 2.8 2.2 5 5 5Z",
   basket: "M3 9h18l-1.7 9.3a2 2 0 0 1-2 1.7H6.7a2 2 0 0 1-2-1.7L3 9ZM8 9 10.5 4M16 9 13.5 4",
   vault: "M12 3 3 8.5h18L12 3ZM5.5 11v6M10 11v6M14 11v6M18.5 11v6M3 20h18",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14ZM20 20l-4.2-4.2",
   // Alvo: dois anéis e o centro. O canteiro é o desenho; esta aba é onde ele se define.
-  target: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM12 13.2a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4Z",
+  target:
+    "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM12 13.2a1.2 1.2 0 1 0 0-2.4 1.2 1.2 0 0 0 0 2.4Z",
 
   // --- Sistema ---
   /* UMA direção desenhada. O estado aberto é ROTAÇÃO por CSS, não outro glifo — é isso

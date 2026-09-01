@@ -8,8 +8,6 @@ export const INVESTABLE_CLASSES = ["STOCK", "FII", "ETF", "BDR"] as const;
 export const RENDA_FIXA = "RENDA_FIXA";
 export const ALLOCATION_CLASSES = [...INVESTABLE_CLASSES, RENDA_FIXA] as const;
 
-export type InvestableClass = (typeof INVESTABLE_CLASSES)[number];
-
 export const CLASS_LABEL: Record<string, string> = {
   STOCK: "Ações",
   FII: "FIIs",

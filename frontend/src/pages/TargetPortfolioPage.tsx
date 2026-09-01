@@ -196,8 +196,8 @@ function BasketEditor({
   return (
     <div className="basket-editor-body">
       <p className="muted">
-        O peso é dentro de {label}: some 100% aqui e a fatia de {label} continua sendo a meta
-        da classe. O gráfico no topo mostra quanto isso vale sobre a carteira inteira.
+        O peso é dentro de {label}: some 100% aqui e a fatia de {label} continua sendo a meta da
+        classe. O gráfico no topo mostra quanto isso vale sobre a carteira inteira.
         {isRF && " Aqui os itens são indexadores, e a compra é feita fora do app."}
       </p>
 
@@ -260,7 +260,11 @@ function BasketEditor({
                 : `faltam ${num(round2(100 - total))} p.p. — precisa fechar em 100%`}
           </span>
           {!ok && (
-            <button type="button" className="link-button" onClick={() => onChange(scaleTo100(rows))}>
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => onChange(scaleTo100(rows))}
+            >
               Ajustar para 100%
             </button>
           )}
@@ -495,7 +499,9 @@ export function TargetPortfolioPage() {
                           : "sem composição"}
                       </span>
                     </span>
-                    <span className="card-toggle"><Icon name="chevron" size={16} /></span>
+                    <span className="card-toggle">
+                      <Icon name="chevron" size={16} />
+                    </span>
                   </button>
                   {isOpen && (
                     <BasketEditor

@@ -32,7 +32,9 @@ export function OrdersHistory() {
       <ul className="pf-drill-list">
         {items.slice(0, 12).map((o) => (
           <li key={o.id} className="pf-drill-item">
-            <span className="pf-drill-ticker"><AssetLink ticker={o.ticker} /></span>
+            <span className="pf-drill-ticker">
+              <AssetLink ticker={o.ticker} />
+            </span>
             <span className="muted">
               {o.shares} × {money(o.price)}
               {o.executed_at ? ` · ${isoToBR(o.executed_at.slice(0, 10))}` : ""}
@@ -49,7 +51,9 @@ export function OrdersHistory() {
         ))}
       </ul>
       {items.length > 12 && (
-        <p className="muted" style={{ fontSize: 12 }}>+{items.length - 12} registros</p>
+        <p className="muted" style={{ fontSize: 12 }}>
+          +{items.length - 12} registros
+        </p>
       )}
       <p className="muted" style={{ fontSize: 12 }}>
         Registro local. Posição oficial: Ghostfolio.

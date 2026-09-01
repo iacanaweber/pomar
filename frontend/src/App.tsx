@@ -5,17 +5,20 @@ import { useAuthStatus, useLogout } from "./api/queries";
 import { GlossaryProvider } from "./app/GlossaryProvider";
 import { BrandMark, Icon, type IconName } from "./components/Icon";
 import { ThemeToggle } from "./components/ThemeToggle";
-import { AssetPage } from "./pages/AssetPage";
 import { LoginPage } from "./pages/LoginPage";
 import { PlanPage } from "./pages/PlanPage";
 import { PortfolioPage } from "./pages/PortfolioPage";
 
-// Telas novas: carregadas sob demanda para não pesar o bundle inicial.
+// Carregadas sob demanda. O critério é FREQUÊNCIA, não idade da tela: o que se abre em
+// toda sessão vem no bundle inicial; folha de detalhe e telas de configuração, não.
+// Estava invertido — AssetPage, que é folha, vinha eager, e a watchlist, que era aba de
+// topo, vinha lazy.
+const AssetPage = lazy(() => import("./pages/AssetPage").then((m) => ({ default: m.AssetPage })));
 const WatchlistPage = lazy(() =>
   import("./pages/WatchlistPage").then((m) => ({ default: m.WatchlistPage })),
 );
 const ReservePage = lazy(() =>
-  import("./pages/ReservePage").then((m) => ({ default: m.ReservePage })),
+  import("./pages/reserve/ReservePage").then((m) => ({ default: m.ReservePage })),
 );
 const TargetPortfolioPage = lazy(() =>
   import("./pages/TargetPortfolioPage").then((m) => ({ default: m.TargetPortfolioPage })),

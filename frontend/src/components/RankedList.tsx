@@ -12,7 +12,6 @@ const RISK_CLASS: Record<string, string> = {
   vermelho: "risk-vermelho",
 };
 
-
 /** Barra da cesta: onde o ativo está hoje, onde fica depois da compra e onde é o alvo.
  *  Uma linha só responde "por que este valor?" sem abrir nada. */
 function BasketBar({ asset }: { asset: PlanAsset }) {
@@ -26,7 +25,11 @@ function BasketBar({ asset }: { asset: PlanAsset }) {
   const grew = after != null && after > current + 0.0001;
   return (
     <div className="basket-bar-wrap">
-      <div className="basket-bar" role="img" aria-label={`peso na cesta: ${pct(current)}, alvo ${pct(target)}`}>
+      <div
+        className="basket-bar"
+        role="img"
+        aria-label={`peso na cesta: ${pct(current)}, alvo ${pct(target)}`}
+      >
         {grew && <span className="basket-bar-after" style={{ width: w(after) }} />}
         <span className="basket-bar-now" style={{ width: w(current) }} />
         <span className="basket-bar-target" style={{ left: w(target) }} />
@@ -61,7 +64,8 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
               <strong>{money(asset.suggested.invested_exact)}</strong>
             </Tooltip>
             <span className="card-shares">
-              {asset.suggested.shares} × {asset.suggested.price ? money(asset.suggested.price) : "—"}
+              {asset.suggested.shares} ×{" "}
+              {asset.suggested.price ? money(asset.suggested.price) : "—"}
             </span>
           </span>
         ) : (
@@ -82,7 +86,9 @@ function AssetCard({ asset, planId }: { asset: PlanAsset; planId?: number | null
       {redFlags.length > 0 && (
         <ul className="card-flags">
           {redFlags.map((f, i) => (
-            <li key={i}><Icon name="alert" size={13} /> {f}</li>
+            <li key={i}>
+              <Icon name="alert" size={13} /> {f}
+            </li>
           ))}
         </ul>
       )}

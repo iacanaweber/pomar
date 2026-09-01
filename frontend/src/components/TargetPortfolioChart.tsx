@@ -3,9 +3,6 @@ import { shareOfTotal, sumPct, type Row } from "../lib/basket";
 import { pctPts } from "../lib/format";
 import { classHue, step } from "../lib/viz";
 
-
-
-
 interface ClassRow {
   cls: string;
   classPct: number;
@@ -82,9 +79,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
       </div>
 
       {segments.length === 0 ? (
-        <p className="muted">
-          Defina as metas por classe e a composição de cada uma.
-        </p>
+        <p className="muted">Defina as metas por classe e a composição de cada uma.</p>
       ) : (
         <>
           <div
@@ -114,19 +109,33 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
             {views.map((v) => (
               <li className={`tp-class-item ${v.motivo ? "tp-class-off" : ""}`} key={v.cls}>
                 <div className="tp-class-head">
-                  <span className="tp-dot" style={{ background: classHue(v.cls) }} aria-hidden="true" />
+                  <span
+                    className="tp-dot"
+                    style={{ background: classHue(v.cls) }}
+                    aria-hidden="true"
+                  />
                   <span className="tp-class-name">{CLASS_LABEL[v.cls]}</span>
                   <span className="tp-class-pct">
-                    {v.motivo ? <span className="muted">{v.motivo}</span> : `${pctPts(v.classPct, 2)} do total`}
+                    {v.motivo ? (
+                      <span className="muted">{v.motivo}</span>
+                    ) : (
+                      `${pctPts(v.classPct, 2)} do total`
+                    )}
                   </span>
                 </div>
                 {v.rows.length > 0 && (
                   <ul className="tp-legend">
                     {v.rows.map((r, i) => (
                       <li key={r.ticker}>
-                        <span className="tp-dot" style={{ background: v.colors[i] }} aria-hidden="true" />
+                        <span
+                          className="tp-dot"
+                          style={{ background: v.colors[i] }}
+                          aria-hidden="true"
+                        />
                         <span className="tp-legend-ticker">{r.ticker}</span>
-                        <span className="tp-legend-pct">{pctPts(shareOfTotal(v.classPct, r.pct), 2)}</span>
+                        <span className="tp-legend-pct">
+                          {pctPts(shareOfTotal(v.classPct, r.pct), 2)}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -142,9 +151,7 @@ export function TargetPortfolioChart({ classes }: { classes: ClassRow[] }) {
           </ul>
         </>
       )}
-      <p className="muted tp-note">
-        % sobre a carteira inteira: meta da classe × peso na classe.
-      </p>
+      <p className="muted tp-note">% sobre a carteira inteira: meta da classe × peso na classe.</p>
     </section>
   );
 }

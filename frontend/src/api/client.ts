@@ -15,7 +15,6 @@ import type {
   IncomeResponse,
   IndexersResponse,
   LabelDimension,
-  LabelIn,
   LabelOut,
   OrderIn,
   OrderOut,
@@ -130,10 +129,9 @@ export const api = {
   listEntries: (id: number) =>
     request<{ items: FixedIncomeEntry[] }>(`/api/fixed-income/accounts/${id}/entries`),
   deleteEntry: (accountId: number, entryId: number) =>
-    request<{ ok: boolean }>(
-      `/api/fixed-income/accounts/${accountId}/entries/${entryId}`,
-      { method: "DELETE" },
-    ),
+    request<{ ok: boolean }>(`/api/fixed-income/accounts/${accountId}/entries/${entryId}`, {
+      method: "DELETE",
+    }),
 
   // composição da classe RENDA_FIXA por tag de indexador (atual × alvo)
   indexers: () => request<IndexersResponse>("/api/fixed-income/indexers", {}, 30000),
@@ -141,8 +139,6 @@ export const api = {
   // rótulos por dimensão (bucket dirige a compra; indexer e geography descrevem)
   labels: (dimension?: LabelDimension) =>
     request<LabelOut[]>(`/api/labels${dimension ? `?dimension=${dimension}` : ""}`),
-  createLabel: (body: LabelIn) => request<LabelOut>("/api/labels", json(body)),
-  deleteLabel: (id: number) => request<{ ok: boolean }>(`/api/labels/${id}`, { method: "DELETE" }),
   assignments: (params: {
     dimension?: LabelDimension;
     subjectType?: "ticker" | "fi_account";
@@ -164,8 +160,7 @@ export const api = {
   // ordens ("já comprei")
   orders: () => request<OrdersListResponse>("/api/orders"),
   createOrder: (body: OrderIn) => request<OrderOut>("/api/orders", json(body)),
-  deleteOrder: (id: number) =>
-    request<{ ok: boolean }>(`/api/orders/${id}`, { method: "DELETE" }),
+  deleteOrder: (id: number) => request<{ ok: boolean }>(`/api/orders/${id}`, { method: "DELETE" }),
 
   // plano (mais lento -> timeout maior)
   plan: (req: PlanRequest) => request<PlanResponse>("/api/plan", json(req), 60000),

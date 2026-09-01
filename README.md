@@ -1,6 +1,6 @@
 # Pomar
 
-**Planejador de aportes mensais na B3 para uma estratégia de dividendos.**
+**Planejador de aportes mensais na B3 para manter a carteira na meta.**
 
 App web pessoal para planejar aportes na B3. Você define uma **carteira alvo** — quanto cada
 classe (Ações, FIIs, ETFs, BDRs e Renda fixa) deve pesar e, dentro de cada classe, quais itens
@@ -8,13 +8,20 @@ a compõem e com que percentual. Ao aportar, você informa quanto tem disponíve
 responde **quantas cotas comprar de quê** para chegar mais perto dessa carteira.
 
 O app não escolhe ativos por você e não dá nota a ninguém: a seleção é sua, e a recomendação é
-aritmética de rebalanceamento — quem está mais longe do peso-alvo recebe mais. Além disso ele
-calcula o **preço-teto de Bazin** (dividendo médio ÷ DY-alvo) e destaca quem está abaixo dele
-mesmo sem compra sugerida, e sinaliza *red flags* factuais (prejuízo, endividamento, payout
-insustentável, liquidez baixa).
+aritmética de rebalanceamento por APORTE — quem está mais longe do peso-alvo recebe mais, e
+nada precisa ser vendido.
 
-As abas são **Plantar** (o aporte), **Carteira** (atual × alvo e composição), **Reserva**
-(renda fixa) e **Descobrir** (watchlist com radar de preço-teto). É instalável como **PWA**.
+O objeto central é o **canteiro**: a carteira alvo é o leito, a largura de cada cova é o peso
+alvo da classe e a altura preenchida é quanto você já tem. Vazio é onde plantar.
+
+As abas são **Plantar** (o aporte), **Carteira** (atual × alvo, rendimento e composição),
+**Alvo** (onde a carteira alvo é definida) e **Reserva** (renda fixa). É instalável na tela
+inicial do celular.
+
+Métricas de stock-picking — preço-teto de Bazin, Yield on Cost, P/L, P/VP, ROE, proventos por
+ano — aparecem só em `/ativo/:ticker` de **ação e FII**, o legado de uma estratégia anterior de
+dividendos. Elas não dizem nada sobre um ETF de acumulação, que não tem lucro por ação nem
+histórico de dividendo que sustente um teto.
 
 > ⚠️ Conteúdo educativo. **Não é recomendação de investimento.** Confira os dados antes de operar.
 
@@ -44,11 +51,11 @@ rede abre o mesmo endereço — a interface é mobile-first, com a navegação f
 No Chrome (Android), menu → **Adicionar à tela inicial**; no Safari (iOS), compartilhar →
 **Adicionar à Tela de Início**. O app abre em tela cheia, sem barra do navegador.
 
-Uma ressalva honesta: **service worker exige HTTPS** (ou `localhost`). Servido em
-`http://<ip-da-lan>:3334`, a instalação e o modo standalone funcionam, mas o cache offline e o
-Web Push não — e o que o Chrome cria é um atalho, não um WebAPK. O app não esconde isso: a
-linha de estado em *Plantar → Ajustes avançados* diz se o cache offline está ativo. Servindo
-por HTTPS, ele passa a valer sozinho, sem mudar nada no código.
+Uma ressalva honesta: **não há cache offline.** Service worker exige HTTPS (ou `localhost`), e
+servido em `http://<ip-da-lan>:3334` ele nunca registra. A pilha existia e foi removida em vez
+de mantida inerte — eram ~150 linhas que jamais executaram. Instalação e modo standalone
+seguem funcionando pelo manifest; o que o Chrome cria é um atalho, não um WebAPK. Se um dia o
+app for servido por HTTPS, o offline volta como trabalho próprio.
 
 ### O mínimo do `.env`
 
@@ -213,7 +220,9 @@ aritmeticamente honesto.
 ### Persistência
 
 Preferências, watchlist, renda fixa e histórico de planos ficam em SQLite no volume Docker
-`pomar-data` — sobrevivem a `up --build`. Backup atômico:
+`pomar-data` — sobrevivem a `up --build`. O histórico de planos é gravado e exposto em
+`GET /api/plan/history`, mas **nenhuma tela o lê ainda**: o que o Plantar restaura é apenas o
+último plano, via `/api/plan/latest`. Backup atômico:
 
 ```bash
 docker compose exec backend python -c \
@@ -257,8 +266,14 @@ geografia em `backend/app/data/geography.py`, os rótulos embutidos em
 `backend/app/data/labels_seed.py` e os textos dos tooltips em `backend/app/data/glossary.py`.
 
 **Ícone:** `cd frontend && node scripts/gen-icons.mjs` regenera os PNGs, o favicon e o SVG a
-partir da geometria no próprio script (sem dependência). As variações descartadas ficam em
-`frontend/icons-src/`.
+partir da geometria no próprio script (sem dependência).
+
+**CSS:** `node scripts/css-audit.mjs snapshot` reduz o `index.css` a «seletor -> valor
+computado» (aplicando declarações em ordem e deixando shorthand apagar longhand anterior).
+Diff vazio entre dois snapshots prova que a cascata por seletor não mudou — é a rede de
+segurança para fundir duplicatas ou reordenar seções, já que o projeto não tem regressão
+visual. `node scripts/css-audit.mjs dupes` lista os seletores declarados mais de uma vez e
+quais propriedades de fato colidem.
 
 **Fontes:** IBM Plex Sans (corpo, UI e todo número) e Fraunces (marca, título de página e
 h2) são servidas pelo próprio nginx a partir de `frontend/public/fonts/`, com a versão no

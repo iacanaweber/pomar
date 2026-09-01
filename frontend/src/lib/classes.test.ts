@@ -3,7 +3,13 @@ import { ALLOCATION_CLASSES, byWeightDesc } from "./classes";
 
 describe("byWeightDesc", () => {
   it("põe o que pesa mais na frente", () => {
-    const pesos: Record<string, number> = { STOCK: 0, FII: 0.05, ETF: 0.45, BDR: 0, RENDA_FIXA: 0.5 };
+    const pesos: Record<string, number> = {
+      STOCK: 0,
+      FII: 0.05,
+      ETF: 0.45,
+      BDR: 0,
+      RENDA_FIXA: 0.5,
+    };
     expect(byWeightDesc(ALLOCATION_CLASSES, (c) => pesos[c])).toEqual([
       "RENDA_FIXA",
       "ETF",

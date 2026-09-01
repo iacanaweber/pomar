@@ -1,15 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  brToISO,
-  isoToBR,
-  money,
-  num,
-  parseBRL,
-  pct,
-  pctPts,
-  signedPct,
-  signedPp,
-} from "./format";
+import { brToISO, isoToBR, money, num, parseBRL, pct, pctPts, signedPct, signedPp } from "./format";
 
 describe("separador decimal — tudo vírgula, sempre", () => {
   // O bug: `pct` devolvia ponto e sete componentes escreveram a própria cópia com

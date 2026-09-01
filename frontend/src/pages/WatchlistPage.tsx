@@ -1,7 +1,12 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ApiError } from "../api/client";
-import { useAddWatchlist, useRemoveWatchlist, useWatchlist, useWatchlistRadar } from "../api/queries";
+import {
+  useAddWatchlist,
+  useRemoveWatchlist,
+  useWatchlist,
+  useWatchlistRadar,
+} from "../api/queries";
 import { AssetLink } from "../components/AssetLink";
 import { CeilingBadge } from "../components/CeilingBadge";
 import { MutationError } from "../components/MutationError";
@@ -15,7 +20,9 @@ function StatusChip({ item }: { item: WatchlistItem }) {
     return (
       <span className="ceiling-chip risk-verde" aria-label="ticker validado">
         <span aria-hidden="true">✓</span>
-        <span>validado{item.last_validated_at ? ` ${shortDateTime(item.last_validated_at)}` : ""}</span>
+        <span>
+          validado{item.last_validated_at ? ` ${shortDateTime(item.last_validated_at)}` : ""}
+        </span>
       </span>
     );
   if (item.valid === 0 && item.last_validated_at)
@@ -108,15 +115,17 @@ export function WatchlistPage() {
     add.mutate({ ticker: t }, { onSuccess: () => setTicker("") });
   };
 
-  const duplicate = items.some((i) => i.ticker.toUpperCase() === ticker.trim().toUpperCase()) && ticker.trim() !== "";
+  const duplicate =
+    items.some((i) => i.ticker.toUpperCase() === ticker.trim().toUpperCase()) &&
+    ticker.trim() !== "";
 
   return (
     <main className="page">
       <h1 className="page-title">Observando</h1>
       <p className="muted" style={{ marginTop: 0 }}>
         Preço, DY e situação vs preço-teto de Bazin
-        {radar.data ? ` (DY-alvo ${pct(radar.data.bazin_target_yield)})` : ""}. O aporte
-        segue a <Link to="/alvo">carteira alvo</Link>.
+        {radar.data ? ` (DY-alvo ${pct(radar.data.bazin_target_yield)})` : ""}. O aporte segue a{" "}
+        <Link to="/alvo">carteira alvo</Link>.
       </p>
 
       {belowNow.length > 0 && (
@@ -154,33 +163,39 @@ export function WatchlistPage() {
           onChange={(e) => setTicker(e.target.value)}
           aria-label="Ticker para adicionar"
         />
-        <button className="primary" type="submit" disabled={add.isPending || !ticker.trim() || duplicate}>
+        <button
+          className="primary"
+          type="submit"
+          disabled={add.isPending || !ticker.trim() || duplicate}
+        >
           {add.isPending ? "Adicionando" : "Adicionar"}
         </button>
       </form>
-      {duplicate && <p className="field-error">{ticker.trim().toUpperCase()} já está na sua lista.</p>}
+      {duplicate && (
+        <p className="field-error">{ticker.trim().toUpperCase()} já está na sua lista.</p>
+      )}
       {add.isError && (
         <div className="banner banner-error">
-          <Icon name="alert" size={15} /> {add.error instanceof ApiError ? add.error.userMessage : "Não foi possível adicionar."}
+          <Icon name="alert" size={15} />{" "}
+          {add.error instanceof ApiError ? add.error.userMessage : "Não foi possível adicionar."}
         </div>
       )}
 
       {isLoading && <p className="muted">Carregando</p>}
 
-      {!isLoading && items.length === 0 && (
-        <div className="banner banner-warn">
-          Lista vazia.
-        </div>
-      )}
+      {!isLoading && items.length === 0 && <div className="banner banner-warn">Lista vazia.</div>}
 
       {items.length > 0 && (
         <ul className="cards">
           {sorted.map((i) => (
-            <WatchlistRow key={i.ticker} item={i} radar={radarByTicker.get(i.ticker.toUpperCase())} />
+            <WatchlistRow
+              key={i.ticker}
+              item={i}
+              radar={radarByTicker.get(i.ticker.toUpperCase())}
+            />
           ))}
         </ul>
       )}
-
     </main>
   );
 }

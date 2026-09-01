@@ -1,0 +1,9 @@
+# O arquivo estava VAZIO, então `COPY . .` levava o node_modules do host para dentro da
+# imagem — por cima do que o `npm ci` acabara de instalar. Funcionava por os dois serem
+# linux x64; era sorte, não projeto.
+node_modules
+dist
+*.tsbuildinfo
+
+# Fontes de autoria que não participam do build (os .woff2 de public/ SIM, esses vão).
+icons-src

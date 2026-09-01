@@ -8,8 +8,8 @@ export function HealthBanner() {
     <div className="banner banner-warn">
       {!data.ghostfolio && (
         <div>
-          <strong>Ghostfolio desconectado.</strong> Confira <code>GHOSTFOLIO_URL</code> e o
-          token. O plano segue com carteira vazia, mirando as metas.
+          <strong>Ghostfolio desconectado.</strong> Confira <code>GHOSTFOLIO_URL</code> e o token. O
+          plano segue com carteira vazia, mirando as metas.
         </div>
       )}
       {!data.brapi && (

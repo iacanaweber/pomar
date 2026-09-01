@@ -4,3560 +4,3560 @@
  */
 
 export interface paths {
-    "/api/login": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Login */
-        post: operations["login_api_login_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/api/login": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/logout": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Logout */
-        post: operations["logout_api_logout_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Login */
+    post: operations["login_api_login_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/logout": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/auth/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Auth Status */
-        get: operations["auth_status_api_auth_status_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Logout */
+    post: operations["logout_api_logout_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/auth/status": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/health": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Health */
-        get: operations["health_api_health_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Auth Status */
+    get: operations["auth_status_api_auth_status_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/health": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/glossary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Glossary */
-        get: operations["glossary_api_glossary_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Health */
+    get: operations["health_api_health_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/glossary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/debug/brapi": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Debug Brapi
-         * @description Diagnóstico da conexão com a brapi (status HTTP, token presente, resposta crua).
-         *
-         *     NÃO expõe o token — só o tamanho. Disponível apenas com DEBUG=true (404 caso contrário),
-         *     para não vazar configuração em produção.
-         */
-        get: operations["debug_brapi_api_debug_brapi_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Glossary */
+    get: operations["glossary_api_glossary_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/debug/brapi": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/portfolio": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Portfolio */
-        get: operations["portfolio_api_portfolio_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Debug Brapi
+     * @description Diagnóstico da conexão com a brapi (status HTTP, token presente, resposta crua).
+     *
+     *     NÃO expõe o token — só o tamanho. Disponível apenas com DEBUG=true (404 caso contrário),
+     *     para não vazar configuração em produção.
+     */
+    get: operations["debug_brapi_api_debug_brapi_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/portfolio": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/portfolio/exposure": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Exposure
-         * @description Composição do patrimônio INTEIRO — renda variável mais a renda fixa que conta.
-         *
-         *     Enquanto a renda fixa vivia só na aba Reserva, o gráfico da Carteira contava a história
-         *     toda; deixou de contar no momento em que uma conta pode ser marcada como patrimônio.
-         *     Sem isto, quem tem 30% em Tesouro Selic veria uma carteira 100% em bolsa.
-         *
-         *     `geography` e `sector` são visualização: nenhuma decisão de compra passa por elas. A
-         *     meta é opcional e informativa — metas vinculantes em duas dimensões independentes
-         *     formam um sistema sobredeterminado, e resolver isso é problema de otimização com
-         *     folga, não de rebalanceamento proporcional.
-         */
-        get: operations["exposure_api_portfolio_exposure_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Portfolio */
+    get: operations["portfolio_api_portfolio_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/portfolio/exposure": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/universe": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Universe */
-        get: operations["universe_api_universe_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Exposure
+     * @description Composição do patrimônio INTEIRO — renda variável mais a renda fixa que conta.
+     *
+     *     Enquanto a renda fixa vivia só na aba Reserva, o gráfico da Carteira contava a história
+     *     toda; deixou de contar no momento em que uma conta pode ser marcada como patrimônio.
+     *     Sem isto, quem tem 30% em Tesouro Selic veria uma carteira 100% em bolsa.
+     *
+     *     `geography` e `sector` são visualização: nenhuma decisão de compra passa por elas. A
+     *     meta é opcional e informativa — metas vinculantes em duas dimensões independentes
+     *     formam um sistema sobredeterminado, e resolver isso é problema de otimização com
+     *     folga, não de rebalanceamento proporcional.
+     */
+    get: operations["exposure_api_portfolio_exposure_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/universe": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/asset/{ticker}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Asset
-         * @description Detalhe completo do ativo: classe+setor canônicos, fundamentos (incl. LPA/VPA),
-         *     histórico de proventos e a leitura factual (preço-teto, consistência, red flags).
-         */
-        get: operations["asset_api_asset__ticker__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Universe */
+    get: operations["universe_api_universe_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/asset/{ticker}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/plan": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Plan */
-        post: operations["plan_api_plan_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Asset
+     * @description Detalhe completo do ativo: classe+setor canônicos, fundamentos (incl. LPA/VPA),
+     *     histórico de proventos e a leitura factual (preço-teto, consistência, red flags).
+     */
+    get: operations["asset_api_asset__ticker__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/plan": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/plan/latest": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Plan Latest
-         * @description Último plano gerado (persistido) — para a PlanPage restaurar ao montar.
-         */
-        get: operations["plan_latest_api_plan_latest_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Plan */
+    post: operations["plan_api_plan_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/plan/latest": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/plan/history": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Plan History
-         * @description Planos anteriores (resumo): quando, quanto e quantas compras foram sugeridas.
-         */
-        get: operations["plan_history_api_plan_history_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Plan Latest
+     * @description Último plano gerado (persistido) — para a PlanPage restaurar ao montar.
+     */
+    get: operations["plan_latest_api_plan_latest_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/plan/history": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/preferences": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Preferences */
-        get: operations["get_preferences_api_preferences_get"];
-        /** Put Preferences */
-        put: operations["put_preferences_api_preferences_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Plan History
+     * @description Planos anteriores (resumo): quando, quanto e quantas compras foram sugeridas.
+     */
+    get: operations["plan_history_api_plan_history_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/preferences": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/watchlist": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Watchlist */
-        get: operations["list_watchlist_api_watchlist_get"];
-        put?: never;
-        /** Add To Watchlist */
-        post: operations["add_to_watchlist_api_watchlist_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Get Preferences */
+    get: operations["get_preferences_api_preferences_get"];
+    /** Put Preferences */
+    put: operations["put_preferences_api_preferences_put"];
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/watchlist": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/watchlist/{ticker}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Remove From Watchlist */
-        delete: operations["remove_from_watchlist_api_watchlist__ticker__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List Watchlist */
+    get: operations["list_watchlist_api_watchlist_get"];
+    put?: never;
+    /** Add To Watchlist */
+    post: operations["add_to_watchlist_api_watchlist_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/watchlist/{ticker}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/watchlist/radar": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Watchlist Radar
-         * @description Radar de zona de compra: preço, DY e situação vs preço-teto de Bazin de TODOS os
-         *     ativos observados — a watchlist deixa de ser lista inerte e responde 'é hora de
-         *     comprar?' sem abrir ativo por ativo. Ordenado pela margem sobre o teto.
-         */
-        get: operations["watchlist_radar_api_watchlist_radar_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Remove From Watchlist */
+    delete: operations["remove_from_watchlist_api_watchlist__ticker__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/watchlist/radar": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/income": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Income
-         * @description Renda passiva atual estimada da carteira (Σ valor × DY) + Yield on Cost por ativo.
-         */
-        get: operations["income_api_income_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Watchlist Radar
+     * @description Radar de zona de compra: preço, DY e situação vs preço-teto de Bazin de TODOS os
+     *     ativos observados — a watchlist deixa de ser lista inerte e responde 'é hora de
+     *     comprar?' sem abrir ativo por ativo. Ordenado pela margem sobre o teto.
+     */
+    get: operations["watchlist_radar_api_watchlist_radar_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/income": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/income/yoc/{ticker}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Yoc History
-         * @description Histórico mensal do Yield on Cost de um ativo (dos snapshots).
-         */
-        get: operations["yoc_history_api_income_yoc__ticker__get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Income
+     * @description Renda passiva atual estimada da carteira (Σ valor × DY) + Yield on Cost por ativo.
+     */
+    get: operations["income_api_income_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/income/yoc/{ticker}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/fixed-income/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Fixed Income Summary */
-        get: operations["fixed_income_summary_api_fixed_income_summary_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Yoc History
+     * @description Histórico mensal do Yield on Cost de um ativo (dos snapshots).
+     */
+    get: operations["yoc_history_api_income_yoc__ticker__get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/fixed-income/summary": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/fixed-income/indexers": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Indexers
-         * @description Composição da classe RENDA_FIXA por tag de indexador — atual × alvo.
-         *
-         *     Junta os dois lados da classe: os saldos das contas e as posições de renda variável que
-         *     o usuário atribuiu ao bucket `RENDA_FIXA` (um IMAB11 pesa na cesta ao lado de um CDB).
-         *     Ghostfolio fora do ar não derruba a resposta: a parte de renda fixa continua correta e
-         *     a resposta diz o que ficou de fora.
-         */
-        get: operations["indexers_api_fixed_income_indexers_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Fixed Income Summary */
+    get: operations["fixed_income_summary_api_fixed_income_summary_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/fixed-income/indexers": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/fixed-income/accounts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Create Account */
-        post: operations["create_account_api_fixed_income_accounts_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /**
+     * Indexers
+     * @description Composição da classe RENDA_FIXA por tag de indexador — atual × alvo.
+     *
+     *     Junta os dois lados da classe: os saldos das contas e as posições de renda variável que
+     *     o usuário atribuiu ao bucket `RENDA_FIXA` (um IMAB11 pesa na cesta ao lado de um CDB).
+     *     Ghostfolio fora do ar não derruba a resposta: a parte de renda fixa continua correta e
+     *     a resposta diz o que ficou de fora.
+     */
+    get: operations["indexers_api_fixed_income_indexers_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/fixed-income/accounts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/fixed-income/accounts/{account_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Archive Account */
-        delete: operations["archive_account_api_fixed_income_accounts__account_id__delete"];
-        options?: never;
-        head?: never;
-        /** Update Account */
-        patch: operations["update_account_api_fixed_income_accounts__account_id__patch"];
-        trace?: never;
+    get?: never;
+    put?: never;
+    /** Create Account */
+    post: operations["create_account_api_fixed_income_accounts_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/fixed-income/accounts/{account_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/fixed-income/accounts/{account_id}/entries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Entries */
-        get: operations["list_entries_api_fixed_income_accounts__account_id__entries_get"];
-        put?: never;
-        /** Add Entry */
-        post: operations["add_entry_api_fixed_income_accounts__account_id__entries_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Archive Account */
+    delete: operations["archive_account_api_fixed_income_accounts__account_id__delete"];
+    options?: never;
+    head?: never;
+    /** Update Account */
+    patch: operations["update_account_api_fixed_income_accounts__account_id__patch"];
+    trace?: never;
+  };
+  "/api/fixed-income/accounts/{account_id}/entries": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/fixed-income/accounts/{account_id}/entries/{entry_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete Entry */
-        delete: operations["delete_entry_api_fixed_income_accounts__account_id__entries__entry_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List Entries */
+    get: operations["list_entries_api_fixed_income_accounts__account_id__entries_get"];
+    put?: never;
+    /** Add Entry */
+    post: operations["add_entry_api_fixed_income_accounts__account_id__entries_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/fixed-income/accounts/{account_id}/entries/{entry_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/orders": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Orders */
-        get: operations["list_orders_api_orders_get"];
-        put?: never;
-        /** Create Order */
-        post: operations["create_order_api_orders_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Entry */
+    delete: operations["delete_entry_api_fixed_income_accounts__account_id__entries__entry_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/orders": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/orders/{order_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete Order */
-        delete: operations["delete_order_api_orders__order_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List Orders */
+    get: operations["list_orders_api_orders_get"];
+    put?: never;
+    /** Create Order */
+    post: operations["create_order_api_orders_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/orders/{order_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/labels": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Labels */
-        get: operations["list_labels_api_labels_get"];
-        put?: never;
-        /** Create Label */
-        post: operations["create_label_api_labels_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Order */
+    delete: operations["delete_order_api_orders__order_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/labels": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/labels/assignments": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List Assignments */
-        get: operations["list_assignments_api_labels_assignments_get"];
-        /** Set Assignments */
-        put: operations["set_assignments_api_labels_assignments_put"];
-        post?: never;
-        /** Clear Assignments */
-        delete: operations["clear_assignments_api_labels_assignments_delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List Labels */
+    get: operations["list_labels_api_labels_get"];
+    put?: never;
+    /** Create Label */
+    post: operations["create_label_api_labels_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/labels/assignments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/labels/{label_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete Label */
-        delete: operations["delete_label_api_labels__label_id__delete"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** List Assignments */
+    get: operations["list_assignments_api_labels_assignments_get"];
+    /** Set Assignments */
+    put: operations["set_assignments_api_labels_assignments_put"];
+    post?: never;
+    /** Clear Assignments */
+    delete: operations["clear_assignments_api_labels_assignments_delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/labels/{label_id}": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/performance": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Performance */
-        get: operations["performance_api_performance_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    post?: never;
+    /** Delete Label */
+    delete: operations["delete_label_api_labels__label_id__delete"];
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/performance": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api/performance/capture": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Capture
-         * @description Captura a semana agora — o mesmo caminho do agendador, exposto para uso manual.
-         */
-        post: operations["capture_api_performance_capture_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    /** Performance */
+    get: operations["performance_api_performance_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/performance/capture": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    "/api": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Root */
-        get: operations["root_api_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+    get?: never;
+    put?: never;
+    /**
+     * Capture
+     * @description Captura a semana agora — o mesmo caminho do agendador, exposto para uso manual.
+     */
+    post: operations["capture_api_performance_capture_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    /** Root */
+    get: operations["root_api_get"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        /** AccountIn */
-        AccountIn: {
-            /**
-             * Name
-             * @description Ex.: 'CDB Banco X', 'Tesouro Selic 2029', 'Conta'.
-             */
-            name: string;
-            /** Institution */
-            institution?: string | null;
-            /**
-             * Kind
-             * @description 'cdb'|'tesouro'|'poupanca'|'conta'|'outro'.
-             */
-            kind?: string | null;
-            /**
-             * Benchmark
-             * @description 'cdi'|'selic'|'prefixado'|'ipca' (informativo).
-             */
-            benchmark?: string | null;
-            /**
-             * Counts In Portfolio
-             * @description Entra no patrimônio, nos gráficos e no cálculo de alvos.
-             * @default false
-             */
-            counts_in_portfolio: boolean;
-            /**
-             * Purpose
-             * @default investment
-             * @enum {string}
-             */
-            purpose: "investment" | "earmarked";
-            /**
-             * Liquidity
-             * @description 'immediate' (D+0/D+1) | 'scheduled' (janela/vencimento) | 'locked' (carência).
-             * @enum {string}
-             */
-            liquidity: "immediate" | "scheduled" | "locked";
-            /**
-             * Redeem Days
-             * @description Dias até o resgate cair na conta (informativo).
-             */
-            redeem_days?: number | null;
-        };
-        /**
-         * AccountPatch
-         * @description PATCH parcial da conta: só os campos enviados mudam. `archived=False` desarquiva —
-         *     arquivar deixou de ser sem-volta na UI.
-         *
-         *     A combinação proibida (`earmarked` + contar na carteira) é validada contra o estado
-         *     MESCLADO, no repositório: aqui só se enxerga metade do par.
-         */
-        AccountPatch: {
-            /** Name */
-            name?: string | null;
-            /** Institution */
-            institution?: string | null;
-            /** Kind */
-            kind?: string | null;
-            /** Benchmark */
-            benchmark?: string | null;
-            /** Archived */
-            archived?: boolean | null;
-            /** Counts In Portfolio */
-            counts_in_portfolio?: boolean | null;
-            /** Purpose */
-            purpose?: ("investment" | "earmarked") | null;
-            /** Liquidity */
-            liquidity?: ("immediate" | "scheduled" | "locked" | "unknown") | null;
-            /** Redeem Days */
-            redeem_days?: number | null;
-        };
-        /** AccountSummary */
-        AccountSummary: {
-            /** Id */
-            id: number;
-            /** Name */
-            name: string;
-            /** Institution */
-            institution?: string | null;
-            /** Kind */
-            kind?: string | null;
-            /** Benchmark */
-            benchmark?: string | null;
-            /**
-             * Archived
-             * @default false
-             */
-            archived: boolean;
-            /**
-             * Counts In Portfolio
-             * @default false
-             */
-            counts_in_portfolio: boolean;
-            /**
-             * Purpose
-             * @default investment
-             * @enum {string}
-             */
-            purpose: "investment" | "earmarked";
-            /**
-             * Liquidity
-             * @default unknown
-             * @enum {string}
-             */
-            liquidity: "immediate" | "scheduled" | "locked" | "unknown";
-            /** Redeem Days */
-            redeem_days?: number | null;
-            /**
-             * In Portfolio
-             * @description Efetivamente contabilizada no patrimônio (marcada e não earmarked).
-             * @default false
-             */
-            in_portfolio: boolean;
-            /**
-             * Current Balance
-             * @default 0
-             */
-            current_balance: number;
-            /**
-             * History Yield Annual
-             * @description Rendimento anualizado (fração).
-             */
-            history_yield_annual?: number | null;
-            /**
-             * History Yield Gain
-             * @description Ganho acumulado no histórico (BRL).
-             */
-            history_yield_gain?: number | null;
-            /** History Yield From */
-            history_yield_from?: string | null;
-            /** History Yield To */
-            history_yield_to?: string | null;
-            /** History Yield Business Days */
-            history_yield_business_days?: number | null;
-            /**
-             * Last Yield Annual
-             * @description Rendimento anualizado (fração).
-             */
-            last_yield_annual?: number | null;
-            /**
-             * Last Yield Gain
-             * @description Ganho do período (BRL).
-             */
-            last_yield_gain?: number | null;
-            /** Last Yield From */
-            last_yield_from?: string | null;
-            /** Last Yield To */
-            last_yield_to?: string | null;
-            /** Last Yield Business Days */
-            last_yield_business_days?: number | null;
-            /**
-             * Pct Of Cdi
-             * @description Rendimento do histórico como fração do CDI (1.0 = 100%).
-             */
-            pct_of_cdi?: number | null;
-        };
-        /** Allocations */
-        Allocations: {
-            /**
-             * By Class
-             * @description Peso por classe (0..1).
-             */
-            by_class?: {
-                [key: string]: number;
-            };
-            /**
-             * By Sector
-             * @description Peso por setor (0..1).
-             */
-            by_sector?: {
-                [key: string]: number;
-            };
-        };
-        /** Asset */
-        Asset: {
-            /** Ticker */
-            ticker: string;
-            /** Name */
-            name?: string | null;
-            /**
-             * Asset Class
-             * @description STOCK | FII | ETF | BDR.
-             * @default UNKNOWN
-             */
-            asset_class: string;
-            /** Sector */
-            sector?: string | null;
-            /**
-             * Price
-             * @description Cotação mais recente (BRL).
-             */
-            price?: number | null;
-            fundamentals?: components["schemas"]["Fundamentals"];
-            /**
-             * Dividends By Year
-             * @description Soma de dividendos por ano (ex: {'2023': 1.2, '2024': 1.4}). Base para preço-teto de Bazin e consistência.
-             */
-            dividends_by_year?: {
-                [key: string]: number;
-            };
-            /**
-             * Lot Size
-             * @description Tamanho do lote padrão (FII/ETF normalmente 1).
-             * @default 1
-             */
-            lot_size: number;
-            /**
-             * Missing
-             * @description Quais dados faltaram nesta consulta.
-             */
-            missing?: string[];
-            /**
-             * Stale
-             * @description True se veio de cache defasado.
-             * @default false
-             */
-            stale: boolean;
-            /**
-             * As Of
-             * @description Carimbo ISO da cotação/fundamentos.
-             */
-            as_of?: string | null;
-            /**
-             * Source
-             * @description Origem dos dados.
-             * @default brapi
-             */
-            source: string;
-        };
-        /**
-         * AssetAnalysis
-         * @description Leitura FACTUAL de um ativo — sem nota, sem ranking, sem estratégia.
-         *
-         *     Números calculados a partir das fontes (preço-teto de Bazin, consistência e
-         *     crescimento dos proventos, payout) e os alertas que decorrem deles.
-         */
-        AssetAnalysis: {
-            /** Ticker */
-            ticker: string;
-            /** Name */
-            name?: string | null;
-            /**
-             * Asset Class
-             * @default UNKNOWN
-             */
-            asset_class: string;
-            /** Sector */
-            sector?: string | null;
-            /** Price */
-            price?: number | null;
-            /** Dividend Yield */
-            dividend_yield?: number | null;
-            /**
-             * Dividend Yield Net
-             * @description DY líquido (JCP ×0,85).
-             */
-            dividend_yield_net?: number | null;
-            /** Bazin Ceiling Price */
-            bazin_ceiling_price?: number | null;
-            /** Bazin Below Ceiling */
-            bazin_below_ceiling?: boolean | null;
-            /** Bazin Margin */
-            bazin_margin?: number | null;
-            /**
-             * Bazin Target Yield
-             * @description DY-alvo usado no preço-teto.
-             * @default 0.06
-             */
-            bazin_target_yield: number;
-            /**
-             * Dividend Consistency
-             * @description Anos pagos ÷ anos analisados, penalizando cortes fortes (0..1).
-             */
-            dividend_consistency?: number | null;
-            /**
-             * Dividend Cagr
-             * @description Crescimento anual dos proventos (fração).
-             */
-            dividend_cagr?: number | null;
-            /**
-             * Payout Ratio
-             * @description Provento médio ÷ LPA (fração).
-             */
-            payout_ratio?: number | null;
-            /**
-             * Risk Level
-             * @default verde
-             */
-            risk_level: string;
-            /** Red Flags */
-            red_flags?: string[];
-            /**
-             * Highlights
-             * @description Pontos factuais favoráveis.
-             */
-            highlights?: string[];
-        };
-        /**
-         * AssetDetailResponse
-         * @description Detalhe de um ativo: dados crus (fundamentos, proventos) + a leitura factual.
-         */
-        AssetDetailResponse: {
-            asset: components["schemas"]["Asset"];
-            analysis: components["schemas"]["AssetAnalysis"];
-        };
-        /** AssignmentItem */
-        AssignmentItem: {
-            /** Label Id */
-            label_id: number;
-            /**
-             * Weight
-             * @description Exposição parcial (ex.: 0.6 INTL + 0.4 BR). Os pesos da mesma dimensão somam 1.0; 'bucket' aceita um rótulo só e força peso 1.0.
-             * @default 1
-             */
-            weight: number;
-        };
-        /** AssignmentOut */
-        AssignmentOut: {
-            /** Subject Type */
-            subject_type: string;
-            /** Subject Id */
-            subject_id: string;
-            /** Dimension */
-            dimension: string;
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /**
-             * Weight
-             * @default 1
-             */
-            weight: number;
-            /**
-             * Source
-             * @description 'user' quando o usuário escolheu; 'curated'/'suffix'/'fallback' quando o rótulo é o default herdado do mapa de `data/geography.py`.
-             * @default user
-             */
-            source: string;
-            /**
-             * Id
-             * @description Id da atribuição — nulo quando é default.
-             */
-            id?: number | null;
-            /** Label Id */
-            label_id?: number | null;
-        };
-        /**
-         * AssignmentsIn
-         * @description Substitui todas as atribuições de UMA dimensão para UM sujeito. Lista vazia limpa.
-         */
-        AssignmentsIn: {
-            /**
-             * Subject Type
-             * @enum {string}
-             */
-            subject_type: "ticker" | "fi_account";
-            /**
-             * Subject Id
-             * @description Ticker (normalizado) ou id da conta como texto.
-             */
-            subject_id: string;
-            /** Dimension */
-            dimension: string;
-            /** Items */
-            items?: components["schemas"]["AssignmentItem"][];
-        };
-        /** BenchmarkSeries */
-        BenchmarkSeries: {
-            /** Code */
-            code: string;
-            /** Label */
-            label: string;
-            /** Source */
-            source: string;
-            /**
-             * Proxy
-             * @description Ticker usado como aproximação do índice — tem taxa e tracking error.
-             */
-            proxy?: string | null;
-            /**
-             * Values
-             * @description Retorno acumulado em cada ponto da série, na mesma base do TWR.
-             */
-            values?: (number | null)[];
-        };
-        /** EntryIn */
-        EntryIn: {
-            /**
-             * Kind
-             * @description balance = atualização de saldo; deposit = aporte; withdrawal = resgate.
-             * @enum {string}
-             */
-            kind: "balance" | "deposit" | "withdrawal";
-            /**
-             * Amount
-             * @description Saldo observado (balance) ou valor (deposit/withdrawal).
-             */
-            amount: number;
-            /**
-             * Entry Date
-             * @description Data ISO yyyy-mm-dd (padrão: hoje, Brasil).
-             */
-            entry_date?: string | null;
-            /** Note */
-            note?: string | null;
-        };
-        /** ExposureDimension */
-        ExposureDimension: {
-            /**
-             * Dimension
-             * @description 'class' | 'sector' | 'geography'.
-             */
-            dimension: string;
-            /** Items */
-            items?: components["schemas"]["ExposureItem"][];
-        };
-        /**
-         * ExposureItem
-         * @description Uma fatia de uma dimensão de composição, com a meta OPCIONAL e informativa.
-         */
-        ExposureItem: {
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /**
-             * Value
-             * @description Valor em BRL.
-             * @default 0
-             */
-            value: number;
-            /**
-             * Pct
-             * @description Fatia do patrimônio (0..1).
-             * @default 0
-             */
-            pct: number;
-            /**
-             * Target Pct
-             * @description Meta informativa (0..1), se houver.
-             */
-            target_pct?: number | null;
-            /**
-             * Deviation Pp
-             * @description Atual − meta, em pontos percentuais.
-             */
-            deviation_pp?: number | null;
-            /** Members */
-            members?: components["schemas"]["ExposureMember"][];
-        };
-        /**
-         * ExposureMember
-         * @description O que compõe uma fatia — um ticker ou uma conta de renda fixa.
-         */
-        ExposureMember: {
-            /**
-             * Label
-             * @description Ticker ou nome da conta.
-             */
-            label: string;
-            /**
-             * Name
-             * @description Nome do ativo ou instituição.
-             */
-            name?: string | null;
-            /**
-             * Value
-             * @description Contribuição para esta fatia (BRL).
-             * @default 0
-             */
-            value: number;
-        };
-        /**
-         * ExposureResponse
-         * @description Composição do patrimônio INTEIRO: renda variável + renda fixa que conta na carteira.
-         *
-         *     O total daqui é maior que o de `/api/portfolio`, que lê só o Ghostfolio. As dimensões
-         *     além de `class` são de visualização: nenhuma decisão de compra passa por elas.
-         */
-        ExposureResponse: {
-            /**
-             * Total
-             * @description Patrimônio (BRL): renda variável + renda fixa marcada.
-             * @default 0
-             */
-            total: number;
-            /**
-             * Rv Total
-             * @description Parte de renda variável (BRL).
-             * @default 0
-             */
-            rv_total: number;
-            /**
-             * Rf Total
-             * @description Parte de renda fixa que conta na carteira (BRL).
-             * @default 0
-             */
-            rf_total: number;
-            /** Dimensions */
-            dimensions?: components["schemas"]["ExposureDimension"][];
-            /**
-             * Currency
-             * @default BRL
-             */
-            currency: string;
-            /** Warnings */
-            warnings?: string[];
-        };
-        /**
-         * FixedIncomeSuggestion
-         * @description A parcela de renda fixa do aporte — o primeiro degrau da cascata.
-         *
-         *     A compra de renda fixa é manual e feita fora do app, então aqui não há quantidade de
-         *     cotas: a saída é uma INSTRUÇÃO em reais, com o atalho para lançar o novo saldo na
-         *     conta sugerida (o app não pede que ninguém redigite o que já sabe).
-         */
-        FixedIncomeSuggestion: {
-            /**
-             * Directed Now
-             * @description Total do aporte que vai para a renda fixa.
-             * @default 0
-             */
-            directed_now: number;
-            /**
-             * Floor Part
-             * @description Parte que cobre o PISO da reserva (BRL).
-             * @default 0
-             */
-            floor_part: number;
-            /**
-             * Weight Part
-             * @description Parte que cobre o PESO da classe (BRL).
-             * @default 0
-             */
-            weight_part: number;
-            /**
-             * Current Value
-             * @description Valor atual da classe RENDA_FIXA (BRL).
-             * @default 0
-             */
-            current_value: number;
-            /**
-             * Target Amount
-             * @description Alvo da classe pelo peso (BRL).
-             * @default 0
-             */
-            target_amount: number;
-            /**
-             * Gap Brl
-             * @description Gap da classe em BRL (0 quando está acima do alvo).
-             * @default 0
-             */
-            gap_brl: number;
-            /**
-             * Gap Pp
-             * @description O mesmo gap em pontos percentuais do patrimônio.
-             * @default 0
-             */
-            gap_pp: number;
-            /** By Indexer */
-            by_indexer?: components["schemas"]["IndexerAllocation"][];
-            /**
-             * Note
-             * @description Uma linha factual sobre o que fazer.
-             */
-            note?: string | null;
-        };
-        /** FixedIncomeSummary */
-        FixedIncomeSummary: {
-            /** Accounts */
-            accounts?: components["schemas"]["AccountSummary"][];
-            /**
-             * Total Balance
-             * @description Tudo que existe na aba Reserva (contas ativas).
-             * @default 0
-             */
-            total_balance: number;
-            /**
-             * Portfolio Balance
-             * @description Parte que conta na carteira (marcada e com propósito 'investment').
-             * @default 0
-             */
-            portfolio_balance: number;
-            /**
-             * Liquid Balance
-             * @description Reserva LÍQUIDA: da parte que conta na carteira, só o que tem resgate imediato. É o que satisfaz o piso da reserva.
-             * @default 0
-             */
-            liquid_balance: number;
-            /**
-             * Excluded Balance
-             * @description Saldo que não conta na carteira (não marcado ou earmarked).
-             * @default 0
-             */
-            excluded_balance: number;
-            /**
-             * Excluded Unmarked
-             * @description Excluído por não estar marcado (BRL).
-             * @default 0
-             */
-            excluded_unmarked: number;
-            /**
-             * Excluded Earmarked
-             * @description Excluído por ter destino definido — 'earmarked' (BRL).
-             * @default 0
-             */
-            excluded_earmarked: number;
-            /**
-             * Total Gain
-             * @description Rendimento acumulado somado (BRL) das contas ativas. É caixa, então soma; a TAXA de cada conta fica no cartão dela, porque taxas não se somam.
-             * @default 0
-             */
-            total_gain: number;
-            /** @description Status do piso da reserva (nulo quando não há piso configurado). */
-            floor?: components["schemas"]["FloorStatus"] | null;
-            /**
-             * Cdi Annual
-             * @description CDI anualizado (fração), benchmark.
-             */
-            cdi_annual?: number | null;
-            /**
-             * Currency
-             * @default BRL
-             */
-            currency: string;
-        };
-        /**
-         * FloorStatus
-         * @description Piso da reserva contra a renda fixa LÍQUIDA — o indicador próprio da aba Reserva.
-         *
-         *     Fica separado do total de renda fixa de propósito: o piso mede se existe dinheiro
-         *     disponível HOJE, e uma aplicação travada não responde a essa pergunta por mais que
-         *     engorde o patrimônio.
-         */
-        FloorStatus: {
-            /**
-             * Floor Nominal
-             * @default 0
-             */
-            floor_nominal: number;
-            /**
-             * Floor Corrected
-             * @default 0
-             */
-            floor_corrected: number;
-            /** Floor Date */
-            floor_date?: string | null;
-            /**
-             * Index
-             * @default none
-             */
-            index: string;
-            /**
-             * Index Available
-             * @default true
-             */
-            index_available: boolean;
-            /**
-             * Liquid Reserve
-             * @default 0
-             */
-            liquid_reserve: number;
-            /**
-             * Deficit
-             * @default 0
-             */
-            deficit: number;
-            /**
-             * Pct Filled
-             * @default 1
-             */
-            pct_filled: number;
-        };
-        /**
-         * Fundamentals
-         * @description Fundamentos de um ativo. Campos podem ser None quando a brapi não fornece.
-         */
-        Fundamentals: {
-            /**
-             * Pvp
-             * @description Preço / Valor Patrimonial (priceToBook).
-             */
-            pvp?: number | null;
-            /**
-             * Pl
-             * @description Preço / Lucro (priceEarnings).
-             */
-            pl?: number | null;
-            /**
-             * Dividend Yield
-             * @description Dividend yield BRUTO trailing-365d (0..1, ex: 0.092 = 9,2%).
-             */
-            dividend_yield?: number | null;
-            /**
-             * Dividend Yield Net
-             * @description Dividend yield LÍQUIDO (JCP×0,85; dividendo/FII isentos), trailing-365d.
-             */
-            dividend_yield_net?: number | null;
-            /**
-             * Lpa
-             * @description Lucro por ação (base do Número de Graham).
-             */
-            lpa?: number | null;
-            /**
-             * Vpa
-             * @description Valor patrimonial por ação (base do Número de Graham).
-             */
-            vpa?: number | null;
-            /**
-             * Market Cap
-             * @description Valor de mercado.
-             */
-            market_cap?: number | null;
-            /**
-             * Roe
-             * @description Return on equity (0..1).
-             */
-            roe?: number | null;
-            /**
-             * Net Margin
-             * @description Margem líquida (0..1).
-             */
-            net_margin?: number | null;
-            /**
-             * Net Debt To Ebitda
-             * @description Dívida líquida / EBITDA.
-             */
-            net_debt_to_ebitda?: number | null;
-            /**
-             * Current Ratio
-             * @description Liquidez corrente (ativo circ./passivo circ.).
-             */
-            current_ratio?: number | null;
-            /**
-             * Avg Daily Liquidity
-             * @description Volume financeiro médio diário (R$).
-             */
-            avg_daily_liquidity?: number | null;
-        };
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
-        /** IncomeAsset */
-        IncomeAsset: {
-            /** Ticker */
-            ticker: string;
-            /** Name */
-            name?: string | null;
-            /** Value */
-            value: number;
-            /** Dividend Yield */
-            dividend_yield: number;
-            /** Annual Income */
-            annual_income: number;
-            /** Cost Basis */
-            cost_basis?: number | null;
-            /**
-             * Yield On Cost
-             * @description Renda anual ÷ preço médio pago.
-             */
-            yield_on_cost?: number | null;
-        };
-        /** IncomeResponse */
-        IncomeResponse: {
-            /**
-             * Annual Income
-             * @default 0
-             */
-            annual_income: number;
-            /**
-             * Monthly Income
-             * @default 0
-             */
-            monthly_income: number;
-            /**
-             * Annual Income Gross
-             * @description Renda anual bruta (antes do IR do JCP).
-             */
-            annual_income_gross?: number | null;
-            /**
-             * Monthly Income Gross
-             * @description Renda mensal bruta (antes do IR do JCP).
-             */
-            monthly_income_gross?: number | null;
-            /**
-             * Portfolio Yield
-             * @default 0
-             */
-            portfolio_yield: number;
-            /**
-             * Yield On Cost
-             * @description YoC agregado (renda ÷ custo total).
-             */
-            yield_on_cost?: number | null;
-            /**
-             * Total Value
-             * @default 0
-             */
-            total_value: number;
-            /** By Asset */
-            by_asset?: components["schemas"]["IncomeAsset"][];
-            /**
-             * Currency
-             * @default BRL
-             */
-            currency: string;
-            /** Warnings */
-            warnings?: string[];
-        };
-        /**
-         * IndexerAllocation
-         * @description Quanto do aporte vai para UMA instrução de renda fixa.
-         *
-         *     Três tipos, uma lista só. Duas listas separadas obrigariam o leitor a re-somar as
-         *     partes para saber quanto foi para a classe — que é a única pergunta que o cartão
-         *     responde.
-         *
-         *     * `floor` — o piso da reserva. Um valor, a lançar numa conta de resgate imediato; a
-         *       escolha da conta é do usuário, então não vem nem indexador nem conta sugerida. É
-         *       sempre a primeira da lista: é o primeiro degrau da cascata.
-         *     * `indexer` — uma tag da cesta (CDI, IPCA, LCI). Cumpre-se lançando dinheiro numa
-         *       conta, em qualquer valor, e o app aponta a que já tem aquela tag.
-         *     * `ticker` — um ETF de renda fixa. Cumpre-se comprando cotas, com lote e ticket mínimo.
-         */
-        IndexerAllocation: {
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /**
-             * Amount
-             * @description Valor a aplicar neste item (BRL). Num ticker é `cotas × preço` — o gasto REAL depois do lote, para a soma do cartão bater com o que sai da conta.
-             * @default 0
-             */
-            amount: number;
-            /**
-             * Current Value
-             * @description Quanto já existe neste item (BRL).
-             * @default 0
-             */
-            current_value: number;
-            /**
-             * Target Pct
-             * @description Peso-alvo dentro da classe (0..1).
-             * @default 0
-             */
-            target_pct: number;
-            /**
-             * Account Id
-             * @description Conta sugerida para o lançamento (só quando kind='indexer').
-             */
-            account_id?: number | null;
-            /** Account Name */
-            account_name?: string | null;
-            /**
-             * Kind
-             * @description 'floor' = piso, lançar em conta de resgate imediato (a escolha é do usuário); 'indexer' = lançar na conta sugerida; 'ticker' = comprar cotas.
-             * @default indexer
-             */
-            kind: string;
-            /**
-             * Ticker
-             * @description Ticker a comprar (só em kind='ticker').
-             */
-            ticker?: string | null;
-            /**
-             * Price
-             * @description Cotação usada no cálculo (BRL).
-             */
-            price?: number | null;
-            /**
-             * Shares
-             * @description Cotas inteiras a comprar.
-             * @default 0
-             */
-            shares: number;
-            /**
-             * Lot Size
-             * @description Tamanho do lote considerado.
-             * @default 1
-             */
-            lot_size: number;
-        };
-        /**
-         * IndexerSlice
-         * @description Uma tag de indexador como item da cesta de RENDA_FIXA — o análogo de um ticker.
-         */
-        IndexerSlice: {
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /**
-             * Value
-             * @description Saldos das contas com a tag + posições de RV atribuídas.
-             * @default 0
-             */
-            value: number;
-            /**
-             * Current Pct
-             * @description Fatia da classe RENDA_FIXA hoje (0..1).
-             * @default 0
-             */
-            current_pct: number;
-            /**
-             * Target Pct
-             * @description Peso-alvo dentro da classe (0..1).
-             * @default 0
-             */
-            target_pct: number;
-            /**
-             * Gap
-             * @description Quanto falta em R$ para o peso-alvo (negativo = acima).
-             * @default 0
-             */
-            gap: number;
-        };
-        /** IndexersResponse */
-        IndexersResponse: {
-            /** Items */
-            items?: components["schemas"]["IndexerSlice"][];
-            /**
-             * Total
-             * @description Valor total da classe RENDA_FIXA (BRL).
-             * @default 0
-             */
-            total: number;
-            /** Warnings */
-            warnings?: string[];
-            /**
-             * Currency
-             * @default BRL
-             */
-            currency: string;
-        };
-        /** LabelIn */
-        LabelIn: {
-            /**
-             * Dimension
-             * @description 'bucket' | 'indexer' | 'geography'.
-             */
-            dimension: string;
-            /**
-             * Code
-             * @description Código curto, normalizado em MAIÚSCULAS (ex.: 'LCI').
-             */
-            code: string;
-            /**
-             * Name
-             * @description Nome exibido. Vazio usa o próprio código.
-             */
-            name?: string | null;
-        };
-        /** LabelOut */
-        LabelOut: {
-            /** Id */
-            id: number;
-            /**
-             * Dimension
-             * @description 'bucket' | 'indexer' | 'geography'.
-             */
-            dimension: string;
-            /** Code */
-            code: string;
-            /** Name */
-            name: string;
-            /**
-             * Builtin
-             * @description Embutido — não pode ser removido.
-             * @default false
-             */
-            builtin: boolean;
-        };
-        /**
-         * LegacySummary
-         * @description Quanto está parado em ativos fora da carteira alvo, e o que isso cobriria.
-         *
-         *     É ARITMÉTICA, não sugestão de venda: o app não recomenda vender nada. O que ele
-         *     responde é quanto do gap atual está em capital que já não segue a estratégia — número
-         *     que o usuário não consegue estimar de cabeça.
-         */
-        LegacySummary: {
-            /**
-             * Value
-             * @description Valor em ativos fora do alvo (BRL).
-             * @default 0
-             */
-            value: number;
-            /** Tickers */
-            tickers?: string[];
-            /**
-             * Gap
-             * @description Quanto falta comprar para atingir os alvos (BRL).
-             * @default 0
-             */
-            gap: number;
-            /**
-             * Gap Coverage
-             * @description Fração do gap que o legado cobriria (0..1+). None quando não há gap.
-             */
-            gap_coverage?: number | null;
-        };
-        /** LoginBody */
-        LoginBody: {
-            /** Password */
-            password: string;
-        };
-        /** OrderIn */
-        OrderIn: {
-            /** Ticker */
-            ticker: string;
-            /** Asset Class */
-            asset_class?: string | null;
-            /**
-             * Shares
-             * @description Quantidade de cotas/ações compradas.
-             */
-            shares: number;
-            /**
-             * Price
-             * @description Preço pago por cota (BRL).
-             */
-            price: number;
-            /**
-             * Fees
-             * @description Custos/corretagem (BRL).
-             * @default 0
-             */
-            fees: number;
-            /**
-             * Executed At
-             * @description Data ISO (padrão: agora).
-             */
-            executed_at?: string | null;
-            /** Note */
-            note?: string | null;
-            /** Plan Id */
-            plan_id?: number | null;
-        };
-        /** OrderOut */
-        OrderOut: {
-            /** Id */
-            id: number;
-            /** Ticker */
-            ticker: string;
-            /** Asset Class */
-            asset_class?: string | null;
-            /** Shares */
-            shares: number;
-            /** Price */
-            price: number;
-            /**
-             * Fees
-             * @default 0
-             */
-            fees: number;
-            /** Executed At */
-            executed_at?: string | null;
-            /** Note */
-            note?: string | null;
-            /** Plan Id */
-            plan_id?: number | null;
-        };
-        /** OrdersListResponse */
-        OrdersListResponse: {
-            /** Items */
-            items?: components["schemas"]["OrderOut"][];
-            /**
-             * Total Invested
-             * @default 0
-             */
-            total_invested: number;
-            /**
-             * Currency
-             * @default BRL
-             */
-            currency: string;
-        };
-        /**
-         * PerformanceResponse
-         * @description Curva de rendimento: TWR da carteira contra os índices.
-         *
-         *     Só o TWR é comparado com índice. O XIRR responde outra pergunta ("quanto o MEU
-         *     dinheiro rendeu") e por isso vem separado, sem par de comparação.
-         */
-        PerformanceResponse: {
-            /** Points */
-            points?: components["schemas"]["WeeklyPoint"][];
-            /** Benchmarks */
-            benchmarks?: components["schemas"]["BenchmarkSeries"][];
-            /**
-             * Composite Weights
-             * @description Pesos do benchmark composto, derivados da carteira alvo do usuário.
-             */
-            composite_weights?: {
-                [key: string]: number;
-            };
-            /**
-             * Twr
-             * @description TWR acumulado da janela (fração).
-             */
-            twr?: number | null;
-            /** Twr Annualized */
-            twr_annualized?: number | null;
-            /**
-             * Xirr
-             * @description Retorno ponderado pelo dinheiro, anualizado (fração).
-             */
-            xirr?: number | null;
-            /**
-             * Invested
-             * @description Aportes líquidos no período (BRL).
-             * @default 0
-             */
-            invested: number;
-            /**
-             * Current Value
-             * @default 0
-             */
-            current_value: number;
-            /**
-             * Window
-             * @description Janela pedida: '3m' | '6m' | '12m' | 'all'.
-             * @default all
-             */
-            window: string;
-            /**
-             * Gaps
-             * @description Semanas sem captura dentro da série.
-             */
-            gaps?: string[];
-            /** Warnings */
-            warnings?: string[];
-            /**
-             * Currency
-             * @default BRL
-             */
-            currency: string;
-        };
-        /**
-         * PlanAsset
-         * @description Um ativo da carteira alvo dentro do plano.
-         *
-         *     Só `ticker` é obrigatório: planos antigos, persistidos com outro formato, precisam
-         *     continuar sendo lidos por GET /plan/latest (campo que falta vira default).
-         */
-        PlanAsset: {
-            /** Ticker */
-            ticker: string;
-            /** Name */
-            name?: string | null;
-            /**
-             * Asset Class
-             * @default UNKNOWN
-             */
-            asset_class: string;
-            /** Sector */
-            sector?: string | null;
-            /** Price */
-            price?: number | null;
-            /**
-             * Dividend Yield
-             * @description DY anual em fração (0..1).
-             */
-            dividend_yield?: number | null;
-            /**
-             * Basket Target Pct
-             * @description Peso-alvo do ativo na cesta da classe, definido pelo usuário.
-             */
-            basket_target_pct?: number | null;
-            /**
-             * Basket Current Pct
-             * @description Peso atual do ativo na cesta (valor dele ÷ valor da cesta hoje).
-             */
-            basket_current_pct?: number | null;
-            /**
-             * Basket After Pct
-             * @description Peso do ativo na cesta DEPOIS das compras sugeridas.
-             */
-            basket_after_pct?: number | null;
-            /**
-             * Basket Gap Brl
-             * @description Quanto falta em R$ para o peso-alvo, medido sobre a cesta já com o aporte (positivo = abaixo do alvo; é isto que determina a compra).
-             */
-            basket_gap_brl?: number | null;
-            /**
-             * Bazin Ceiling Price
-             * @description Preço-teto de Bazin em BRL (dividendo médio ÷ DY-alvo). None se indisponível.
-             */
-            bazin_ceiling_price?: number | null;
-            /**
-             * Bazin Below Ceiling
-             * @description True se o preço atual está abaixo do teto (zona de compra).
-             */
-            bazin_below_ceiling?: boolean | null;
-            /**
-             * Bazin Margin
-             * @description Margem sobre o teto em [-1,1] (positivo = comprando com desconto).
-             */
-            bazin_margin?: number | null;
-            /**
-             * Risk Level
-             * @description Selo de risco factual: verde | amarelo | vermelho.
-             * @default verde
-             */
-            risk_level: string;
-            /**
-             * Red Flags
-             * @description Pontos de atenção (por que olhar duas vezes).
-             */
-            red_flags?: string[];
-            /**
-             * Reasons
-             * @description Frases curtas explicando a sugestão (ou a ausência dela).
-             */
-            reasons?: string[];
-            suggested?: components["schemas"]["SuggestedBuy"] | null;
-        };
-        /** PlanRequest */
-        PlanRequest: {
-            /**
-             * Aporte
-             * @description Quanto você tem para investir hoje (BRL).
-             */
-            aporte: number;
-            /**
-             * Classes
-             * @description Classes que devem receber este aporte (STOCK/FII/ETF/BDR). Omitido = todas. Lista vazia é erro (não há o que planejar).
-             */
-            classes?: string[] | null;
-            /**
-             * Targets
-             * @description Alvos de alocação por classe (0..1). Se omitido, usa o default.
-             */
-            targets?: {
-                [key: string]: number;
-            } | null;
-            /**
-             * Min Ticket
-             * @description Valor mínimo para ABRIR posição em um ativo (BRL).
-             * @default 100
-             */
-            min_ticket: number;
-            /**
-             * Reserve Target
-             * @deprecated
-             * @description APOSENTADO e IGNORADO: a reserva deixou de ser uma fração do patrimônio e virou um piso em R$ dentro da classe RENDA_FIXA (preferências).
-             */
-            reserve_target?: number | null;
-            /**
-             * Reserve Current
-             * @description Sobrepõe a reserva LÍQUIDA lida do rastreador de renda fixa (BRL).
-             */
-            reserve_current?: number | null;
-            /**
-             * Reserve Floor
-             * @description Sobrepõe o piso da reserva das preferências (BRL).
-             */
-            reserve_floor?: number | null;
-            /**
-             * Reserve Floor Share
-             * @description Teto do aporte para o PISO da reserva (0..1). Omitido usa a preferência salva; 1 é prioridade absoluta.
-             */
-            reserve_floor_share?: number | null;
-            /**
-             * Allow Empty Portfolio
-             * @description Permite gerar plano SEM conseguir ler a carteira (fail-open explícito). Por padrão o plano é abortado: alocar dinheiro real sobre carteira vazia produz sugestões materialmente erradas.
-             * @default false
-             */
-            allow_empty_portfolio: boolean;
-        };
-        /** PlanResponse */
-        PlanResponse: {
-            /** Aporte */
-            aporte: number;
-            /**
-             * Currency
-             * @default BRL
-             */
-            currency: string;
-            /** As Of */
-            as_of: string;
-            /** Targets By Class */
-            targets_by_class?: {
-                [key: string]: number;
-            };
-            /** Current By Class */
-            current_by_class?: {
-                [key: string]: number;
-            };
-            /** Ranking */
-            ranking?: components["schemas"]["PlanAsset"][];
-            /**
-             * Unallocated
-             * @description Sobra do aporte não alocada (BRL).
-             * @default 0
-             */
-            unallocated: number;
-            /** @description Status do piso da reserva (quando há um piso configurado). */
-            reserve?: components["schemas"]["ReserveSuggestion"] | null;
-            /** @description Parcela de renda fixa do aporte (quando a classe tem peso ou piso). */
-            fixed_income?: components["schemas"]["FixedIncomeSuggestion"] | null;
-            /** @description Ativos fora da carteira alvo (quando existem). */
-            legacy?: components["schemas"]["LegacySummary"] | null;
-            /**
-             * Classes Applied
-             * @description Classes marcadas que tinham composição e entraram no plano.
-             */
-            classes_applied?: string[];
-            /**
-             * Classes Skipped
-             * @description Classes marcadas SEM composição definida — puladas.
-             */
-            classes_skipped?: string[];
-            /** Warnings */
-            warnings?: string[];
-            /**
-             * Plan Id
-             * @description Id do plano persistido (plan_history).
-             */
-            plan_id?: number | null;
-            /**
-             * Created At
-             * @description Quando o plano foi gerado (planos salvos).
-             */
-            created_at?: string | null;
-        };
-        /**
-         * PlanSummary
-         * @description Resumo de um plano salvo (lista 'Planos anteriores').
-         */
-        PlanSummary: {
-            /** Id */
-            id: number;
-            /** Created At */
-            created_at?: string | null;
-            /** Aporte */
-            aporte?: number | null;
-            /** Suggested Count */
-            suggested_count?: number | null;
-        };
-        /** Portfolio */
-        Portfolio: {
-            /**
-             * Total Value
-             * @description Valor total da carteira (BRL).
-             */
-            total_value: number;
-            /**
-             * Currency
-             * @description Moeda de referência.
-             * @default BRL
-             */
-            currency: string;
-            /** Positions */
-            positions?: components["schemas"]["Position"][];
-            allocations?: components["schemas"]["Allocations"];
-            /**
-             * As Of
-             * @description Carimbo ISO da leitura.
-             */
-            as_of: string;
-            /**
-             * Source
-             * @description Origem dos dados.
-             * @default ghostfolio
-             */
-            source: string;
-            /** Warnings */
-            warnings?: string[];
-        };
-        /** Position */
-        Position: {
-            /**
-             * Ticker
-             * @description Símbolo do ativo (ex: 'BBAS3').
-             */
-            ticker: string;
-            /**
-             * Name
-             * @description Nome do ativo, se disponível.
-             */
-            name?: string | null;
-            /**
-             * Asset Class
-             * @description STOCK | FII | ETF | BDR | UNKNOWN.
-             * @default UNKNOWN
-             */
-            asset_class: string;
-            /**
-             * Sector
-             * @description Setor, se conhecido.
-             */
-            sector?: string | null;
-            /**
-             * Value
-             * @description Valor de mercado da posição (BRL).
-             */
-            value: number;
-            /**
-             * Weight
-             * @description Peso na carteira (0..1).
-             */
-            weight: number;
-            /**
-             * Quantity
-             * @description Quantidade de cotas/ações.
-             */
-            quantity?: number | null;
-            /**
-             * Cost Basis
-             * @description Custo total da posição (BRL), se conhecido.
-             */
-            cost_basis?: number | null;
-            /**
-             * Average Price
-             * @description Preço médio de compra (BRL).
-             */
-            average_price?: number | null;
-            /**
-             * Net Performance Pct
-             * @description Rentabilidade líquida da posição (fração) — do Ghostfolio, se disponível.
-             */
-            net_performance_pct?: number | null;
-            /**
-             * Source
-             * @description Origem do dado.
-             * @default ghostfolio:holdings
-             */
-            source: string;
-        };
-        /**
-         * PreferencesBody
-         * @description Campos opcionais — só os enviados são atualizados (patch).
-         */
-        PreferencesBody: {
-            /** Aporte Default */
-            aporte_default?: number | null;
-            /** Targets */
-            targets?: {
-                [key: string]: unknown;
-            } | null;
-            /** Min Ticket */
-            min_ticket?: number | null;
-            /** Lot Mode */
-            lot_mode?: string | null;
-            /**
-             * Reserve Target
-             * @deprecated
-             * @description APOSENTADO: era a fração do patrimônio em renda fixa. Virou o peso da classe RENDA_FIXA (em `targets`) mais o piso em R$ (`reserve_floor_amount`).
-             */
-            reserve_target?: number | null;
-            /** Bazin Target Mode */
-            bazin_target_mode?: string | null;
-            /** Bazin Target Yield */
-            bazin_target_yield?: number | null;
-            /** Class Targets */
-            class_targets?: {
-                [key: string]: {
-                    [key: string]: number;
-                };
-            } | null;
-            /**
-             * Reserve Floor Amount
-             * @description Piso da reserva em R$ — o mínimo que fica em renda fixa LÍQUIDA.
-             */
-            reserve_floor_amount?: number | null;
-            /**
-             * Reserve Floor Date
-             * @description Data-base do piso (ISO). É de onde a correção pelo IPCA parte.
-             */
-            reserve_floor_date?: string | null;
-            /**
-             * Reserve Floor Index
-             * @description 'ipca' corrige o piso pela inflação; 'none' o deixa nominal.
-             */
-            reserve_floor_index?: ("none" | "ipca") | null;
-            /**
-             * Dimension Targets
-             * @description Metas das dimensões SECUNDÁRIAS ({'geography': {'INTL': 0.2}}). Informativas: não têm efeito algum sobre a compra.
-             */
-            dimension_targets?: {
-                [key: string]: {
-                    [key: string]: number;
-                };
-            } | null;
-            /**
-             * Legacy In Total
-             * @description Se os ativos fora da carteira alvo entram no patrimônio que serve de base para os alvos em R$ das demais classes.
-             */
-            legacy_in_total?: boolean | null;
-            /**
-             * Reserve Floor Share
-             * @description Teto do aporte para o PISO da reserva (0..1). 1 = prioridade absoluta (padrão). Com o piso já composto não há déficit e o teto não faz nada.
-             */
-            reserve_floor_share?: number | null;
-        };
-        /**
-         * RadarItem
-         * @description Linha do radar: os dados de DECISÃO de cada ativo observado.
-         */
-        RadarItem: {
-            /** Ticker */
-            ticker: string;
-            /**
-             * Asset Class
-             * @default STOCK
-             */
-            asset_class: string;
-            /** Price */
-            price?: number | null;
-            /** Dividend Yield */
-            dividend_yield?: number | null;
-            /** Dividend Yield Net */
-            dividend_yield_net?: number | null;
-            /** Ceiling Price */
-            ceiling_price?: number | null;
-            /**
-             * Margin
-             * @description (teto − preço) ÷ teto; positivo = desconto.
-             */
-            margin?: number | null;
-            /** Below Ceiling */
-            below_ceiling?: boolean | null;
-            /**
-             * In Portfolio
-             * @default false
-             */
-            in_portfolio: boolean;
-        };
-        /** RadarResponse */
-        RadarResponse: {
-            /** Items */
-            items?: components["schemas"]["RadarItem"][];
-            /**
-             * Bazin Target Yield
-             * @default 0.06
-             */
-            bazin_target_yield: number;
-            /**
-             * Below Count
-             * @default 0
-             */
-            below_count: number;
-            /** Warnings */
-            warnings?: string[];
-        };
-        /**
-         * ReserveSuggestion
-         * @description Status do PISO da reserva e quanto deste aporte ele consome.
-         *
-         *     Os cinco primeiros campos mantêm os nomes que sempre tiveram porque o PAPEL deles não
-         *     mudou — alvo em R$, quanto existe, quanto falta, quanto está preenchido, quanto vai
-         *     agora. O que mudou foi a definição do alvo: era `fração × patrimônio` e passou a ser o
-         *     piso corrigido. Todos têm default para que `GET /plan/latest` continue conseguindo ler
-         *     os planos gravados antes desta mudança.
-         */
-        ReserveSuggestion: {
-            /**
-             * Target Amount
-             * @description Piso corrigido — o alvo em BRL.
-             * @default 0
-             */
-            target_amount: number;
-            /**
-             * Current Amount
-             * @description Reserva LÍQUIDA (BRL): só contas que contam na carteira, de propósito 'investment' e com resgate imediato.
-             * @default 0
-             */
-            current_amount: number;
-            /**
-             * Gap
-             * @description Déficit do piso (BRL).
-             * @default 0
-             */
-            gap: number;
-            /**
-             * Pct Filled
-             * @description Fração do piso já preenchida (0..1).
-             * @default 0
-             */
-            pct_filled: number;
-            /**
-             * Directed Now
-             * @description Quanto deste aporte vai para a reserva (BRL).
-             * @default 0
-             */
-            directed_now: number;
-            /**
-             * Benchmark Cdi Annual
-             * @description CDI anualizado (fração), referência.
-             */
-            benchmark_cdi_annual?: number | null;
-            /**
-             * Floor Nominal
-             * @description Piso como o usuário digitou, sem correção.
-             * @default 0
-             */
-            floor_nominal: number;
-            /**
-             * Floor Date
-             * @description Data-base do piso (ISO).
-             */
-            floor_date?: string | null;
-            /**
-             * Floor Index
-             * @description 'none' | 'ipca'.
-             * @default none
-             */
-            floor_index: string;
-            /**
-             * Floor Index Available
-             * @description False quando o IPCA não veio e o piso exibido é o nominal.
-             * @default true
-             */
-            floor_index_available: boolean;
-            /**
-             * Note
-             * @default O piso da reserva é coberto antes de qualquer compra.
-             */
-            note: string;
-        };
-        /**
-         * SuggestedBuy
-         * @description Quanto comprar de um ativo — com a aritmética completa, auditável.
-         */
-        SuggestedBuy: {
-            /**
-             * Target Amount
-             * @description Valor-alvo a aportar neste ativo (BRL).
-             */
-            target_amount: number;
-            /**
-             * Price
-             * @description Cotação usada no cálculo (BRL).
-             */
-            price?: number | null;
-            /**
-             * Shares
-             * @description Número inteiro de cotas/ações sugerido.
-             * @default 0
-             */
-            shares: number;
-            /**
-             * Invested Exact
-             * @description shares * price — gasto real estimado.
-             * @default 0
-             */
-            invested_exact: number;
-            /**
-             * Lot Size
-             * @description Tamanho do lote considerado.
-             * @default 1
-             */
-            lot_size: number;
-            /**
-             * Lot Note
-             * @description Observação sobre lote/arredondamento.
-             */
-            lot_note?: string | null;
-        };
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-            /** Input */
-            input?: unknown;
-            /** Context */
-            ctx?: Record<string, never>;
-        };
-        /** WatchlistAdd */
-        WatchlistAdd: {
-            /** Ticker */
-            ticker: string;
-            /** Note */
-            note?: string | null;
-        };
-        /** WeeklyPoint */
-        WeeklyPoint: {
-            /**
-             * Week Of
-             * @description Semana ISO 'yyyy-Www'.
-             */
-            week_of: string;
-            /**
-             * Week End
-             * @description Domingo de fechamento (ISO).
-             */
-            week_end: string;
-            /** Captured At */
-            captured_at: string;
-            /**
-             * Late
-             * @description Capturado fora da janela pretendida.
-             * @default false
-             */
-            late: boolean;
-            /** Total Value */
-            total_value: number;
-            /** Rv Value */
-            rv_value?: number | null;
-            /** Rf Value */
-            rf_value?: number | null;
-            /**
-             * Flow Net
-             * @default 0
-             */
-            flow_net: number;
-            /**
-             * Twr Period
-             * @description Retorno do período (fração).
-             */
-            twr_period?: number | null;
-            /**
-             * Twr Cumulative
-             * @description TWR acumulado (fração).
-             */
-            twr_cumulative?: number | null;
-        };
-        /** YocPoint */
-        YocPoint: {
-            /** Month */
-            month: string;
-            /** Yoc */
-            yoc?: number | null;
-        };
+  schemas: {
+    /** AccountIn */
+    AccountIn: {
+      /**
+       * Name
+       * @description Ex.: 'CDB Banco X', 'Tesouro Selic 2029', 'Conta'.
+       */
+      name: string;
+      /** Institution */
+      institution?: string | null;
+      /**
+       * Kind
+       * @description 'cdb'|'tesouro'|'poupanca'|'conta'|'outro'.
+       */
+      kind?: string | null;
+      /**
+       * Benchmark
+       * @description 'cdi'|'selic'|'prefixado'|'ipca' (informativo).
+       */
+      benchmark?: string | null;
+      /**
+       * Counts In Portfolio
+       * @description Entra no patrimônio, nos gráficos e no cálculo de alvos.
+       * @default false
+       */
+      counts_in_portfolio: boolean;
+      /**
+       * Purpose
+       * @default investment
+       * @enum {string}
+       */
+      purpose: "investment" | "earmarked";
+      /**
+       * Liquidity
+       * @description 'immediate' (D+0/D+1) | 'scheduled' (janela/vencimento) | 'locked' (carência).
+       * @enum {string}
+       */
+      liquidity: "immediate" | "scheduled" | "locked";
+      /**
+       * Redeem Days
+       * @description Dias até o resgate cair na conta (informativo).
+       */
+      redeem_days?: number | null;
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    /**
+     * AccountPatch
+     * @description PATCH parcial da conta: só os campos enviados mudam. `archived=False` desarquiva —
+     *     arquivar deixou de ser sem-volta na UI.
+     *
+     *     A combinação proibida (`earmarked` + contar na carteira) é validada contra o estado
+     *     MESCLADO, no repositório: aqui só se enxerga metade do par.
+     */
+    AccountPatch: {
+      /** Name */
+      name?: string | null;
+      /** Institution */
+      institution?: string | null;
+      /** Kind */
+      kind?: string | null;
+      /** Benchmark */
+      benchmark?: string | null;
+      /** Archived */
+      archived?: boolean | null;
+      /** Counts In Portfolio */
+      counts_in_portfolio?: boolean | null;
+      /** Purpose */
+      purpose?: ("investment" | "earmarked") | null;
+      /** Liquidity */
+      liquidity?: ("immediate" | "scheduled" | "locked" | "unknown") | null;
+      /** Redeem Days */
+      redeem_days?: number | null;
+    };
+    /** AccountSummary */
+    AccountSummary: {
+      /** Id */
+      id: number;
+      /** Name */
+      name: string;
+      /** Institution */
+      institution?: string | null;
+      /** Kind */
+      kind?: string | null;
+      /** Benchmark */
+      benchmark?: string | null;
+      /**
+       * Archived
+       * @default false
+       */
+      archived: boolean;
+      /**
+       * Counts In Portfolio
+       * @default false
+       */
+      counts_in_portfolio: boolean;
+      /**
+       * Purpose
+       * @default investment
+       * @enum {string}
+       */
+      purpose: "investment" | "earmarked";
+      /**
+       * Liquidity
+       * @default unknown
+       * @enum {string}
+       */
+      liquidity: "immediate" | "scheduled" | "locked" | "unknown";
+      /** Redeem Days */
+      redeem_days?: number | null;
+      /**
+       * In Portfolio
+       * @description Efetivamente contabilizada no patrimônio (marcada e não earmarked).
+       * @default false
+       */
+      in_portfolio: boolean;
+      /**
+       * Current Balance
+       * @default 0
+       */
+      current_balance: number;
+      /**
+       * History Yield Annual
+       * @description Rendimento anualizado (fração).
+       */
+      history_yield_annual?: number | null;
+      /**
+       * History Yield Gain
+       * @description Ganho acumulado no histórico (BRL).
+       */
+      history_yield_gain?: number | null;
+      /** History Yield From */
+      history_yield_from?: string | null;
+      /** History Yield To */
+      history_yield_to?: string | null;
+      /** History Yield Business Days */
+      history_yield_business_days?: number | null;
+      /**
+       * Last Yield Annual
+       * @description Rendimento anualizado (fração).
+       */
+      last_yield_annual?: number | null;
+      /**
+       * Last Yield Gain
+       * @description Ganho do período (BRL).
+       */
+      last_yield_gain?: number | null;
+      /** Last Yield From */
+      last_yield_from?: string | null;
+      /** Last Yield To */
+      last_yield_to?: string | null;
+      /** Last Yield Business Days */
+      last_yield_business_days?: number | null;
+      /**
+       * Pct Of Cdi
+       * @description Rendimento do histórico como fração do CDI (1.0 = 100%).
+       */
+      pct_of_cdi?: number | null;
+    };
+    /** Allocations */
+    Allocations: {
+      /**
+       * By Class
+       * @description Peso por classe (0..1).
+       */
+      by_class?: {
+        [key: string]: number;
+      };
+      /**
+       * By Sector
+       * @description Peso por setor (0..1).
+       */
+      by_sector?: {
+        [key: string]: number;
+      };
+    };
+    /** Asset */
+    Asset: {
+      /** Ticker */
+      ticker: string;
+      /** Name */
+      name?: string | null;
+      /**
+       * Asset Class
+       * @description STOCK | FII | ETF | BDR.
+       * @default UNKNOWN
+       */
+      asset_class: string;
+      /** Sector */
+      sector?: string | null;
+      /**
+       * Price
+       * @description Cotação mais recente (BRL).
+       */
+      price?: number | null;
+      fundamentals?: components["schemas"]["Fundamentals"];
+      /**
+       * Dividends By Year
+       * @description Soma de dividendos por ano (ex: {'2023': 1.2, '2024': 1.4}). Base para preço-teto de Bazin e consistência.
+       */
+      dividends_by_year?: {
+        [key: string]: number;
+      };
+      /**
+       * Lot Size
+       * @description Tamanho do lote padrão (FII/ETF normalmente 1).
+       * @default 1
+       */
+      lot_size: number;
+      /**
+       * Missing
+       * @description Quais dados faltaram nesta consulta.
+       */
+      missing?: string[];
+      /**
+       * Stale
+       * @description True se veio de cache defasado.
+       * @default false
+       */
+      stale: boolean;
+      /**
+       * As Of
+       * @description Carimbo ISO da cotação/fundamentos.
+       */
+      as_of?: string | null;
+      /**
+       * Source
+       * @description Origem dos dados.
+       * @default brapi
+       */
+      source: string;
+    };
+    /**
+     * AssetAnalysis
+     * @description Leitura FACTUAL de um ativo — sem nota, sem ranking, sem estratégia.
+     *
+     *     Números calculados a partir das fontes (preço-teto de Bazin, consistência e
+     *     crescimento dos proventos, payout) e os alertas que decorrem deles.
+     */
+    AssetAnalysis: {
+      /** Ticker */
+      ticker: string;
+      /** Name */
+      name?: string | null;
+      /**
+       * Asset Class
+       * @default UNKNOWN
+       */
+      asset_class: string;
+      /** Sector */
+      sector?: string | null;
+      /** Price */
+      price?: number | null;
+      /** Dividend Yield */
+      dividend_yield?: number | null;
+      /**
+       * Dividend Yield Net
+       * @description DY líquido (JCP ×0,85).
+       */
+      dividend_yield_net?: number | null;
+      /** Bazin Ceiling Price */
+      bazin_ceiling_price?: number | null;
+      /** Bazin Below Ceiling */
+      bazin_below_ceiling?: boolean | null;
+      /** Bazin Margin */
+      bazin_margin?: number | null;
+      /**
+       * Bazin Target Yield
+       * @description DY-alvo usado no preço-teto.
+       * @default 0.06
+       */
+      bazin_target_yield: number;
+      /**
+       * Dividend Consistency
+       * @description Anos pagos ÷ anos analisados, penalizando cortes fortes (0..1).
+       */
+      dividend_consistency?: number | null;
+      /**
+       * Dividend Cagr
+       * @description Crescimento anual dos proventos (fração).
+       */
+      dividend_cagr?: number | null;
+      /**
+       * Payout Ratio
+       * @description Provento médio ÷ LPA (fração).
+       */
+      payout_ratio?: number | null;
+      /**
+       * Risk Level
+       * @default verde
+       */
+      risk_level: string;
+      /** Red Flags */
+      red_flags?: string[];
+      /**
+       * Highlights
+       * @description Pontos factuais favoráveis.
+       */
+      highlights?: string[];
+    };
+    /**
+     * AssetDetailResponse
+     * @description Detalhe de um ativo: dados crus (fundamentos, proventos) + a leitura factual.
+     */
+    AssetDetailResponse: {
+      asset: components["schemas"]["Asset"];
+      analysis: components["schemas"]["AssetAnalysis"];
+    };
+    /** AssignmentItem */
+    AssignmentItem: {
+      /** Label Id */
+      label_id: number;
+      /**
+       * Weight
+       * @description Exposição parcial (ex.: 0.6 INTL + 0.4 BR). Os pesos da mesma dimensão somam 1.0; 'bucket' aceita um rótulo só e força peso 1.0.
+       * @default 1
+       */
+      weight: number;
+    };
+    /** AssignmentOut */
+    AssignmentOut: {
+      /** Subject Type */
+      subject_type: string;
+      /** Subject Id */
+      subject_id: string;
+      /** Dimension */
+      dimension: string;
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /**
+       * Weight
+       * @default 1
+       */
+      weight: number;
+      /**
+       * Source
+       * @description 'user' quando o usuário escolheu; 'curated'/'suffix'/'fallback' quando o rótulo é o default herdado do mapa de `data/geography.py`.
+       * @default user
+       */
+      source: string;
+      /**
+       * Id
+       * @description Id da atribuição — nulo quando é default.
+       */
+      id?: number | null;
+      /** Label Id */
+      label_id?: number | null;
+    };
+    /**
+     * AssignmentsIn
+     * @description Substitui todas as atribuições de UMA dimensão para UM sujeito. Lista vazia limpa.
+     */
+    AssignmentsIn: {
+      /**
+       * Subject Type
+       * @enum {string}
+       */
+      subject_type: "ticker" | "fi_account";
+      /**
+       * Subject Id
+       * @description Ticker (normalizado) ou id da conta como texto.
+       */
+      subject_id: string;
+      /** Dimension */
+      dimension: string;
+      /** Items */
+      items?: components["schemas"]["AssignmentItem"][];
+    };
+    /** BenchmarkSeries */
+    BenchmarkSeries: {
+      /** Code */
+      code: string;
+      /** Label */
+      label: string;
+      /** Source */
+      source: string;
+      /**
+       * Proxy
+       * @description Ticker usado como aproximação do índice — tem taxa e tracking error.
+       */
+      proxy?: string | null;
+      /**
+       * Values
+       * @description Retorno acumulado em cada ponto da série, na mesma base do TWR.
+       */
+      values?: (number | null)[];
+    };
+    /** EntryIn */
+    EntryIn: {
+      /**
+       * Kind
+       * @description balance = atualização de saldo; deposit = aporte; withdrawal = resgate.
+       * @enum {string}
+       */
+      kind: "balance" | "deposit" | "withdrawal";
+      /**
+       * Amount
+       * @description Saldo observado (balance) ou valor (deposit/withdrawal).
+       */
+      amount: number;
+      /**
+       * Entry Date
+       * @description Data ISO yyyy-mm-dd (padrão: hoje, Brasil).
+       */
+      entry_date?: string | null;
+      /** Note */
+      note?: string | null;
+    };
+    /** ExposureDimension */
+    ExposureDimension: {
+      /**
+       * Dimension
+       * @description 'class' | 'sector' | 'geography'.
+       */
+      dimension: string;
+      /** Items */
+      items?: components["schemas"]["ExposureItem"][];
+    };
+    /**
+     * ExposureItem
+     * @description Uma fatia de uma dimensão de composição, com a meta OPCIONAL e informativa.
+     */
+    ExposureItem: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /**
+       * Value
+       * @description Valor em BRL.
+       * @default 0
+       */
+      value: number;
+      /**
+       * Pct
+       * @description Fatia do patrimônio (0..1).
+       * @default 0
+       */
+      pct: number;
+      /**
+       * Target Pct
+       * @description Meta informativa (0..1), se houver.
+       */
+      target_pct?: number | null;
+      /**
+       * Deviation Pp
+       * @description Atual − meta, em pontos percentuais.
+       */
+      deviation_pp?: number | null;
+      /** Members */
+      members?: components["schemas"]["ExposureMember"][];
+    };
+    /**
+     * ExposureMember
+     * @description O que compõe uma fatia — um ticker ou uma conta de renda fixa.
+     */
+    ExposureMember: {
+      /**
+       * Label
+       * @description Ticker ou nome da conta.
+       */
+      label: string;
+      /**
+       * Name
+       * @description Nome do ativo ou instituição.
+       */
+      name?: string | null;
+      /**
+       * Value
+       * @description Contribuição para esta fatia (BRL).
+       * @default 0
+       */
+      value: number;
+    };
+    /**
+     * ExposureResponse
+     * @description Composição do patrimônio INTEIRO: renda variável + renda fixa que conta na carteira.
+     *
+     *     O total daqui é maior que o de `/api/portfolio`, que lê só o Ghostfolio. As dimensões
+     *     além de `class` são de visualização: nenhuma decisão de compra passa por elas.
+     */
+    ExposureResponse: {
+      /**
+       * Total
+       * @description Patrimônio (BRL): renda variável + renda fixa marcada.
+       * @default 0
+       */
+      total: number;
+      /**
+       * Rv Total
+       * @description Parte de renda variável (BRL).
+       * @default 0
+       */
+      rv_total: number;
+      /**
+       * Rf Total
+       * @description Parte de renda fixa que conta na carteira (BRL).
+       * @default 0
+       */
+      rf_total: number;
+      /** Dimensions */
+      dimensions?: components["schemas"]["ExposureDimension"][];
+      /**
+       * Currency
+       * @default BRL
+       */
+      currency: string;
+      /** Warnings */
+      warnings?: string[];
+    };
+    /**
+     * FixedIncomeSuggestion
+     * @description A parcela de renda fixa do aporte — o primeiro degrau da cascata.
+     *
+     *     A compra de renda fixa é manual e feita fora do app, então aqui não há quantidade de
+     *     cotas: a saída é uma INSTRUÇÃO em reais, com o atalho para lançar o novo saldo na
+     *     conta sugerida (o app não pede que ninguém redigite o que já sabe).
+     */
+    FixedIncomeSuggestion: {
+      /**
+       * Directed Now
+       * @description Total do aporte que vai para a renda fixa.
+       * @default 0
+       */
+      directed_now: number;
+      /**
+       * Floor Part
+       * @description Parte que cobre o PISO da reserva (BRL).
+       * @default 0
+       */
+      floor_part: number;
+      /**
+       * Weight Part
+       * @description Parte que cobre o PESO da classe (BRL).
+       * @default 0
+       */
+      weight_part: number;
+      /**
+       * Current Value
+       * @description Valor atual da classe RENDA_FIXA (BRL).
+       * @default 0
+       */
+      current_value: number;
+      /**
+       * Target Amount
+       * @description Alvo da classe pelo peso (BRL).
+       * @default 0
+       */
+      target_amount: number;
+      /**
+       * Gap Brl
+       * @description Gap da classe em BRL (0 quando está acima do alvo).
+       * @default 0
+       */
+      gap_brl: number;
+      /**
+       * Gap Pp
+       * @description O mesmo gap em pontos percentuais do patrimônio.
+       * @default 0
+       */
+      gap_pp: number;
+      /** By Indexer */
+      by_indexer?: components["schemas"]["IndexerAllocation"][];
+      /**
+       * Note
+       * @description Uma linha factual sobre o que fazer.
+       */
+      note?: string | null;
+    };
+    /** FixedIncomeSummary */
+    FixedIncomeSummary: {
+      /** Accounts */
+      accounts?: components["schemas"]["AccountSummary"][];
+      /**
+       * Total Balance
+       * @description Tudo que existe na aba Reserva (contas ativas).
+       * @default 0
+       */
+      total_balance: number;
+      /**
+       * Portfolio Balance
+       * @description Parte que conta na carteira (marcada e com propósito 'investment').
+       * @default 0
+       */
+      portfolio_balance: number;
+      /**
+       * Liquid Balance
+       * @description Reserva LÍQUIDA: da parte que conta na carteira, só o que tem resgate imediato. É o que satisfaz o piso da reserva.
+       * @default 0
+       */
+      liquid_balance: number;
+      /**
+       * Excluded Balance
+       * @description Saldo que não conta na carteira (não marcado ou earmarked).
+       * @default 0
+       */
+      excluded_balance: number;
+      /**
+       * Excluded Unmarked
+       * @description Excluído por não estar marcado (BRL).
+       * @default 0
+       */
+      excluded_unmarked: number;
+      /**
+       * Excluded Earmarked
+       * @description Excluído por ter destino definido — 'earmarked' (BRL).
+       * @default 0
+       */
+      excluded_earmarked: number;
+      /**
+       * Total Gain
+       * @description Rendimento acumulado somado (BRL) das contas ativas. É caixa, então soma; a TAXA de cada conta fica no cartão dela, porque taxas não se somam.
+       * @default 0
+       */
+      total_gain: number;
+      /** @description Status do piso da reserva (nulo quando não há piso configurado). */
+      floor?: components["schemas"]["FloorStatus"] | null;
+      /**
+       * Cdi Annual
+       * @description CDI anualizado (fração), benchmark.
+       */
+      cdi_annual?: number | null;
+      /**
+       * Currency
+       * @default BRL
+       */
+      currency: string;
+    };
+    /**
+     * FloorStatus
+     * @description Piso da reserva contra a renda fixa LÍQUIDA — o indicador próprio da aba Reserva.
+     *
+     *     Fica separado do total de renda fixa de propósito: o piso mede se existe dinheiro
+     *     disponível HOJE, e uma aplicação travada não responde a essa pergunta por mais que
+     *     engorde o patrimônio.
+     */
+    FloorStatus: {
+      /**
+       * Floor Nominal
+       * @default 0
+       */
+      floor_nominal: number;
+      /**
+       * Floor Corrected
+       * @default 0
+       */
+      floor_corrected: number;
+      /** Floor Date */
+      floor_date?: string | null;
+      /**
+       * Index
+       * @default none
+       */
+      index: string;
+      /**
+       * Index Available
+       * @default true
+       */
+      index_available: boolean;
+      /**
+       * Liquid Reserve
+       * @default 0
+       */
+      liquid_reserve: number;
+      /**
+       * Deficit
+       * @default 0
+       */
+      deficit: number;
+      /**
+       * Pct Filled
+       * @default 1
+       */
+      pct_filled: number;
+    };
+    /**
+     * Fundamentals
+     * @description Fundamentos de um ativo. Campos podem ser None quando a brapi não fornece.
+     */
+    Fundamentals: {
+      /**
+       * Pvp
+       * @description Preço / Valor Patrimonial (priceToBook).
+       */
+      pvp?: number | null;
+      /**
+       * Pl
+       * @description Preço / Lucro (priceEarnings).
+       */
+      pl?: number | null;
+      /**
+       * Dividend Yield
+       * @description Dividend yield BRUTO trailing-365d (0..1, ex: 0.092 = 9,2%).
+       */
+      dividend_yield?: number | null;
+      /**
+       * Dividend Yield Net
+       * @description Dividend yield LÍQUIDO (JCP×0,85; dividendo/FII isentos), trailing-365d.
+       */
+      dividend_yield_net?: number | null;
+      /**
+       * Lpa
+       * @description Lucro por ação (base do Número de Graham).
+       */
+      lpa?: number | null;
+      /**
+       * Vpa
+       * @description Valor patrimonial por ação (base do Número de Graham).
+       */
+      vpa?: number | null;
+      /**
+       * Market Cap
+       * @description Valor de mercado.
+       */
+      market_cap?: number | null;
+      /**
+       * Roe
+       * @description Return on equity (0..1).
+       */
+      roe?: number | null;
+      /**
+       * Net Margin
+       * @description Margem líquida (0..1).
+       */
+      net_margin?: number | null;
+      /**
+       * Net Debt To Ebitda
+       * @description Dívida líquida / EBITDA.
+       */
+      net_debt_to_ebitda?: number | null;
+      /**
+       * Current Ratio
+       * @description Liquidez corrente (ativo circ./passivo circ.).
+       */
+      current_ratio?: number | null;
+      /**
+       * Avg Daily Liquidity
+       * @description Volume financeiro médio diário (R$).
+       */
+      avg_daily_liquidity?: number | null;
+    };
+    /** HTTPValidationError */
+    HTTPValidationError: {
+      /** Detail */
+      detail?: components["schemas"]["ValidationError"][];
+    };
+    /** IncomeAsset */
+    IncomeAsset: {
+      /** Ticker */
+      ticker: string;
+      /** Name */
+      name?: string | null;
+      /** Value */
+      value: number;
+      /** Dividend Yield */
+      dividend_yield: number;
+      /** Annual Income */
+      annual_income: number;
+      /** Cost Basis */
+      cost_basis?: number | null;
+      /**
+       * Yield On Cost
+       * @description Renda anual ÷ preço médio pago.
+       */
+      yield_on_cost?: number | null;
+    };
+    /** IncomeResponse */
+    IncomeResponse: {
+      /**
+       * Annual Income
+       * @default 0
+       */
+      annual_income: number;
+      /**
+       * Monthly Income
+       * @default 0
+       */
+      monthly_income: number;
+      /**
+       * Annual Income Gross
+       * @description Renda anual bruta (antes do IR do JCP).
+       */
+      annual_income_gross?: number | null;
+      /**
+       * Monthly Income Gross
+       * @description Renda mensal bruta (antes do IR do JCP).
+       */
+      monthly_income_gross?: number | null;
+      /**
+       * Portfolio Yield
+       * @default 0
+       */
+      portfolio_yield: number;
+      /**
+       * Yield On Cost
+       * @description YoC agregado (renda ÷ custo total).
+       */
+      yield_on_cost?: number | null;
+      /**
+       * Total Value
+       * @default 0
+       */
+      total_value: number;
+      /** By Asset */
+      by_asset?: components["schemas"]["IncomeAsset"][];
+      /**
+       * Currency
+       * @default BRL
+       */
+      currency: string;
+      /** Warnings */
+      warnings?: string[];
+    };
+    /**
+     * IndexerAllocation
+     * @description Quanto do aporte vai para UMA instrução de renda fixa.
+     *
+     *     Três tipos, uma lista só. Duas listas separadas obrigariam o leitor a re-somar as
+     *     partes para saber quanto foi para a classe — que é a única pergunta que o cartão
+     *     responde.
+     *
+     *     * `floor` — o piso da reserva. Um valor, a lançar numa conta de resgate imediato; a
+     *       escolha da conta é do usuário, então não vem nem indexador nem conta sugerida. É
+     *       sempre a primeira da lista: é o primeiro degrau da cascata.
+     *     * `indexer` — uma tag da cesta (CDI, IPCA, LCI). Cumpre-se lançando dinheiro numa
+     *       conta, em qualquer valor, e o app aponta a que já tem aquela tag.
+     *     * `ticker` — um ETF de renda fixa. Cumpre-se comprando cotas, com lote e ticket mínimo.
+     */
+    IndexerAllocation: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /**
+       * Amount
+       * @description Valor a aplicar neste item (BRL). Num ticker é `cotas × preço` — o gasto REAL depois do lote, para a soma do cartão bater com o que sai da conta.
+       * @default 0
+       */
+      amount: number;
+      /**
+       * Current Value
+       * @description Quanto já existe neste item (BRL).
+       * @default 0
+       */
+      current_value: number;
+      /**
+       * Target Pct
+       * @description Peso-alvo dentro da classe (0..1).
+       * @default 0
+       */
+      target_pct: number;
+      /**
+       * Account Id
+       * @description Conta sugerida para o lançamento (só quando kind='indexer').
+       */
+      account_id?: number | null;
+      /** Account Name */
+      account_name?: string | null;
+      /**
+       * Kind
+       * @description 'floor' = piso, lançar em conta de resgate imediato (a escolha é do usuário); 'indexer' = lançar na conta sugerida; 'ticker' = comprar cotas.
+       * @default indexer
+       */
+      kind: string;
+      /**
+       * Ticker
+       * @description Ticker a comprar (só em kind='ticker').
+       */
+      ticker?: string | null;
+      /**
+       * Price
+       * @description Cotação usada no cálculo (BRL).
+       */
+      price?: number | null;
+      /**
+       * Shares
+       * @description Cotas inteiras a comprar.
+       * @default 0
+       */
+      shares: number;
+      /**
+       * Lot Size
+       * @description Tamanho do lote considerado.
+       * @default 1
+       */
+      lot_size: number;
+    };
+    /**
+     * IndexerSlice
+     * @description Uma tag de indexador como item da cesta de RENDA_FIXA — o análogo de um ticker.
+     */
+    IndexerSlice: {
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /**
+       * Value
+       * @description Saldos das contas com a tag + posições de RV atribuídas.
+       * @default 0
+       */
+      value: number;
+      /**
+       * Current Pct
+       * @description Fatia da classe RENDA_FIXA hoje (0..1).
+       * @default 0
+       */
+      current_pct: number;
+      /**
+       * Target Pct
+       * @description Peso-alvo dentro da classe (0..1).
+       * @default 0
+       */
+      target_pct: number;
+      /**
+       * Gap
+       * @description Quanto falta em R$ para o peso-alvo (negativo = acima).
+       * @default 0
+       */
+      gap: number;
+    };
+    /** IndexersResponse */
+    IndexersResponse: {
+      /** Items */
+      items?: components["schemas"]["IndexerSlice"][];
+      /**
+       * Total
+       * @description Valor total da classe RENDA_FIXA (BRL).
+       * @default 0
+       */
+      total: number;
+      /** Warnings */
+      warnings?: string[];
+      /**
+       * Currency
+       * @default BRL
+       */
+      currency: string;
+    };
+    /** LabelIn */
+    LabelIn: {
+      /**
+       * Dimension
+       * @description 'bucket' | 'indexer' | 'geography'.
+       */
+      dimension: string;
+      /**
+       * Code
+       * @description Código curto, normalizado em MAIÚSCULAS (ex.: 'LCI').
+       */
+      code: string;
+      /**
+       * Name
+       * @description Nome exibido. Vazio usa o próprio código.
+       */
+      name?: string | null;
+    };
+    /** LabelOut */
+    LabelOut: {
+      /** Id */
+      id: number;
+      /**
+       * Dimension
+       * @description 'bucket' | 'indexer' | 'geography'.
+       */
+      dimension: string;
+      /** Code */
+      code: string;
+      /** Name */
+      name: string;
+      /**
+       * Builtin
+       * @description Embutido — não pode ser removido.
+       * @default false
+       */
+      builtin: boolean;
+    };
+    /**
+     * LegacySummary
+     * @description Quanto está parado em ativos fora da carteira alvo, e o que isso cobriria.
+     *
+     *     É ARITMÉTICA, não sugestão de venda: o app não recomenda vender nada. O que ele
+     *     responde é quanto do gap atual está em capital que já não segue a estratégia — número
+     *     que o usuário não consegue estimar de cabeça.
+     */
+    LegacySummary: {
+      /**
+       * Value
+       * @description Valor em ativos fora do alvo (BRL).
+       * @default 0
+       */
+      value: number;
+      /** Tickers */
+      tickers?: string[];
+      /**
+       * Gap
+       * @description Quanto falta comprar para atingir os alvos (BRL).
+       * @default 0
+       */
+      gap: number;
+      /**
+       * Gap Coverage
+       * @description Fração do gap que o legado cobriria (0..1+). None quando não há gap.
+       */
+      gap_coverage?: number | null;
+    };
+    /** LoginBody */
+    LoginBody: {
+      /** Password */
+      password: string;
+    };
+    /** OrderIn */
+    OrderIn: {
+      /** Ticker */
+      ticker: string;
+      /** Asset Class */
+      asset_class?: string | null;
+      /**
+       * Shares
+       * @description Quantidade de cotas/ações compradas.
+       */
+      shares: number;
+      /**
+       * Price
+       * @description Preço pago por cota (BRL).
+       */
+      price: number;
+      /**
+       * Fees
+       * @description Custos/corretagem (BRL).
+       * @default 0
+       */
+      fees: number;
+      /**
+       * Executed At
+       * @description Data ISO (padrão: agora).
+       */
+      executed_at?: string | null;
+      /** Note */
+      note?: string | null;
+      /** Plan Id */
+      plan_id?: number | null;
+    };
+    /** OrderOut */
+    OrderOut: {
+      /** Id */
+      id: number;
+      /** Ticker */
+      ticker: string;
+      /** Asset Class */
+      asset_class?: string | null;
+      /** Shares */
+      shares: number;
+      /** Price */
+      price: number;
+      /**
+       * Fees
+       * @default 0
+       */
+      fees: number;
+      /** Executed At */
+      executed_at?: string | null;
+      /** Note */
+      note?: string | null;
+      /** Plan Id */
+      plan_id?: number | null;
+    };
+    /** OrdersListResponse */
+    OrdersListResponse: {
+      /** Items */
+      items?: components["schemas"]["OrderOut"][];
+      /**
+       * Total Invested
+       * @default 0
+       */
+      total_invested: number;
+      /**
+       * Currency
+       * @default BRL
+       */
+      currency: string;
+    };
+    /**
+     * PerformanceResponse
+     * @description Curva de rendimento: TWR da carteira contra os índices.
+     *
+     *     Só o TWR é comparado com índice. O XIRR responde outra pergunta ("quanto o MEU
+     *     dinheiro rendeu") e por isso vem separado, sem par de comparação.
+     */
+    PerformanceResponse: {
+      /** Points */
+      points?: components["schemas"]["WeeklyPoint"][];
+      /** Benchmarks */
+      benchmarks?: components["schemas"]["BenchmarkSeries"][];
+      /**
+       * Composite Weights
+       * @description Pesos do benchmark composto, derivados da carteira alvo do usuário.
+       */
+      composite_weights?: {
+        [key: string]: number;
+      };
+      /**
+       * Twr
+       * @description TWR acumulado da janela (fração).
+       */
+      twr?: number | null;
+      /** Twr Annualized */
+      twr_annualized?: number | null;
+      /**
+       * Xirr
+       * @description Retorno ponderado pelo dinheiro, anualizado (fração).
+       */
+      xirr?: number | null;
+      /**
+       * Invested
+       * @description Aportes líquidos no período (BRL).
+       * @default 0
+       */
+      invested: number;
+      /**
+       * Current Value
+       * @default 0
+       */
+      current_value: number;
+      /**
+       * Window
+       * @description Janela pedida: '3m' | '6m' | '12m' | 'all'.
+       * @default all
+       */
+      window: string;
+      /**
+       * Gaps
+       * @description Semanas sem captura dentro da série.
+       */
+      gaps?: string[];
+      /** Warnings */
+      warnings?: string[];
+      /**
+       * Currency
+       * @default BRL
+       */
+      currency: string;
+    };
+    /**
+     * PlanAsset
+     * @description Um ativo da carteira alvo dentro do plano.
+     *
+     *     Só `ticker` é obrigatório: planos antigos, persistidos com outro formato, precisam
+     *     continuar sendo lidos por GET /plan/latest (campo que falta vira default).
+     */
+    PlanAsset: {
+      /** Ticker */
+      ticker: string;
+      /** Name */
+      name?: string | null;
+      /**
+       * Asset Class
+       * @default UNKNOWN
+       */
+      asset_class: string;
+      /** Sector */
+      sector?: string | null;
+      /** Price */
+      price?: number | null;
+      /**
+       * Dividend Yield
+       * @description DY anual em fração (0..1).
+       */
+      dividend_yield?: number | null;
+      /**
+       * Basket Target Pct
+       * @description Peso-alvo do ativo na cesta da classe, definido pelo usuário.
+       */
+      basket_target_pct?: number | null;
+      /**
+       * Basket Current Pct
+       * @description Peso atual do ativo na cesta (valor dele ÷ valor da cesta hoje).
+       */
+      basket_current_pct?: number | null;
+      /**
+       * Basket After Pct
+       * @description Peso do ativo na cesta DEPOIS das compras sugeridas.
+       */
+      basket_after_pct?: number | null;
+      /**
+       * Basket Gap Brl
+       * @description Quanto falta em R$ para o peso-alvo, medido sobre a cesta já com o aporte (positivo = abaixo do alvo; é isto que determina a compra).
+       */
+      basket_gap_brl?: number | null;
+      /**
+       * Bazin Ceiling Price
+       * @description Preço-teto de Bazin em BRL (dividendo médio ÷ DY-alvo). None se indisponível.
+       */
+      bazin_ceiling_price?: number | null;
+      /**
+       * Bazin Below Ceiling
+       * @description True se o preço atual está abaixo do teto (zona de compra).
+       */
+      bazin_below_ceiling?: boolean | null;
+      /**
+       * Bazin Margin
+       * @description Margem sobre o teto em [-1,1] (positivo = comprando com desconto).
+       */
+      bazin_margin?: number | null;
+      /**
+       * Risk Level
+       * @description Selo de risco factual: verde | amarelo | vermelho.
+       * @default verde
+       */
+      risk_level: string;
+      /**
+       * Red Flags
+       * @description Pontos de atenção (por que olhar duas vezes).
+       */
+      red_flags?: string[];
+      /**
+       * Reasons
+       * @description Frases curtas explicando a sugestão (ou a ausência dela).
+       */
+      reasons?: string[];
+      suggested?: components["schemas"]["SuggestedBuy"] | null;
+    };
+    /** PlanRequest */
+    PlanRequest: {
+      /**
+       * Aporte
+       * @description Quanto você tem para investir hoje (BRL).
+       */
+      aporte: number;
+      /**
+       * Classes
+       * @description Classes que devem receber este aporte (STOCK/FII/ETF/BDR). Omitido = todas. Lista vazia é erro (não há o que planejar).
+       */
+      classes?: string[] | null;
+      /**
+       * Targets
+       * @description Alvos de alocação por classe (0..1). Se omitido, usa o default.
+       */
+      targets?: {
+        [key: string]: number;
+      } | null;
+      /**
+       * Min Ticket
+       * @description Valor mínimo para ABRIR posição em um ativo (BRL).
+       * @default 100
+       */
+      min_ticket: number;
+      /**
+       * Reserve Target
+       * @deprecated
+       * @description APOSENTADO e IGNORADO: a reserva deixou de ser uma fração do patrimônio e virou um piso em R$ dentro da classe RENDA_FIXA (preferências).
+       */
+      reserve_target?: number | null;
+      /**
+       * Reserve Current
+       * @description Sobrepõe a reserva LÍQUIDA lida do rastreador de renda fixa (BRL).
+       */
+      reserve_current?: number | null;
+      /**
+       * Reserve Floor
+       * @description Sobrepõe o piso da reserva das preferências (BRL).
+       */
+      reserve_floor?: number | null;
+      /**
+       * Reserve Floor Share
+       * @description Teto do aporte para o PISO da reserva (0..1). Omitido usa a preferência salva; 1 é prioridade absoluta.
+       */
+      reserve_floor_share?: number | null;
+      /**
+       * Allow Empty Portfolio
+       * @description Permite gerar plano SEM conseguir ler a carteira (fail-open explícito). Por padrão o plano é abortado: alocar dinheiro real sobre carteira vazia produz sugestões materialmente erradas.
+       * @default false
+       */
+      allow_empty_portfolio: boolean;
+    };
+    /** PlanResponse */
+    PlanResponse: {
+      /** Aporte */
+      aporte: number;
+      /**
+       * Currency
+       * @default BRL
+       */
+      currency: string;
+      /** As Of */
+      as_of: string;
+      /** Targets By Class */
+      targets_by_class?: {
+        [key: string]: number;
+      };
+      /** Current By Class */
+      current_by_class?: {
+        [key: string]: number;
+      };
+      /** Ranking */
+      ranking?: components["schemas"]["PlanAsset"][];
+      /**
+       * Unallocated
+       * @description Sobra do aporte não alocada (BRL).
+       * @default 0
+       */
+      unallocated: number;
+      /** @description Status do piso da reserva (quando há um piso configurado). */
+      reserve?: components["schemas"]["ReserveSuggestion"] | null;
+      /** @description Parcela de renda fixa do aporte (quando a classe tem peso ou piso). */
+      fixed_income?: components["schemas"]["FixedIncomeSuggestion"] | null;
+      /** @description Ativos fora da carteira alvo (quando existem). */
+      legacy?: components["schemas"]["LegacySummary"] | null;
+      /**
+       * Classes Applied
+       * @description Classes marcadas que tinham composição e entraram no plano.
+       */
+      classes_applied?: string[];
+      /**
+       * Classes Skipped
+       * @description Classes marcadas SEM composição definida — puladas.
+       */
+      classes_skipped?: string[];
+      /** Warnings */
+      warnings?: string[];
+      /**
+       * Plan Id
+       * @description Id do plano persistido (plan_history).
+       */
+      plan_id?: number | null;
+      /**
+       * Created At
+       * @description Quando o plano foi gerado (planos salvos).
+       */
+      created_at?: string | null;
+    };
+    /**
+     * PlanSummary
+     * @description Resumo de um plano salvo (lista 'Planos anteriores').
+     */
+    PlanSummary: {
+      /** Id */
+      id: number;
+      /** Created At */
+      created_at?: string | null;
+      /** Aporte */
+      aporte?: number | null;
+      /** Suggested Count */
+      suggested_count?: number | null;
+    };
+    /** Portfolio */
+    Portfolio: {
+      /**
+       * Total Value
+       * @description Valor total da carteira (BRL).
+       */
+      total_value: number;
+      /**
+       * Currency
+       * @description Moeda de referência.
+       * @default BRL
+       */
+      currency: string;
+      /** Positions */
+      positions?: components["schemas"]["Position"][];
+      allocations?: components["schemas"]["Allocations"];
+      /**
+       * As Of
+       * @description Carimbo ISO da leitura.
+       */
+      as_of: string;
+      /**
+       * Source
+       * @description Origem dos dados.
+       * @default ghostfolio
+       */
+      source: string;
+      /** Warnings */
+      warnings?: string[];
+    };
+    /** Position */
+    Position: {
+      /**
+       * Ticker
+       * @description Símbolo do ativo (ex: 'BBAS3').
+       */
+      ticker: string;
+      /**
+       * Name
+       * @description Nome do ativo, se disponível.
+       */
+      name?: string | null;
+      /**
+       * Asset Class
+       * @description STOCK | FII | ETF | BDR | UNKNOWN.
+       * @default UNKNOWN
+       */
+      asset_class: string;
+      /**
+       * Sector
+       * @description Setor, se conhecido.
+       */
+      sector?: string | null;
+      /**
+       * Value
+       * @description Valor de mercado da posição (BRL).
+       */
+      value: number;
+      /**
+       * Weight
+       * @description Peso na carteira (0..1).
+       */
+      weight: number;
+      /**
+       * Quantity
+       * @description Quantidade de cotas/ações.
+       */
+      quantity?: number | null;
+      /**
+       * Cost Basis
+       * @description Custo total da posição (BRL), se conhecido.
+       */
+      cost_basis?: number | null;
+      /**
+       * Average Price
+       * @description Preço médio de compra (BRL).
+       */
+      average_price?: number | null;
+      /**
+       * Net Performance Pct
+       * @description Rentabilidade líquida da posição (fração) — do Ghostfolio, se disponível.
+       */
+      net_performance_pct?: number | null;
+      /**
+       * Source
+       * @description Origem do dado.
+       * @default ghostfolio:holdings
+       */
+      source: string;
+    };
+    /**
+     * PreferencesBody
+     * @description Campos opcionais — só os enviados são atualizados (patch).
+     */
+    PreferencesBody: {
+      /** Aporte Default */
+      aporte_default?: number | null;
+      /** Targets */
+      targets?: {
+        [key: string]: unknown;
+      } | null;
+      /** Min Ticket */
+      min_ticket?: number | null;
+      /** Lot Mode */
+      lot_mode?: string | null;
+      /**
+       * Reserve Target
+       * @deprecated
+       * @description APOSENTADO: era a fração do patrimônio em renda fixa. Virou o peso da classe RENDA_FIXA (em `targets`) mais o piso em R$ (`reserve_floor_amount`).
+       */
+      reserve_target?: number | null;
+      /** Bazin Target Mode */
+      bazin_target_mode?: string | null;
+      /** Bazin Target Yield */
+      bazin_target_yield?: number | null;
+      /** Class Targets */
+      class_targets?: {
+        [key: string]: {
+          [key: string]: number;
+        };
+      } | null;
+      /**
+       * Reserve Floor Amount
+       * @description Piso da reserva em R$ — o mínimo que fica em renda fixa LÍQUIDA.
+       */
+      reserve_floor_amount?: number | null;
+      /**
+       * Reserve Floor Date
+       * @description Data-base do piso (ISO). É de onde a correção pelo IPCA parte.
+       */
+      reserve_floor_date?: string | null;
+      /**
+       * Reserve Floor Index
+       * @description 'ipca' corrige o piso pela inflação; 'none' o deixa nominal.
+       */
+      reserve_floor_index?: ("none" | "ipca") | null;
+      /**
+       * Dimension Targets
+       * @description Metas das dimensões SECUNDÁRIAS ({'geography': {'INTL': 0.2}}). Informativas: não têm efeito algum sobre a compra.
+       */
+      dimension_targets?: {
+        [key: string]: {
+          [key: string]: number;
+        };
+      } | null;
+      /**
+       * Legacy In Total
+       * @description Se os ativos fora da carteira alvo entram no patrimônio que serve de base para os alvos em R$ das demais classes.
+       */
+      legacy_in_total?: boolean | null;
+      /**
+       * Reserve Floor Share
+       * @description Teto do aporte para o PISO da reserva (0..1). 1 = prioridade absoluta (padrão). Com o piso já composto não há déficit e o teto não faz nada.
+       */
+      reserve_floor_share?: number | null;
+    };
+    /**
+     * RadarItem
+     * @description Linha do radar: os dados de DECISÃO de cada ativo observado.
+     */
+    RadarItem: {
+      /** Ticker */
+      ticker: string;
+      /**
+       * Asset Class
+       * @default STOCK
+       */
+      asset_class: string;
+      /** Price */
+      price?: number | null;
+      /** Dividend Yield */
+      dividend_yield?: number | null;
+      /** Dividend Yield Net */
+      dividend_yield_net?: number | null;
+      /** Ceiling Price */
+      ceiling_price?: number | null;
+      /**
+       * Margin
+       * @description (teto − preço) ÷ teto; positivo = desconto.
+       */
+      margin?: number | null;
+      /** Below Ceiling */
+      below_ceiling?: boolean | null;
+      /**
+       * In Portfolio
+       * @default false
+       */
+      in_portfolio: boolean;
+    };
+    /** RadarResponse */
+    RadarResponse: {
+      /** Items */
+      items?: components["schemas"]["RadarItem"][];
+      /**
+       * Bazin Target Yield
+       * @default 0.06
+       */
+      bazin_target_yield: number;
+      /**
+       * Below Count
+       * @default 0
+       */
+      below_count: number;
+      /** Warnings */
+      warnings?: string[];
+    };
+    /**
+     * ReserveSuggestion
+     * @description Status do PISO da reserva e quanto deste aporte ele consome.
+     *
+     *     Os cinco primeiros campos mantêm os nomes que sempre tiveram porque o PAPEL deles não
+     *     mudou — alvo em R$, quanto existe, quanto falta, quanto está preenchido, quanto vai
+     *     agora. O que mudou foi a definição do alvo: era `fração × patrimônio` e passou a ser o
+     *     piso corrigido. Todos têm default para que `GET /plan/latest` continue conseguindo ler
+     *     os planos gravados antes desta mudança.
+     */
+    ReserveSuggestion: {
+      /**
+       * Target Amount
+       * @description Piso corrigido — o alvo em BRL.
+       * @default 0
+       */
+      target_amount: number;
+      /**
+       * Current Amount
+       * @description Reserva LÍQUIDA (BRL): só contas que contam na carteira, de propósito 'investment' e com resgate imediato.
+       * @default 0
+       */
+      current_amount: number;
+      /**
+       * Gap
+       * @description Déficit do piso (BRL).
+       * @default 0
+       */
+      gap: number;
+      /**
+       * Pct Filled
+       * @description Fração do piso já preenchida (0..1).
+       * @default 0
+       */
+      pct_filled: number;
+      /**
+       * Directed Now
+       * @description Quanto deste aporte vai para a reserva (BRL).
+       * @default 0
+       */
+      directed_now: number;
+      /**
+       * Benchmark Cdi Annual
+       * @description CDI anualizado (fração), referência.
+       */
+      benchmark_cdi_annual?: number | null;
+      /**
+       * Floor Nominal
+       * @description Piso como o usuário digitou, sem correção.
+       * @default 0
+       */
+      floor_nominal: number;
+      /**
+       * Floor Date
+       * @description Data-base do piso (ISO).
+       */
+      floor_date?: string | null;
+      /**
+       * Floor Index
+       * @description 'none' | 'ipca'.
+       * @default none
+       */
+      floor_index: string;
+      /**
+       * Floor Index Available
+       * @description False quando o IPCA não veio e o piso exibido é o nominal.
+       * @default true
+       */
+      floor_index_available: boolean;
+      /**
+       * Note
+       * @default O piso da reserva é coberto antes de qualquer compra.
+       */
+      note: string;
+    };
+    /**
+     * SuggestedBuy
+     * @description Quanto comprar de um ativo — com a aritmética completa, auditável.
+     */
+    SuggestedBuy: {
+      /**
+       * Target Amount
+       * @description Valor-alvo a aportar neste ativo (BRL).
+       */
+      target_amount: number;
+      /**
+       * Price
+       * @description Cotação usada no cálculo (BRL).
+       */
+      price?: number | null;
+      /**
+       * Shares
+       * @description Número inteiro de cotas/ações sugerido.
+       * @default 0
+       */
+      shares: number;
+      /**
+       * Invested Exact
+       * @description shares * price — gasto real estimado.
+       * @default 0
+       */
+      invested_exact: number;
+      /**
+       * Lot Size
+       * @description Tamanho do lote considerado.
+       * @default 1
+       */
+      lot_size: number;
+      /**
+       * Lot Note
+       * @description Observação sobre lote/arredondamento.
+       */
+      lot_note?: string | null;
+    };
+    /** ValidationError */
+    ValidationError: {
+      /** Location */
+      loc: (string | number)[];
+      /** Message */
+      msg: string;
+      /** Error Type */
+      type: string;
+      /** Input */
+      input?: unknown;
+      /** Context */
+      ctx?: Record<string, never>;
+    };
+    /** WatchlistAdd */
+    WatchlistAdd: {
+      /** Ticker */
+      ticker: string;
+      /** Note */
+      note?: string | null;
+    };
+    /** WeeklyPoint */
+    WeeklyPoint: {
+      /**
+       * Week Of
+       * @description Semana ISO 'yyyy-Www'.
+       */
+      week_of: string;
+      /**
+       * Week End
+       * @description Domingo de fechamento (ISO).
+       */
+      week_end: string;
+      /** Captured At */
+      captured_at: string;
+      /**
+       * Late
+       * @description Capturado fora da janela pretendida.
+       * @default false
+       */
+      late: boolean;
+      /** Total Value */
+      total_value: number;
+      /** Rv Value */
+      rv_value?: number | null;
+      /** Rf Value */
+      rf_value?: number | null;
+      /**
+       * Flow Net
+       * @default 0
+       */
+      flow_net: number;
+      /**
+       * Twr Period
+       * @description Retorno do período (fração).
+       */
+      twr_period?: number | null;
+      /**
+       * Twr Cumulative
+       * @description TWR acumulado (fração).
+       */
+      twr_cumulative?: number | null;
+    };
+    /** YocPoint */
+    YocPoint: {
+      /** Month */
+      month: string;
+      /** Yoc */
+      yoc?: number | null;
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    login_api_login_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LoginBody"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  login_api_login_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    logout_api_logout_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LoginBody"];
+      };
     };
-    auth_status_api_auth_status_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    health_api_health_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
+  };
+  logout_api_logout_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    glossary_api_glossary_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
     };
-    debug_brapi_api_debug_brapi_get: {
-        parameters: {
-            query?: {
-                ticker?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  auth_status_api_auth_status_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    portfolio_api_portfolio_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Portfolio"];
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
     };
-    exposure_api_portfolio_exposure_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ExposureResponse"];
-                };
-            };
-        };
+  };
+  health_api_health_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    universe_api_universe_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
     };
-    asset_api_asset__ticker__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticker: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssetDetailResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  glossary_api_glossary_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    plan_api_plan_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PlanRequest"];
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+      };
     };
-    plan_latest_api_plan_latest_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanResponse"];
-                };
-            };
-        };
+  };
+  debug_brapi_api_debug_brapi_get: {
+    parameters: {
+      query?: {
+        ticker?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    plan_history_api_plan_history_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PlanSummary"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    get_preferences_api_preferences_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
+  };
+  portfolio_api_portfolio_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    put_preferences_api_preferences_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PreferencesBody"];
-            };
+        content: {
+          "application/json": components["schemas"]["Portfolio"];
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+      };
     };
-    list_watchlist_api_watchlist_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
+  };
+  exposure_api_portfolio_exposure_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    add_to_watchlist_api_watchlist_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["WatchlistAdd"];
-            };
+        content: {
+          "application/json": components["schemas"]["ExposureResponse"];
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+      };
     };
-    remove_from_watchlist_api_watchlist__ticker__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticker: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  universe_api_universe_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    watchlist_radar_api_watchlist_radar_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["RadarResponse"];
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
     };
-    income_api_income_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IncomeResponse"];
-                };
-            };
-        };
+  };
+  asset_api_asset__ticker__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ticker: string;
+      };
+      cookie?: never;
     };
-    yoc_history_api_income_yoc__ticker__get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                ticker: string;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["YocPoint"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": components["schemas"]["AssetDetailResponse"];
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    fixed_income_summary_api_fixed_income_summary_get: {
-        parameters: {
-            query?: {
-                include_archived?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["FixedIncomeSummary"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  plan_api_plan_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    indexers_api_fixed_income_indexers_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["IndexersResponse"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PlanRequest"];
+      };
     };
-    create_account_api_fixed_income_accounts_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AccountIn"];
-            };
+        content: {
+          "application/json": components["schemas"]["PlanResponse"];
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AccountSummary"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    archive_account_api_fixed_income_accounts__account_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                account_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  plan_latest_api_plan_latest_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    update_account_api_fixed_income_accounts__account_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                account_id: number;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AccountPatch"];
-            };
+        content: {
+          "application/json": components["schemas"]["PlanResponse"];
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AccountSummary"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+      };
     };
-    list_entries_api_fixed_income_accounts__account_id__entries_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                account_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  plan_history_api_plan_history_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    add_entry_api_fixed_income_accounts__account_id__entries_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                account_id: number;
-            };
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["EntryIn"];
-            };
+        content: {
+          "application/json": components["schemas"]["PlanSummary"][];
         };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AccountSummary"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
         };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    delete_entry_api_fixed_income_accounts__account_id__entries__entry_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                account_id: number;
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  get_preferences_api_preferences_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    list_orders_api_orders_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrdersListResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
     };
-    create_order_api_orders_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["OrderIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OrderOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  put_preferences_api_preferences_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    delete_order_api_orders__order_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                order_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["PreferencesBody"];
+      };
     };
-    list_labels_api_labels_get: {
-        parameters: {
-            query?: {
-                dimension?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LabelOut"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    create_label_api_labels_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["LabelIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LabelOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  list_watchlist_api_watchlist_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    list_assignments_api_labels_assignments_get: {
-        parameters: {
-            query?: {
-                dimension?: string | null;
-                subject_type?: string | null;
-                subject_id?: string | null;
-                /** @description Lista separada por vírgula — resolve vários sujeitos de uma vez. */
-                subjects?: string | null;
-                /** @description Inclui o rótulo herdado do mapa curado para quem não tem escolha gravada. */
-                include_defaults?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssignmentOut"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
     };
-    set_assignments_api_labels_assignments_put: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AssignmentsIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssignmentOut"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  add_to_watchlist_api_watchlist_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
-    clear_assignments_api_labels_assignments_delete: {
-        parameters: {
-            query: {
-                subject_type: string;
-                subject_id: string;
-                dimension: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["WatchlistAdd"];
+      };
     };
-    delete_label_api_labels__label_id__delete: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                label_id: number;
-            };
-            cookie?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    performance_api_performance_get: {
-        parameters: {
-            query?: {
-                window?: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PerformanceResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  };
+  remove_from_watchlist_api_watchlist__ticker__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ticker: string;
+      };
+      cookie?: never;
     };
-    capture_api_performance_capture_post: {
-        parameters: {
-            query?: {
-                force?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
         };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
         };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
     };
-    root_api_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-        };
+  };
+  watchlist_radar_api_watchlist_radar_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["RadarResponse"];
+        };
+      };
+    };
+  };
+  income_api_income_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IncomeResponse"];
+        };
+      };
+    };
+  };
+  yoc_history_api_income_yoc__ticker__get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ticker: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["YocPoint"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  fixed_income_summary_api_fixed_income_summary_get: {
+    parameters: {
+      query?: {
+        include_archived?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["FixedIncomeSummary"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  indexers_api_fixed_income_indexers_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["IndexersResponse"];
+        };
+      };
+    };
+  };
+  create_account_api_fixed_income_accounts_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AccountIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AccountSummary"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  archive_account_api_fixed_income_accounts__account_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  update_account_api_fixed_income_accounts__account_id__patch: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AccountPatch"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AccountSummary"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_entries_api_fixed_income_accounts__account_id__entries_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  add_entry_api_fixed_income_accounts__account_id__entries_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["EntryIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AccountSummary"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_entry_api_fixed_income_accounts__account_id__entries__entry_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        account_id: number;
+        entry_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_orders_api_orders_get: {
+    parameters: {
+      query?: {
+        limit?: number;
+        offset?: number;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OrdersListResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_order_api_orders_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["OrderIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["OrderOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_order_api_orders__order_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        order_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_labels_api_labels_get: {
+    parameters: {
+      query?: {
+        dimension?: string | null;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LabelOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  create_label_api_labels_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["LabelIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["LabelOut"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  list_assignments_api_labels_assignments_get: {
+    parameters: {
+      query?: {
+        dimension?: string | null;
+        subject_type?: string | null;
+        subject_id?: string | null;
+        /** @description Lista separada por vírgula — resolve vários sujeitos de uma vez. */
+        subjects?: string | null;
+        /** @description Inclui o rótulo herdado do mapa curado para quem não tem escolha gravada. */
+        include_defaults?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssignmentOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  set_assignments_api_labels_assignments_put: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["AssignmentsIn"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["AssignmentOut"][];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  clear_assignments_api_labels_assignments_delete: {
+    parameters: {
+      query: {
+        subject_type: string;
+        subject_id: string;
+        dimension: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  delete_label_api_labels__label_id__delete: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        label_id: number;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  performance_api_performance_get: {
+    parameters: {
+      query?: {
+        window?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["PerformanceResponse"];
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  capture_api_performance_capture_post: {
+    parameters: {
+      query?: {
+        force?: boolean;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
+  root_api_get: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": {
+            [key: string]: unknown;
+          };
+        };
+      };
+    };
+  };
 }

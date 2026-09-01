@@ -67,7 +67,11 @@ function AssetLabels({ ticker, assetClass }: { ticker: string; assetClass: strin
 
   // `labels` é obrigatório: a função atende duas dimensões, e um valor padrão apontando
   // para uma delas fazia a outra procurar o código na lista errada.
-  const salvar = (dimension: "bucket" | "geography", code: string, labels: LabelOut[] | undefined) => {
+  const salvar = (
+    dimension: "bucket" | "geography",
+    code: string,
+    labels: LabelOut[] | undefined,
+  ) => {
     const label = (labels ?? []).find((l) => l.code === code);
     setAssignments.mutate({
       subject_type: "ticker",
@@ -158,7 +162,9 @@ export function AssetPage() {
   if (isLoading)
     return (
       <main className="page">
-        <p className="muted" role="status">Carregando {ticker}…</p>
+        <p className="muted" role="status">
+          Carregando {ticker}…
+        </p>
       </main>
     );
   if (error || !data)
@@ -179,7 +185,9 @@ export function AssetPage() {
   // estratégia anterior. Num ETF de acumulação a grade vinha vazia e o teto, sem sentido.
   const legado = temMetricasDeAcao(asset.asset_class);
   const riskClass = RISK_CLASS[analysis.risk_level ?? "verde"] ?? "";
-  const years = Object.entries(asset.dividends_by_year ?? {}).sort(([a], [b]) => a.localeCompare(b));
+  const years = Object.entries(asset.dividends_by_year ?? {}).sort(([a], [b]) =>
+    a.localeCompare(b),
+  );
   const maxDiv = Math.max(1, ...years.map(([, v]) => v));
 
   return (
@@ -190,7 +198,9 @@ export function AssetPage() {
 
       <div className="asset-head">
         <div>
-          <h1 className="page-title" style={{ margin: 0 }}>{asset.ticker}</h1>
+          <h1 className="page-title" style={{ margin: 0 }}>
+            {asset.ticker}
+          </h1>
           <p className="muted" style={{ margin: 0 }}>
             {asset.name ?? asset.sector ?? asset.asset_class} · {asset.asset_class}
             {asset.sector ? ` · ${asset.sector}` : ""}
@@ -198,11 +208,15 @@ export function AssetPage() {
         </div>
         <div className="asset-head-right">
           {asset.price != null && <strong className="asset-price">{money(asset.price)}</strong>}
-          <span className={`risk-seal ${riskClass}`}>{RISK_LABEL[analysis.risk_level ?? "verde"]}</span>
+          <span className={`risk-seal ${riskClass}`}>
+            {RISK_LABEL[analysis.risk_level ?? "verde"]}
+          </span>
         </div>
       </div>
 
-      {asset.stale && <div className="banner banner-warn">⏳ Dados de cache, possivelmente defasados.</div>}
+      {asset.stale && (
+        <div className="banner banner-warn">⏳ Dados de cache, possivelmente defasados.</div>
+      )}
 
       {legado && (
         <CeilingBadge
@@ -224,7 +238,9 @@ export function AssetPage() {
       {(analysis.red_flags ?? []).length > 0 && (
         <ul className="card-flags">
           {(analysis.red_flags ?? []).map((r, i) => (
-            <li key={i}><Icon name="alert" size={13} /> {r}</li>
+            <li key={i}>
+              <Icon name="alert" size={13} /> {r}
+            </li>
           ))}
         </ul>
       )}
@@ -233,99 +249,115 @@ export function AssetPage() {
 
       {legado && (
         <>
-        <div className="alloc">
-          <h3>Fundamentos</h3>
-          <div className="fund-grid">
-            <Fund label="P/L" value={f.pl != null ? f.pl.toFixed(2) : null} />
-            <Fund label="P/VP" value={f.pvp != null ? f.pvp.toFixed(2) : null} />
-            {f.dividend_yield != null && (
-              <div className="fund-item">
-                <Tooltip metricKey="net_yield">
-                  <span className="muted">Dividend Yield</span>
-                </Tooltip>
-                <strong>
-                  {pct(f.dividend_yield)} <span className="muted" style={{ fontWeight: 400 }}>bruto</span>
-                </strong>
-                {f.dividend_yield_net != null && (
-                  <span className="muted" style={{ fontSize: 12 }}>
-                    {pct(f.dividend_yield_net)} líquido
-                  </span>
-                )}
-              </div>
-            )}
-            <Fund label="LPA" value={f.lpa != null ? f.lpa.toFixed(2) : null} />
-            <Fund label="VPA" value={f.vpa != null ? f.vpa.toFixed(2) : null} />
-            <Fund label="ROE" value={f.roe != null ? pct(f.roe) : null} />
-            <Fund label="Margem líquida" value={f.net_margin != null ? pct(f.net_margin) : null} />
-            <Fund label="Dív. líq./EBIT (proxy)" value={f.net_debt_to_ebitda != null ? f.net_debt_to_ebitda.toFixed(2) : null} />
-            <Fund label="Liquidez corrente" value={f.current_ratio != null ? f.current_ratio.toFixed(2) : null} />
-          </div>
-          <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>Fonte: {asset.source}</p>
-        </div>
-
-        <YocEvolution ticker={asset.ticker} />
-
-        {years.length > 0 && (
           <div className="alloc">
-            <h3>Proventos por ano</h3>
-            <div className="prov-bars">
-              {years.map(([y, v]) => (
-                <div key={y} className="prov-row">
-                  <span className="prov-year">{y}</span>
-                  <div className="prov-track">
-                    <div className="prov-fill" style={{ width: `${(v / maxDiv) * 100}%` }} />
-                  </div>
-                  <span className="prov-val">{money(v)}</span>
+            <h3>Fundamentos</h3>
+            <div className="fund-grid">
+              <Fund label="P/L" value={f.pl != null ? f.pl.toFixed(2) : null} />
+              <Fund label="P/VP" value={f.pvp != null ? f.pvp.toFixed(2) : null} />
+              {f.dividend_yield != null && (
+                <div className="fund-item">
+                  <Tooltip metricKey="net_yield">
+                    <span className="muted">Dividend Yield</span>
+                  </Tooltip>
+                  <strong>
+                    {pct(f.dividend_yield)}{" "}
+                    <span className="muted" style={{ fontWeight: 400 }}>
+                      bruto
+                    </span>
+                  </strong>
+                  {f.dividend_yield_net != null && (
+                    <span className="muted" style={{ fontSize: 12 }}>
+                      {pct(f.dividend_yield_net)} líquido
+                    </span>
+                  )}
                 </div>
-              ))}
+              )}
+              <Fund label="LPA" value={f.lpa != null ? f.lpa.toFixed(2) : null} />
+              <Fund label="VPA" value={f.vpa != null ? f.vpa.toFixed(2) : null} />
+              <Fund label="ROE" value={f.roe != null ? pct(f.roe) : null} />
+              <Fund
+                label="Margem líquida"
+                value={f.net_margin != null ? pct(f.net_margin) : null}
+              />
+              <Fund
+                label="Dív. líq./EBIT (proxy)"
+                value={f.net_debt_to_ebitda != null ? f.net_debt_to_ebitda.toFixed(2) : null}
+              />
+              <Fund
+                label="Liquidez corrente"
+                value={f.current_ratio != null ? f.current_ratio.toFixed(2) : null}
+              />
             </div>
+            <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
+              Fonte: {asset.source}
+            </p>
           </div>
-        )}
 
-        <div className="alloc">
-          <h3>Leitura dos proventos</h3>
-          <div className="fund-grid">
-            <Fund
-              label="Preço-teto de Bazin"
-              value={
-                analysis.bazin_ceiling_price != null
-                  ? `${money(analysis.bazin_ceiling_price)} (DY-alvo ${pct(analysis.bazin_target_yield)})`
-                  : null
-              }
-            />
-            <Fund
-              label="Consistência dos proventos"
-              value={analysis.dividend_consistency != null ? pct(analysis.dividend_consistency, 0) : null}
-            />
-            <Fund
-              label="Crescimento dos proventos"
-              value={
-                analysis.dividend_cagr != null
-                  ? `${analysis.dividend_cagr > 0 ? "+" : ""}${pct(analysis.dividend_cagr)} a.a.`
-                  : null
-              }
-            />
-            <Fund
-              label="Payout (provento médio ÷ LPA)"
-              value={analysis.payout_ratio != null ? pct(analysis.payout_ratio, 0) : null}
-            />
+          <YocEvolution ticker={asset.ticker} />
+
+          {years.length > 0 && (
+            <div className="alloc">
+              <h3>Proventos por ano</h3>
+              <div className="prov-bars">
+                {years.map(([y, v]) => (
+                  <div key={y} className="prov-row">
+                    <span className="prov-year">{y}</span>
+                    <div className="prov-track">
+                      <div className="prov-fill" style={{ width: `${(v / maxDiv) * 100}%` }} />
+                    </div>
+                    <span className="prov-val">{money(v)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="alloc">
+            <h3>Leitura dos proventos</h3>
+            <div className="fund-grid">
+              <Fund
+                label="Preço-teto de Bazin"
+                value={
+                  analysis.bazin_ceiling_price != null
+                    ? `${money(analysis.bazin_ceiling_price)} (DY-alvo ${pct(analysis.bazin_target_yield)})`
+                    : null
+                }
+              />
+              <Fund
+                label="Consistência dos proventos"
+                value={
+                  analysis.dividend_consistency != null
+                    ? pct(analysis.dividend_consistency, 0)
+                    : null
+                }
+              />
+              <Fund
+                label="Crescimento dos proventos"
+                value={
+                  analysis.dividend_cagr != null
+                    ? `${analysis.dividend_cagr > 0 ? "+" : ""}${pct(analysis.dividend_cagr)} a.a.`
+                    : null
+                }
+              />
+              <Fund
+                label="Payout (provento médio ÷ LPA)"
+                value={analysis.payout_ratio != null ? pct(analysis.payout_ratio, 0) : null}
+              />
+            </div>
+            <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
+              Campo vazio: a fonte não trouxe o dado.
+            </p>
           </div>
-          <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
-            Campo vazio: a fonte não trouxe o dado.
-          </p>
-        </div>
         </>
       )}
 
       {!legado && (
         <p className="muted asset-sem-metricas">
-          {classLabel(asset.asset_class)} não tem preço-teto, Yield on Cost nem fundamentos
-          de empresa: essas contas partem de lucro e histórico de dividendo de uma companhia.
-          O que dirige a compra aqui é o peso na carteira alvo —{" "}
-          <Link to="/alvo">ver no Alvo →</Link>
+          {classLabel(asset.asset_class)} não tem preço-teto, Yield on Cost nem fundamentos de
+          empresa: essas contas partem de lucro e histórico de dividendo de uma companhia. O que
+          dirige a compra aqui é o peso na carteira alvo — <Link to="/alvo">ver no Alvo →</Link>
         </p>
       )}
-
     </main>
   );
 }

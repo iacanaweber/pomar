@@ -12,7 +12,6 @@ import { classHue, step } from "../lib/viz";
  *  lado do eixo zero, o sinal do número e o rótulo. Assim nenhuma cor nova precisa ser
  *  inventada e a leitura sobrevive a qualquer tipo de daltonismo. */
 
-
 /** Barra 100% da carteira, segmentada por ativo e agrupada por classe (a mesma linguagem
  *  do gráfico da Carteira alvo). `pct` são % sobre o mesmo denominador da barra. */
 function StackedBar({
@@ -189,9 +188,7 @@ function OffTargetSection({ comparison }: { comparison: Comparison }) {
           </li>
         ))}
       </ul>
-      <p className="muted cmp-note">
-        Sem peso no alvo. Incluídos no total de {money(totalValue)}.
-      </p>
+      <p className="muted cmp-note">Sem peso no alvo. Incluídos no total de {money(totalValue)}.</p>
       <LegacyBaseToggle comparison={comparison} />
     </section>
   );
@@ -216,9 +213,7 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
       <div className="cmp">
         <div className="card empty-target">
           <h3>Defina sua carteira alvo</h3>
-          <p className="muted">
-            Metas por classe e composição de cada uma.
-          </p>
+          <p className="muted">Metas por classe e composição de cada uma.</p>
           <Link className="primary" to="/alvo">
             Montar carteira alvo →
           </Link>
@@ -238,13 +233,15 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
   const barOrder = byWeightDesc(ALLOCATION_CLASSES, pesoDaClasse);
 
   const group = (pick: (r: ComparisonRow) => number) =>
-    barOrder.map((cls) => ({
-      cls,
-      items: rows
-        .filter((r) => r.cls === cls && pick(r) > 0)
-        .sort((a, b) => pick(b) - pick(a))
-        .map((r) => ({ ticker: r.ticker, pct: pick(r) })),
-    })).filter((g) => g.items.length > 0);
+    barOrder
+      .map((cls) => ({
+        cls,
+        items: rows
+          .filter((r) => r.cls === cls && pick(r) > 0)
+          .sort((a, b) => pick(b) - pick(a))
+          .map((r) => ({ ticker: r.ticker, pct: pick(r) })),
+      }))
+      .filter((g) => g.items.length > 0);
 
   // A renda fixa não tem linha por ticker (os itens da cesta são indexadores), então ela
   // entra nas barras como um bloco único da classe.

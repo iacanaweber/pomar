@@ -9,36 +9,23 @@ type Schemas = components["schemas"];
 export type PlanRequest = Schemas["PlanRequest"];
 export type PlanResponse = Schemas["PlanResponse"];
 export type PlanAsset = Schemas["PlanAsset"];
-export type AssetAnalysis = Schemas["AssetAnalysis"];
-export type SuggestedBuy = Schemas["SuggestedBuy"];
 export type Portfolio = Schemas["Portfolio"];
 export type Position = Schemas["Position"];
-export type Allocations = Schemas["Allocations"];
 export type ExposureResponse = Schemas["ExposureResponse"];
-export type ExposureDimension = Schemas["ExposureDimension"];
-export type ExposureItem = Schemas["ExposureItem"];
 export type PreferencesBody = Schemas["PreferencesBody"];
-export type WatchlistAdd = Schemas["WatchlistAdd"];
 export type IncomeResponse = Schemas["IncomeResponse"];
-export type IncomeAsset = Schemas["IncomeAsset"];
 export type AssetDetailResponse = Schemas["AssetDetailResponse"];
-export type Asset = Schemas["Asset"];
 export type Fundamentals = Schemas["Fundamentals"];
 export type ReserveSuggestion = Schemas["ReserveSuggestion"];
 export type FixedIncomeSuggestion = Schemas["FixedIncomeSuggestion"];
-export type IndexerAllocation = Schemas["IndexerAllocation"];
-export type LegacySummary = Schemas["LegacySummary"];
 
 // --- Yield on Cost (dos snapshots mensais) ---
 export type YocPoint = Schemas["YocPoint"];
 
 // --- curva de rendimento (TWR semanal) ---
 export type PerformanceResponse = Schemas["PerformanceResponse"];
-export type WeeklyPoint = Schemas["WeeklyPoint"];
-export type BenchmarkSeries = Schemas["BenchmarkSeries"];
 
 // --- Planos salvos e radar da watchlist (v4) ---
-export type PlanSummary = Schemas["PlanSummary"];
 export type RadarResponse = Schemas["RadarResponse"];
 export type RadarItem = Schemas["RadarItem"];
 
@@ -56,7 +43,6 @@ export type NewLiquidity = AccountIn["liquidity"];
 
 // --- Cesta de RENDA_FIXA: os itens são tags de indexador, não tickers ---
 export type IndexersResponse = Schemas["IndexersResponse"];
-export type IndexerSlice = Schemas["IndexerSlice"];
 
 // --- Rótulos por dimensão (bucket / indexer / geography) ---
 export type LabelOut = Schemas["LabelOut"];

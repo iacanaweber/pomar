@@ -80,13 +80,15 @@ export function PlanPage() {
           Esta tela não tinha título NENHUM — o primeiro heading era o h2 do RankedList,
           que só existe quando há compras a fazer. */}
       <h1 className="page-title">Plantar</h1>
-      {!portfolio.isPending && <Canteiro
+      {!portfolio.isPending && (
+        <Canteiro
           comparison={comparison}
           aporte={aportePorClasse}
           coberturaLegado={result?.legacy?.gap_coverage}
           gapLegado={result?.legacy?.gap}
           moeda={result?.currency}
-        />}
+        />
+      )}
 
       <PlanControls
         preferences={preferences.data}
@@ -98,16 +100,13 @@ export function PlanPage() {
       {/* O plano leva até 60 segundos. Sem região viva, quem usa leitor de tela aperta o
           botão e nada mais é anunciado — nem o fim do cálculo. */}
       <p className="sr-only" role="status">
-        {plan.isPending
-          ? "Calculando o plano de aporte."
-          : plan.isSuccess
-            ? "Plano pronto."
-            : ""}
+        {plan.isPending ? "Calculando o plano de aporte." : plan.isSuccess ? "Plano pronto." : ""}
       </p>
 
       {plan.isError && (
         <div className="banner banner-error">
-          <Icon name="alert" size={15} /> {planError ? planError.userMessage : "Erro ao gerar o plano"}
+          <Icon name="alert" size={15} />{" "}
+          {planError ? planError.userMessage : "Erro ao gerar o plano"}
           {portfolioUnavailable && lastReq && (
             <div style={{ marginTop: 6 }}>
               <button
@@ -131,8 +130,8 @@ export function PlanPage() {
           {(result.classes_skipped ?? []).length > 0 && (
             <div className="banner banner-warn">
               <Icon name="alert" size={15} /> Sem composição definida:{" "}
-              {(result.classes_skipped ?? []).map((c) => classLabel(c)).join(", ")} — essas
-              classes ficaram de fora do plano.{" "}
+              {(result.classes_skipped ?? []).map((c) => classLabel(c)).join(", ")} — essas classes
+              ficaram de fora do plano.{" "}
               <Link to={`/alvo#${(result.classes_skipped ?? [])[0]}`}>definir agora →</Link>
             </div>
           )}

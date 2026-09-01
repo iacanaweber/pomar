@@ -26,9 +26,8 @@ export function classify(
   margin?: number | null,
   belowCeiling?: boolean | null,
 ): { status: Status; label: string } {
-  const m = margin != null ? margin
-    : ceiling != null && price != null ? (ceiling - price) / ceiling
-    : null;
+  const m =
+    margin != null ? margin : ceiling != null && price != null ? (ceiling - price) / ceiling : null;
   if (m == null) {
     if (belowCeiling != null) {
       return belowCeiling
@@ -56,7 +55,8 @@ const RISK_CLASS: Record<Status, string> = {
 
 export function CeilingBadge({ ceiling, price, margin, belowCeiling, variant = "chip" }: Props) {
   const { status, label } = classify(ceiling, price, margin, belowCeiling);
-  const m = margin != null ? margin : ceiling != null && price != null ? (ceiling - price) / ceiling : null;
+  const m =
+    margin != null ? margin : ceiling != null && price != null ? (ceiling - price) / ceiling : null;
   // Convenção ÚNICA do app (glossário e ScoreBreakdown): margem POSITIVA = desconto
   // (abaixo do teto, bom). Antes o chip invertia o sinal e contradizia o tooltip.
   const marginText = m != null ? `margem ${m >= 0 ? "+" : "−"}${pct(Math.abs(m), 0)}` : null;
@@ -93,7 +93,11 @@ export function CeilingBadge({ ceiling, price, margin, belowCeiling, variant = "
 
       {hasBar ? (
         <>
-          <div className="ceiling-bar" role="img" aria-label={`Preço atual ${money(price!)}, teto ${money(ceiling!)}`}>
+          <div
+            className="ceiling-bar"
+            role="img"
+            aria-label={`Preço atual ${money(price!)}, teto ${money(ceiling!)}`}
+          >
             <div className="alloc-track" style={{ height: 18 }}>
               <div className="alloc-cur" style={{ width: `${curPct}%` }} />
               <div className="alloc-tgt" style={{ left: `${tgtPct}%`, height: 26, top: -4 }} />

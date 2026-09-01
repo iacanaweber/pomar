@@ -87,8 +87,8 @@ export function PortfolioPage() {
   const [by, setBy] = useState<GroupBy>("target");
   const [active, setActive] = useState<number | null>(null);
 
-
-  const positions = pf?.positions ?? [];
+  // `?? []` cria um array novo a cada render e desestabiliza os useMemo abaixo.
+  const positions = useMemo(() => pf?.positions ?? [], [pf?.positions]);
   const groups = useMemo(() => {
     if (by === "asset") return aggregate(positions);
     if (!FROM_EXPOSURE.includes(by)) return [];
@@ -146,7 +146,14 @@ export function PortfolioPage() {
   // um do outro, e porcentagens que não fechavam 100%.
   const slicesTotal = useMemo(() => slices.reduce((s, x) => s + x.value, 0), [slices]);
 
-  if (isLoading) return <main className="page"><p className="muted" role="status">Carregando</p></main>;
+  if (isLoading)
+    return (
+      <main className="page">
+        <p className="muted" role="status">
+          Carregando
+        </p>
+      </main>
+    );
 
   if (error)
     return (
@@ -161,9 +168,7 @@ export function PortfolioPage() {
   if (positions.length === 0)
     return (
       <main className="page">
-        <div className="banner banner-warn">
-          Nenhuma posição no Ghostfolio.
-        </div>
+        <div className="banner banner-warn">Nenhuma posição no Ghostfolio.</div>
       </main>
     );
 
@@ -189,8 +194,11 @@ export function PortfolioPage() {
         <span className="muted">
           {positions.length} posições
           {(exposure.data?.rf_total ?? 0) > 0 && (
-            <> · renda variável {money(exposure.data!.rv_total)} · renda fixa{" "}
-              {money(exposure.data!.rf_total)}</>
+            <>
+              {" "}
+              · renda variável {money(exposure.data!.rv_total)} · renda fixa{" "}
+              {money(exposure.data!.rf_total)}
+            </>
           )}
         </span>
         {fixedIncome.data?.cdi_annual != null && (
@@ -235,56 +243,52 @@ export function PortfolioPage() {
 
       {by === "rendimento" &&
         (performance.isLoading ? (
-          <p className="muted" role="status">Carregando</p>
+          <p className="muted" role="status">
+            Carregando
+          </p>
         ) : performance.data ? (
-          <PerformanceChart
-            data={performance.data}
-            window={perfWindow}
-            onWindow={setPerfWindow}
-          />
+          <PerformanceChart data={performance.data} window={perfWindow} onWindow={setPerfWindow} />
         ) : (
           <p className="muted">Curva de rendimento indisponível.</p>
         ))}
 
       {by !== "target" && by !== "rendimento" && (
-      <div className="pf-chart">
-        <div className="pf-chart-pie">
-          <PieChart slices={slices} active={active} onActive={setActive} ariaLabel={ariaLabel} />
-        </div>
-        {/* Um <button> de verdade dentro do <li>: Enter e Espaço vêm de graça, o papel
+        <div className="pf-chart">
+          <div className="pf-chart-pie">
+            <PieChart slices={slices} active={active} onActive={setActive} ariaLabel={ariaLabel} />
+          </div>
+          {/* Um <button> de verdade dentro do <li>: Enter e Espaço vêm de graça, o papel
             é anunciado certo, e some o par role="list"/role="listitem" redundante. */}
-        <ul className="legend">
-          {slices.map((s, i) => (
-            <li key={s.label}>
-            <button
-              type="button"
-              aria-pressed={active === i}
-              aria-label={`${s.label}: ${money(s.value)}, ${pct(s.value / slicesTotal)}`}
-              className={`legend-item ${active != null && active !== i ? "dim" : ""} ${active === i ? "legend-on" : ""}`}
-              onClick={() => setActive(active === i ? null : i)}
-            >
-              <span className="legend-dot" style={{ background: s.color }} />
-              <span className="legend-label">{s.label}</span>
-              <span className="legend-val">
-                {money(s.value)} <span className="muted">· {pct(s.value / slicesTotal)}</span>
-                {groups[i]?.deviationPp != null && (
-                  <span className="muted legend-target">
-                    {" "}
-                    · meta {pct(groups[i].targetPct ?? 0)} ({signedPp(groups[i].deviationPp!)})
+          <ul className="legend">
+            {slices.map((s, i) => (
+              <li key={s.label}>
+                <button
+                  type="button"
+                  aria-pressed={active === i}
+                  aria-label={`${s.label}: ${money(s.value)}, ${pct(s.value / slicesTotal)}`}
+                  className={`legend-item ${active != null && active !== i ? "dim" : ""} ${active === i ? "legend-on" : ""}`}
+                  onClick={() => setActive(active === i ? null : i)}
+                >
+                  <span className="legend-dot" style={{ background: s.color }} />
+                  <span className="legend-label">{s.label}</span>
+                  <span className="legend-val">
+                    {money(s.value)} <span className="muted">· {pct(s.value / slicesTotal)}</span>
+                    {groups[i]?.deviationPp != null && (
+                      <span className="muted legend-target">
+                        {" "}
+                        · meta {pct(groups[i].targetPct ?? 0)} ({signedPp(groups[i].deviationPp!)})
+                      </span>
+                    )}
                   </span>
-                )}
-              </span>
-            </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {by === "geography" && (
-        <p className="muted pf-note">
-          Por domicílio do ativo, não por origem da receita.
-        </p>
+        <p className="muted pf-note">Por domicílio do ativo, não por origem da receita.</p>
       )}
       {FROM_EXPOSURE.includes(by) && (exposure.data?.rf_total ?? 0) > 0 && (
         <p className="muted pf-note">
@@ -301,7 +305,9 @@ export function PortfolioPage() {
               .map((p) => {
                 return (
                   <li key={p.ticker} className="pf-drill-item pf-asset-row">
-                    <span className="pf-drill-ticker"><AssetLink ticker={p.ticker} /></span>
+                    <span className="pf-drill-ticker">
+                      <AssetLink ticker={p.ticker} />
+                    </span>
                     <span className="pf-asset-val">
                       {money(p.value)} <span className="muted">· {pct(p.value / total)}</span>
                     </span>
@@ -310,7 +316,8 @@ export function PortfolioPage() {
                         <span
                           className={`pf-perf ${p.net_performance_pct >= 0 ? "pf-perf-up" : "pf-perf-down"}`}
                         >
-                          {p.net_performance_pct >= 0 ? "+" : "−"}{pct(Math.abs(p.net_performance_pct))}
+                          {p.net_performance_pct >= 0 ? "+" : "−"}
+                          {pct(Math.abs(p.net_performance_pct))}
                         </span>
                       </Tooltip>
                     )}
@@ -329,14 +336,16 @@ export function PortfolioPage() {
           <h3>
             Ativos em <span className="pf-drill-group">{selected.label}</span>{" "}
             <span className="muted">
-              · {selected.members!.length}{" "}
-              {selected.members!.length === 1 ? "ativo" : "ativos"} · {money(selected.value)}
+              · {selected.members!.length} {selected.members!.length === 1 ? "ativo" : "ativos"} ·{" "}
+              {money(selected.value)}
             </span>
           </h3>
           <ul className="pf-drill-list">
             {selected.members!.map((m) => (
               <li key={m.ticker} className="pf-drill-item">
-                <span className="pf-drill-ticker"><AssetLink ticker={m.ticker} /></span>
+                <span className="pf-drill-ticker">
+                  <AssetLink ticker={m.ticker} />
+                </span>
                 {m.name && <span className="pf-drill-name">{m.name}</span>}
                 <span className="pf-drill-val">
                   {money(m.value)} <span className="muted">· {pct(m.value / total)}</span>
