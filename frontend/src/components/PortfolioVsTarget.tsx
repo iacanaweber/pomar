@@ -3,55 +3,9 @@ import { Link } from "react-router-dom";
 import { usePreferences, useSavePreferences } from "../api/queries";
 import { AssetLink } from "./AssetLink";
 import { AT_TARGET_PP, type Comparison, type ComparisonRow } from "../lib/comparison";
-import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
+import { byWeightDesc, CLASS_LABEL } from "../lib/classes";
 import { money, pctPts, signedPp } from "../lib/format";
-import { classHue, step } from "../lib/viz";
-
-/** Mesma matiz por classe do gráfico da Carteira alvo — a cor segue a entidade, e aqui ela
- *  continua significando CLASSE. A polaridade (acima/abaixo do alvo) vem da geometria: o
- *  lado do eixo zero, o sinal do número e o rótulo. Assim nenhuma cor nova precisa ser
- *  inventada e a leitura sobrevive a qualquer tipo de daltonismo. */
-
-/** Barra 100% da carteira, segmentada por ativo e agrupada por classe (a mesma linguagem
- *  do gráfico da Carteira alvo). `pct` são % sobre o mesmo denominador da barra. */
-function StackedBar({
-  label,
-  groups,
-  caption,
-}: {
-  label: string;
-  groups: { cls: string; items: { ticker: string; pct: number }[] }[];
-  caption: string;
-}) {
-  const allocated = groups.reduce((s, g) => s + g.items.reduce((t, i) => t + i.pct, 0), 0);
-  const rest = Math.max(0, 100 - allocated);
-  return (
-    <div className="cmp-bar-block">
-      <div className="cmp-bar-head">
-        <span className="cmp-bar-label">{label}</span>
-        <span className="muted cmp-bar-caption">{caption}</span>
-      </div>
-      <div className="tp-track" role="img" aria-label={`${label}: ${caption}`}>
-        <div className="tp-bar">
-          {groups.flatMap((g, gi) =>
-            g.items.map((it, i) => (
-              <span
-                key={`${g.cls}-${it.ticker}`}
-                className={`tp-seg ${i === 0 && gi > 0 ? "tp-seg-class" : ""}`}
-                style={{
-                  flexGrow: Math.max(it.pct, 0.01),
-                  background: step(classHue(g.cls), i, g.items.length),
-                }}
-                title={`${it.ticker} · ${CLASS_LABEL[g.cls] ?? g.cls}: ${pctPts(it.pct, 2)}`}
-              />
-            )),
-          )}
-          {rest > 0.05 && <span className="tp-seg tp-seg-empty" style={{ flexGrow: rest }} />}
-        </div>
-      </div>
-    </div>
-  );
-}
+import { classHue } from "../lib/viz";
 
 /** Uma linha do desvio: barra divergente ancorada no zero. À esquerda falta comprar, à
  *  direita está acima do alvo. Só entram aqui linhas COM alvo — o legado tem seção própria,
@@ -196,17 +150,8 @@ function OffTargetSection({ comparison }: { comparison: Comparison }) {
 
 export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
   const [showAll, setShowAll] = useState(false);
-  const {
-    rows,
-    byClass,
-    targetSumPct,
-    hasTarget,
-    alignedValue,
-    legacyValue,
-    legacyPct,
-    legacyInTotal,
-    targetBase,
-  } = comparison;
+  const { rows, byClass, hasTarget, alignedValue, legacyValue, legacyInTotal, targetBase } =
+    comparison;
 
   if (!hasTarget) {
     return (
@@ -223,32 +168,6 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
     );
   }
 
-  // Uma ordem só para as DUAS barras: se "Hoje" e "Alvo" se ordenassem cada uma pelo seu
-  // próprio peso, elas deixariam de ser comparáveis lado a lado — que é a única razão de
-  // estarem coladas. A ordem sai do alvo, com o valor atual como desempate.
-  const pesoDaClasse = (cls: string) => {
-    const b = byClass.find((x) => x.cls === cls);
-    return b?.targetPct || b?.currentPct || 0;
-  };
-  const barOrder = byWeightDesc(ALLOCATION_CLASSES, pesoDaClasse);
-
-  const group = (pick: (r: ComparisonRow) => number) =>
-    barOrder
-      .map((cls) => ({
-        cls,
-        items: rows
-          .filter((r) => r.cls === cls && pick(r) > 0)
-          .sort((a, b) => pick(b) - pick(a))
-          .map((r) => ({ ticker: r.ticker, pct: pick(r) })),
-      }))
-      .filter((g) => g.items.length > 0);
-
-  // A renda fixa não tem linha por ticker (os itens da cesta são indexadores), então ela
-  // entra nas barras como um bloco único da classe.
-  const rf = byClass.find((b) => b.cls === RENDA_FIXA);
-  const rfBar = (pct: number) =>
-    pct > 0 ? [{ cls: RENDA_FIXA, items: [{ ticker: "Renda fixa", pct }] }] : [];
-
   const atTarget = rows.filter((r) => r.status === "ok");
   const acionaveis = rows.filter((r) => r.status !== "ok");
   const visiveis = showAll ? rows : acionaveis;
@@ -257,32 +176,6 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
   return (
     <div className="cmp">
       <TargetAccess comparison={comparison} />
-
-      <section className="card cmp-bars">
-        <StackedBar
-          label="Hoje"
-          groups={[...group((r) => r.currentPct), ...rfBar(rf?.currentPct ?? 0)]}
-          caption={
-            legacyPct > 0.05
-              ? `${money(alignedValue)} seguindo a estratégia`
-              : "toda a carteira dentro do alvo"
-          }
-        />
-        <StackedBar
-          label="Alvo"
-          groups={[...group((r) => r.targetPct ?? 0), ...rfBar(rf?.targetPct ?? 0)]}
-          caption={
-            Math.abs(targetSumPct - 100) > 0.5
-              ? `metas somam ${pctPts(targetSumPct, 2)} — ajuste na Carteira alvo`
-              : "metas somam 100%"
-          }
-        />
-        {legacyPct > 0.05 && (
-          <p className="muted cmp-note">
-            Barras sobre o capital alinhado. {money(legacyValue)} fora do alvo, abaixo.
-          </p>
-        )}
-      </section>
 
       <section className="card cmp-list">
         <div className="cmp-list-head">

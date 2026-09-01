@@ -2788,121 +2788,44 @@ select {
   }
 }
 
-/* ===== O CANTEIRO =====
-   A carteira alvo é o leito e o que você tem preenche cada cova. Largura = peso alvo,
-   altura preenchida = quanto já existe. Vazio é onde plantar.
-
-   Substitui .alloc-summary (Plantar), .tp-* (/alvo) e a barra empilhada de .cmp-*
-   (Carteira) — três desenhos da mesma pergunta, cada um com sua cópia das cores. */
-.canteiro {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-12);
-}
-
-.canteiro-leito {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--sp-4);
-}
-
-.canteiro-cova {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-  min-width: 0;
-  height: 100%;
-}
-
-/* A calha É a cova vazia: o que falta plantar. Fundo de trilho, borda embaixo para o
-   leito ter chão mesmo quando a classe está zerada. */
-.canteiro-terra {
-  position: relative;
-  flex: 1;
-  background: var(--track);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.canteiro-cheio {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-}
-/* O aporte entra COMO CAMADA CLARA em cima do preenchimento atual: onde o dinheiro cai. */
-.canteiro-aporte {
-  position: absolute;
-  left: 0;
-  right: 0;
-  opacity: 0.45;
-}
-
-/* Acima do alvo não vira barra de 130% — vira uma marca na borda de cima. Uma barra que
-   passa de 100% não quer dizer nada. */
-.canteiro-excesso {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: var(--sereno);
-  z-index: 1;
-}
-
-.canteiro-nome {
-  font-size: var(--fs-caption);
-  color: var(--muted);
-  text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* O ÚNICO movimento novo do app: as covas crescem do chão, uma vez, na montagem.
-   Escalonado por transition-delay no componente. */
-@media (prefers-reduced-motion: no-preference) {
-  .canteiro-cheio,
-  .canteiro-aporte {
-    transition: height 600ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
-}
-
-.canteiro-tabela-wrap {
+/* ===== HOJE × ALVO — a tabela por classe =====
+   As barras herdam .tp-* e .cmp-bar-*, que já existiam. Isto aqui é só a tabela que dá o
+   número em reais que a barra resume. */
+.cmp-tabela-wrap {
   overflow-x: auto;
 }
-.canteiro-tabela {
+.cmp-tabela {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--fs-meta);
   font-variant-numeric: tabular-nums;
 }
-.canteiro-tabela th,
-.canteiro-tabela td {
+.cmp-tabela th,
+.cmp-tabela td {
   padding: var(--sp-6) var(--sp-8);
   text-align: right;
   white-space: nowrap;
 }
-.canteiro-tabela thead th {
+.cmp-tabela thead th {
   font-size: var(--fs-caption);
   font-weight: 600;
   color: var(--muted);
   border-bottom: 1px solid var(--line);
 }
-.canteiro-tabela tbody th {
+.cmp-tabela tbody th {
   text-align: left;
   font-weight: 600;
 }
-.canteiro-tabela th:first-child,
-.canteiro-tabela td:first-child {
+.cmp-tabela th:first-child,
+.cmp-tabela td:first-child {
   text-align: left;
 }
-.canteiro-tabela tbody tr + tr th,
-.canteiro-tabela tbody tr + tr td {
+.cmp-tabela tbody tr + tr th,
+.cmp-tabela tbody tr + tr td {
   border-top: 1px solid var(--line);
 }
 
-.canteiro-marca {
+.cmp-marca {
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -2912,30 +2835,17 @@ select {
 }
 
 /* Quente = agir. É a cor mais alta da interface e só aparece onde dinheiro deve ir. */
-.canteiro-plantar {
+.cmp-plantar {
   color: var(--seiva);
   font-weight: 600;
 }
 /* Frio = ler. Estar acima do alvo não é erro: é informação. */
-.canteiro-sobra {
+.cmp-sobra {
   color: var(--sereno);
 }
 
-.canteiro-fora {
-  font-size: var(--fs-meta);
-  color: var(--muted);
-  margin: 0;
-  line-height: 1.5;
-}
-
-.canteiro-vazio {
-  padding: var(--pad-card);
-}
-.canteiro-vazio h3 {
+.cmp-vazio-titulo {
   margin-top: 0;
-}
-.canteiro-vazio p {
-  margin-bottom: 0;
 }
 
 /* Legenda de tabela só para leitor de tela: o leito acima já diz visualmente o que ela

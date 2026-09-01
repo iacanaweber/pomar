@@ -13,9 +13,19 @@
  *  contra um denominador zero. O que essas posições têm é valor em R$ e participação no
  *  patrimônio, e é só isso que a tela mostra.
  *
- *  **Os denominadores da comparação excluem o legado.** A pergunta da tela é "o capital que
- *  segue a estratégia se parece com a estratégia?", e diluir os pesos pelo que está de saída
- *  responderia outra coisa. O legado aparece somado à parte, nunca espalhado pelas linhas.
+ *  **Duas escalas, de propósito, e cada uma responde uma pergunta diferente.**
+ *
+ *  Por ATIVO (`rows`), o denominador exclui o legado: "dentro do capital que segue a
+ *  estratégia, este ticker está no peso?". Diluir os pesos pelo que está de saída
+ *  responderia outra coisa. O legado sai das linhas e aparece somado à parte.
+ *
+ *  Por CLASSE (`byClass`), o denominador é o PATRIMÔNIO INTEIRO, legado incluído: ali a
+ *  pergunta é descritiva — "como minha carteira está composta hoje, e como eu queria que
+ *  estivesse?". Foi assim que uma classe inteira em legado (ações de uma estratégia
+ *  anterior) sumia da tela: `byClass` somava só `rows`, então a classe vinha com valor
+ *  zero, indistinguível de uma que nunca existiu. Pior: como o denominador também excluía
+ *  o legado, as classes restantes INFLAVAM até somar 100% e preenchiam o trilho —
+ *  o buraco não ficava visível, e os ETFs pareciam mais perto do alvo do que estavam.
  *
  *  **Os alvos em R$ usam outra base**, escolhida por `legacyInTotal` (default `true`): o
  *  legado entra no patrimônio que serve de base para os alvos das demais classes. Isso
@@ -55,7 +65,9 @@ export interface ComparisonRow {
 
 export interface ComparisonClassRow {
   cls: string;
+  /** Valor da classe INTEIRA, legado incluído. */
   currentValue: number;
+  /** % do PATRIMÔNIO — diferente de `ComparisonRow.currentPct`, que é % do alinhado. */
   currentPct: number;
   targetPct: number;
   deltaPp: number;
@@ -196,12 +208,21 @@ export function buildComparison(
   );
   legacy.sort((a, b) => b.currentValue - a.currentValue || a.ticker.localeCompare(b.ticker));
 
+  // `[...rows, ...legacy]`, e não só `rows`: a leitura por classe é DESCRITIVA e tem de
+  // mostrar a carteira inteira. Uma classe cujas posições são todas legado precisa
+  // aparecer com o valor que ela realmente tem. `RENDA_FIXA` sempre foi correta aqui —
+  // `rendaFixaValue` já era o total da classe — e era a única.
+  const todasAsLinhas = [...rows, ...legacy];
   const byClass: ComparisonClassRow[] = ALLOCATION_CLASSES.map((cls) => {
     const currentValue =
       cls === RENDA_FIXA
         ? rendaFixaValue
-        : round2(rows.filter((r) => r.cls === cls).reduce((s, r) => s + r.currentValue, 0));
-    const currentPct = share(currentValue, alignedValue);
+        : round2(
+            todasAsLinhas.filter((r) => r.cls === cls).reduce((s, r) => s + r.currentValue, 0),
+          );
+    // Patrimônio, não capital alinhado: é o que faz Σ currentPct fechar 100% e o que faz
+    // as colunas Hoje / Alvo / Desvio da tabela subtraírem de fato.
+    const currentPct = share(currentValue, patrimonio);
     const targetPct = round2((targets[cls] ?? 0) * 100);
     const deltaPp = round2(targetPct - currentPct);
     return {

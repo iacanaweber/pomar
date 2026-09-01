@@ -10,7 +10,7 @@ import {
 } from "../api/queries";
 import { PlanControls } from "../components/PlanControls";
 import { RankedList } from "../components/RankedList";
-import { Canteiro } from "../components/Canteiro";
+import { HojeVsAlvo } from "../components/HojeVsAlvo";
 import { buildComparison } from "../lib/comparison";
 import { HealthBanner } from "../components/HealthBanner";
 import { OrdersHistory } from "../components/OrdersHistory";
@@ -50,19 +50,6 @@ export function PlanPage() {
     [portfolio.data, preferences.data, fixedIncome.data],
   );
 
-  // Quanto o plano manda para cada classe — a camada clara em cima do canteiro.
-  const aportePorClasse = useMemo(() => {
-    if (!result) return undefined;
-    const soma: Record<string, number> = {};
-    for (const a of result.ranking ?? []) {
-      const brl = a.suggested?.invested_exact ?? 0;
-      if (brl > 0) soma[a.asset_class] = (soma[a.asset_class] ?? 0) + brl;
-    }
-    const rf = result.fixed_income?.directed_now ?? 0;
-    if (rf > 0) soma.RENDA_FIXA = (soma.RENDA_FIXA ?? 0) + rf;
-    return soma;
-  }, [result]);
-
   const planError = plan.error instanceof ApiError ? plan.error : null;
   const portfolioUnavailable = planError?.status === 503;
 
@@ -75,18 +62,15 @@ export function PlanPage() {
     <main className="page">
       <HealthBanner />
 
-      {/* Diagnóstico antes de ação, e agora com um objeto só: o canteiro É a carteira
-          alvo, e o vazio de cada cova é a pergunta que o formulário abaixo responde.
-          Esta tela não tinha título NENHUM — o primeiro heading era o h2 do RankedList,
-          que só existe quando há compras a fazer. */}
+      {/* Diagnóstico antes de ação: a distância entre as duas barras é a pergunta que o
+          formulário abaixo responde. Esta tela não tinha título NENHUM — o primeiro
+          heading era o h2 do RankedList, que só existe quando há compras a fazer. */}
       <h1 className="page-title">Plantar</h1>
       {!portfolio.isPending && (
-        <Canteiro
+        <HojeVsAlvo
           comparison={comparison}
-          aporte={aportePorClasse}
           coberturaLegado={result?.legacy?.gap_coverage}
           gapLegado={result?.legacy?.gap}
-          moeda={result?.currency}
         />
       )}
 

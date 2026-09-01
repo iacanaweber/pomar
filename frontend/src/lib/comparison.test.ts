@@ -345,4 +345,87 @@ describe("buildComparison", () => {
     expect(row(c, "AAA3").status).toBe("ok");
     finito(c);
   });
+
+  // ===== A leitura por CLASSE mede o patrimônio inteiro =====
+  //
+  // A regressão: `byClass` somava só `rows`, que exclui o legado por construção. Uma
+  // classe cujas posições eram todas legado vinha com valor zero — indistinguível de uma
+  // classe que nunca existiu — e desaparecia da tela. E como o denominador também
+  // excluía o legado, as classes restantes inflavam até 100% e o buraco não aparecia.
+  describe("byClass com legado presente", () => {
+    // Ações 400 inteiramente fora de cesta; ETF 600 no alvo de 100%.
+    const POSICOES = [
+      pos("MGLU3", "STOCK", 250),
+      pos("PETR4", "STOCK", 150),
+      pos("BOVA11", "ETF", 600),
+    ];
+    const METAS = { STOCK: 0, FII: 0, ETF: 1.0, BDR: 0 };
+    const CESTAS = { ETF: { BOVA11: 1.0 } };
+
+    it("classe inteira em legado aparece com o valor que de fato tem", () => {
+      const c = buildComparison(POSICOES, 1000, METAS, CESTAS);
+      const acoes = c.byClass.find((b) => b.cls === "STOCK")!;
+      expect(acoes.currentValue).toBe(400);
+      expect(acoes.currentPct).toBe(40);
+      expect(acoes.targetPct).toBe(0);
+      finito(c);
+    });
+
+    it("as porcentagens por classe somam 100% do patrimônio", () => {
+      const c = buildComparison(POSICOES, 1000, METAS, CESTAS);
+      const soma = c.byClass.reduce((s, b) => s + b.currentPct, 0);
+      expect(soma).toBeCloseTo(100, 1);
+    });
+
+    it("o desvio subtrai de fato: Hoje 40% contra Alvo 0% é +40 p.p.", () => {
+      const c = buildComparison(POSICOES, 1000, METAS, CESTAS);
+      const acoes = c.byClass.find((b) => b.cls === "STOCK")!;
+      // targetPct - currentPct: negativo = falta, positivo = sobra
+      expect(acoes.deltaPp).toBe(-40);
+    });
+
+    it("classe sem alvo e com posição indica SOBRA em R$, não zero", () => {
+      const c = buildComparison(POSICOES, 1000, METAS, CESTAS);
+      const acoes = c.byClass.find((b) => b.cls === "STOCK")!;
+      // alvo 0 sobre base 1000, menos os 400 que existem
+      expect(acoes.deltaBrl).toBe(-400);
+    });
+
+    it("a classe com alvo não é mais inflada pelo legado que saiu do denominador", () => {
+      const c = buildComparison(POSICOES, 1000, METAS, CESTAS);
+      const etf = c.byClass.find((b) => b.cls === "ETF")!;
+      // 600 de 1000 de patrimônio. Sobre o alinhado (600) daria 100% — a leitura
+      // otimista que fazia o ETF parecer já no lugar.
+      expect(etf.currentPct).toBe(60);
+      expect(etf.deltaPp).toBe(40);
+      expect(c.alignedValue).toBe(600);
+    });
+
+    it("renda fixa segue completa, com contas e posições do bucket", () => {
+      const c = buildComparison(
+        [pos("MGLU3", "STOCK", 200), pos("IMAB11", "RENDA_FIXA", 100)],
+        300,
+        { STOCK: 0, FII: 0, ETF: 0, BDR: 0, RENDA_FIXA: 1.0 },
+        {},
+        { rendaFixaValue: 200 },
+      );
+      const rf = c.byClass.find((b) => b.cls === "RENDA_FIXA")!;
+      expect(rf.currentValue).toBe(300); // 200 de conta + 100 da posição
+      expect(c.totalValue).toBe(500); // 300 de RV + 200 de conta
+      expect(rf.currentPct).toBe(60);
+      const acoes = c.byClass.find((b) => b.cls === "STOCK")!;
+      expect(acoes.currentPct).toBe(40); // as ações NÃO somem
+      finito(c);
+    });
+
+    it("por ATIVO o denominador continua sendo o capital alinhado", () => {
+      const c = buildComparison(POSICOES, 1000, METAS, CESTAS);
+      // BOVA11 é 100% do que segue a estratégia, ainda que 60% do patrimônio
+      expect(row(c, "BOVA11").currentPct).toBe(100);
+      expect(row(c, "BOVA11").portfolioPct).toBe(60);
+      // e o legado guarda a fatia do patrimônio, que é o que a barra "Hoje" usa
+      expect(legacyRow(c, "MGLU3").portfolioPct).toBe(25);
+      expect(legacyRow(c, "MGLU3").currentPct).toBe(0);
+    });
+  });
 });

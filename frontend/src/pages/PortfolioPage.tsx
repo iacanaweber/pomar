@@ -14,7 +14,7 @@ import { Tooltip } from "../components/Tooltip";
 import { money, pct, signedPp } from "../lib/format";
 import { categoricalHue } from "../lib/viz";
 import { PortfolioVsTarget } from "../components/PortfolioVsTarget";
-import { Canteiro } from "../components/Canteiro";
+import { HojeVsAlvo } from "../components/HojeVsAlvo";
 import { PerformanceChart } from "../components/PerformanceChart";
 import { buildComparison } from "../lib/comparison";
 import { Icon } from "../components/Icon";
@@ -234,9 +234,9 @@ export function PortfolioPage() {
 
       {by === "target" && (
         <>
-          {/* O canteiro resume; a lista por ativo abaixo detalha. Mesmo objeto do
+          {/* As barras resumem; a lista por ativo abaixo detalha. Mesmo objeto do
               Plantar, mesma conta — o desvio tem de bater entre as duas telas. */}
-          <Canteiro comparison={comparison} />
+          <HojeVsAlvo comparison={comparison} />
           <PortfolioVsTarget comparison={comparison} />
         </>
       )}
