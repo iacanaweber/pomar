@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { PlanRequest, Preferences } from "../types";
 import { useSavePreferences } from "../api/queries";
@@ -13,6 +13,10 @@ import { Icon } from "./Icon";
 
 interface Props {
   preferences?: Preferences;
+  /** As preferências ainda estão vindo. Sem isto, `class_targets` é `{}` durante a
+   *  busca e a tela inicial acusa "Carteira alvo não definida" em TODO carregamento
+   *  frio, para depois se corrigir sozinha. */
+  preferencesPending: boolean;
   loading: boolean;
   onSubmit: (req: PlanRequest) => void;
 }
@@ -40,7 +44,7 @@ function OfflineStatusLine() {
   );
 }
 
-export function PlanControls({ preferences, loading, onSubmit }: Props) {
+export function PlanControls({ preferences, preferencesPending, loading, onSubmit }: Props) {
   const [aporte, setAporte] = useState("");
   const [touched, setTouched] = useState(false);
   const [advanced, setAdvanced] = useState(false);
@@ -56,20 +60,26 @@ export function PlanControls({ preferences, loading, onSubmit }: Props) {
   const savePrefs = useSavePreferences();
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
-  // Sincroniza o formulário com as preferências salvas quando elas chegam (uma vez).
+  // Sincroniza o formulário com as preferências salvas quando elas chegam — UMA vez, e a
+  // trava é o que faz valer o "uma vez". `useSavePreferences` faz `setQueryData`, então
+  // salvar produz um objeto novo, o efeito reentrava e reescrevia o campo: um aporte
+  // digitado como "3.500" virava "3500" ao clicar em Salvar padrão.
+  const hydrated = useRef(false);
   useEffect(() => {
-    if (!preferences) return;
+    if (!preferences || hydrated.current) return;
+    hydrated.current = true;
     setMinTicket(String(preferences.min_ticket));
     setFloorSharePct(shareToPct(preferences.reserve_floor_share));
     if (preferences.aporte_default) setAporte(String(preferences.aporte_default));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [preferences]);
 
   const blank = aporte.trim() === "";
   const baskets = preferences?.class_targets ?? {};
   const targets = preferences?.targets ?? {};
   const sizeOf = (cls: string) => Object.keys(baskets[cls] ?? {}).length;
-  const hasAnyBasket = INVESTABLE_CLASSES.some((c) => sizeOf(c) > 0);
+  // Enquanto as preferências vêm, "não tem cesta" é indistinguível de "ainda não sei".
+  // Na dúvida, mostrar o seletor: acusar carteira não configurada é a afirmação forte.
+  const hasAnyBasket = preferencesPending || INVESTABLE_CLASSES.some((c) => sizeOf(c) > 0);
   const usable = selected.filter((c) => sizeOf(c) > 0);
 
   const toggle = (cls: string) =>

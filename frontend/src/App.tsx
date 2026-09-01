@@ -1,5 +1,6 @@
 import { Suspense, lazy } from "react";
 import { Navigate, NavLink, Route, Routes } from "react-router-dom";
+import { ApiError } from "./api/client";
 import { useAuthStatus, useLogout } from "./api/queries";
 import { GlossaryProvider } from "./app/GlossaryProvider";
 import { BrandMark, Icon, type IconName } from "./components/Icon";
@@ -97,11 +98,33 @@ export default function App() {
   if (auth.isLoading) {
     return (
       <main className="page">
-        <p className="muted">Carregando…</p>
+        <p className="muted" role="status">
+          Carregando…
+        </p>
       </main>
     );
   }
-  if (auth.data?.auth_required && !auth.data.authenticated) {
+  // Sem resposta do backend não se sabe se há sessão. Renderizar o app inteiro nesse
+  // caso era afirmar que sim: cada aba abria e falhava por conta própria, com cinco
+  // mensagens de erro diferentes para uma causa só.
+  if (auth.isError || !auth.data) {
+    return (
+      <main className="page">
+        <div className="banner banner-error" role="alert">
+          <Icon name="alert" size={15} />{" "}
+          {auth.error instanceof ApiError
+            ? auth.error.userMessage
+            : "Não foi possível falar com o servidor."}
+        </div>
+        <p className="link-row">
+          <button className="link-button" onClick={() => auth.refetch()}>
+            Tentar de novo
+          </button>
+        </p>
+      </main>
+    );
+  }
+  if (auth.data.auth_required && !auth.data.authenticated) {
     return <LoginPage />;
   }
   return (

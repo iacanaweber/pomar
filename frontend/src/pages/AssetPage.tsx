@@ -9,7 +9,7 @@ import {
 } from "../api/queries";
 import { CeilingBadge } from "../components/CeilingBadge";
 import { Tooltip } from "../components/Tooltip";
-import type { Fundamentals } from "../types";
+import type { Fundamentals, LabelOut } from "../types";
 import { money, pct } from "../lib/format";
 import { Icon } from "../components/Icon";
 
@@ -63,7 +63,9 @@ function AssetLabels({ ticker, assetClass }: { ticker: string; assetClass: strin
   const geo = atual.data?.[0];
   const bucket = bucketAtual.data?.[0];
 
-  const salvar = (dimension: "bucket" | "geography", code: string, labels = geos.data) => {
+  // `labels` é obrigatório: a função atende duas dimensões, e um valor padrão apontando
+  // para uma delas fazia a outra procurar o código na lista errada.
+  const salvar = (dimension: "bucket" | "geography", code: string, labels: LabelOut[] | undefined) => {
     const label = (labels ?? []).find((l) => l.code === code);
     setAssignments.mutate({
       subject_type: "ticker",
@@ -93,7 +95,14 @@ function AssetLabels({ ticker, assetClass }: { ticker: string; assetClass: strin
         </label>
         <label className="field">
           <span>Geografia</span>
-          <select value={geo?.code ?? "BR"} onChange={(e) => salvar("geography", e.target.value)}>
+          {/* Sem atribuição, valor vazio com opção própria — o `?? "BR"` de antes casava
+              com nenhuma opção quando "BR" não estava na lista, e o navegador exibia em
+              silêncio a primeira da lista como se fosse a escolhida. */}
+          <select
+            value={geo?.code ?? ""}
+            onChange={(e) => salvar("geography", e.target.value, geos.data)}
+          >
+            <option value="">Automática (mapa do app)</option>
             {(geos.data ?? []).map((l) => (
               <option key={l.id} value={l.code}>
                 {l.name}

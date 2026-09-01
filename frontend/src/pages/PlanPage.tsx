@@ -40,6 +40,7 @@ export function PlanPage() {
 
       <PlanControls
         preferences={preferences.data}
+        preferencesPending={preferences.isPending}
         loading={plan.isPending}
         onSubmit={submit}
       />
