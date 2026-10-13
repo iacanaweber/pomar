@@ -19,7 +19,7 @@ function StatusChip({ item }: { item: WatchlistItem }) {
   if (item.valid === 1)
     return (
       <span className="ceiling-chip risk-verde" aria-label="ticker validado">
-        <span aria-hidden="true">✓</span>
+        <Icon name="check" size={13} />
         <span>
           validado{item.last_validated_at ? ` ${shortDateTime(item.last_validated_at)}` : ""}
         </span>
@@ -28,13 +28,13 @@ function StatusChip({ item }: { item: WatchlistItem }) {
   if (item.valid === 0 && item.last_validated_at)
     return (
       <span className="ceiling-chip risk-vermelho" aria-label="ticker não encontrado">
-        <span aria-hidden="true">⚠</span>
+        <Icon name="alert" size={13} />
         <span>não encontrado</span>
       </span>
     );
   return (
     <span className="ceiling-chip metric-na" aria-label="validando">
-      <span aria-hidden="true">⏳</span>
+      <Icon name="clock" size={13} />
       <span>Validando</span>
     </span>
   );

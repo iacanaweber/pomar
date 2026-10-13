@@ -82,10 +82,15 @@ function AlsoEditor({
             aria-label={`Ticker legado para agrupar com ${ticker}`}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter") { e.preventDefault(); add(); }
+              if (e.key === "Enter") {
+                e.preventDefault();
+                add();
+              }
               if (e.key === "Escape") setAdding(false);
             }}
-            onBlur={() => { if (!draft.trim()) setAdding(false); }}
+            onBlur={() => {
+              if (!draft.trim()) setAdding(false);
+            }}
           />
           <button type="button" className="link-button" onClick={add} disabled={!draft.trim()}>
             ok
@@ -239,7 +244,7 @@ function BasketEditor({
     rows.length !== Object.keys(saved).length ||
     rows.some((r) => {
       const s = saved[r.ticker];
-      const savedW = typeof s === "number" ? s : s?.weight ?? -1;
+      const savedW = typeof s === "number" ? s : (s?.weight ?? -1);
       const savedAlso = typeof s === "object" && s !== null ? s.also : undefined;
       return (
         Math.abs(savedW * 100 - r.pct) > 0.001 ||
@@ -275,9 +280,7 @@ function BasketEditor({
         .filter((r) => r.ticker.trim())
         .map((r) => [
           r.ticker,
-          r.also?.length
-            ? { weight: (r.pct || 0) / 100, also: r.also }
-            : (r.pct || 0) / 100,
+          r.also?.length ? { weight: (r.pct || 0) / 100, also: r.also } : (r.pct || 0) / 100,
         ]),
     );
     savePrefs.mutate(
@@ -347,11 +350,15 @@ function BasketEditor({
         <div className={`basket-sum ${SUM_CLASS[state]}`}>
           <span className="basket-sum-value">soma: {num(total)}%</span>
           <span className="basket-sum-note">
-            {state === "ok"
-              ? "✓ fechado"
-              : state === "over"
-                ? `passou ${num(round2(total - 100))} p.p. — precisa fechar em 100%`
-                : `faltam ${num(round2(100 - total))} p.p. — precisa fechar em 100%`}
+            {state === "ok" ? (
+              <>
+                <Icon name="check" size={14} className="icon-inline" /> fechado
+              </>
+            ) : state === "over" ? (
+              `passou ${num(round2(total - 100))} p.p. — precisa fechar em 100%`
+            ) : (
+              `faltam ${num(round2(100 - total))} p.p. — precisa fechar em 100%`
+            )}
           </span>
           {!ok && (
             <button
@@ -433,7 +440,13 @@ function ClassTargetsEditor({
       <div className={`basket-sum ${SUM_CLASS[state]}`}>
         <span className="basket-sum-value">soma: {num(total)}%</span>
         <span className="basket-sum-note">
-          {state === "ok" ? "✓ fechado" : "precisa fechar em 100%"}
+          {state === "ok" ? (
+            <>
+              <Icon name="check" size={14} className="icon-inline" /> fechado
+            </>
+          ) : (
+            "precisa fechar em 100%"
+          )}
         </span>
         {state !== "ok" && (
           <button
@@ -589,9 +602,21 @@ export function TargetPortfolioPage() {
                     <span className="card-id">
                       <span className="card-ticker">{CLASS_LABEL[cls]}</span>
                       <span className="card-name">
-                        {n > 0
-                          ? `${n} ativo${n > 1 ? "s" : ""} · soma ${num(sum)}%${closed ? " ✓" : " ⚠"}`
-                          : "sem composição"}
+                        {n > 0 ? (
+                          <>
+                            {`${n} ativo${n > 1 ? "s" : ""} · soma ${num(sum)}% `}
+                            <Icon
+                              name={closed ? "check" : "alert"}
+                              size={13}
+                              className="icon-inline"
+                            />
+                            <span className="sr-only">
+                              {closed ? "fechada" : "não fecha em 100%"}
+                            </span>
+                          </>
+                        ) : (
+                          "sem composição"
+                        )}
                       </span>
                     </span>
                     <span className="card-toggle">

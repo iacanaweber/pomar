@@ -215,7 +215,10 @@ export function AssetPage() {
       </div>
 
       {asset.stale && (
-        <div className="banner banner-warn">⏳ Dados de cache, possivelmente defasados.</div>
+        <div className="banner banner-warn">
+          <Icon name="clock" size={15} className="icon-inline" /> Dados de cache, possivelmente
+          defasados.
+        </div>
       )}
 
       {legado && (

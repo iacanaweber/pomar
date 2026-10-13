@@ -3,6 +3,7 @@ import type { FixedIncomeSuggestion, ReserveSuggestion } from "../types";
 import { money, num, pct } from "../lib/format";
 import { useComprasFeitas } from "../hooks/useComprasFeitas";
 import { Tooltip } from "./Tooltip";
+import { Icon } from "./Icon";
 
 /** A parcela de renda fixa do aporte: o que fazer com ela, linha a linha.
  *
@@ -112,7 +113,8 @@ export function FixedIncomeSuggestionCard({
           // Sem a distinção, o cartão negava, uma linha acima, os R$ 1.800 que ele mandava
           // lançar.
           <span className="risk-verde">
-            ✓ Peso da classe no alvo ou acima{quiet ? " — nada a aplicar aqui." : "."}
+            <Icon name="check" size={14} className="icon-inline" /> Peso da classe no alvo ou acima
+            {quiet ? " — nada a aplicar aqui." : "."}
           </span>
         ) : (
           <>

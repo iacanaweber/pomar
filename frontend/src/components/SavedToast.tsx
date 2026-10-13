@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
+import { Icon } from "./Icon";
 
 /**
- * Micro-feedback "✓ salvo". Controlado por uma chave que muda a cada salvamento
+ * Micro-feedback de "salvo", com o ícone de confirmação. Controlado por uma chave que muda a cada salvamento
  * (ex.: o timestamp do onSuccess). Some sozinho após `duration` ms.
  */
 export function SavedToast({
   show,
-  message = "✓ Preferências salvas",
+  message = "Preferências salvas.",
   duration = 2000,
 }: {
   show: number | null;
@@ -24,7 +25,7 @@ export function SavedToast({
   if (!visible) return null;
   return (
     <div className="saved-toast" role="status" aria-live="polite">
-      {message}
+      <Icon name="check" size={16} className="icon-inline" /> {message}
     </div>
   );
 }

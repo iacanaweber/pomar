@@ -35,6 +35,10 @@ const PATHS = {
   trash:
     "M4 7h16M10 11v6M14 11v6M6 7l1 12.1a2 2 0 0 0 2 1.9h6a2 2 0 0 0 2-1.9L18 7M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2",
   pencil: "M4 20h4L20 8a2.8 2.8 0 0 0-4-4L4 16v4ZM14.5 5.5l4 4",
+  // Confirmação e espera. Substituem ✓ e ⏳, que caíam na fonte do sistema e mudavam de
+  // desenho (e de cor, no caso do emoji) de aparelho para aparelho.
+  check: "M5 12.5l4.5 4.5L19 7",
+  clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 7.5V12l3 2",
   sun: "M12 17a5 5 0 1 0 0-10 5 5 0 0 0 0 10ZM12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4",
   moon: "M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z",
 } as const;
@@ -44,11 +48,12 @@ export type IconName = keyof typeof PATHS;
 export function Icon({
   name,
   size = 18,
+  className,
   ...rest
 }: { name: IconName; size?: number } & SVGProps<SVGSVGElement>) {
   return (
     <svg
-      className={`icon icon-${name}`}
+      className={`icon icon-${name}${className ? ` ${className}` : ""}`}
       viewBox="0 0 24 24"
       width={size}
       height={size}
