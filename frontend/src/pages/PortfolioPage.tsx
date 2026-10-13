@@ -18,6 +18,7 @@ import { HojeVsAlvo } from "../components/HojeVsAlvo";
 import { PerformanceChart } from "../components/PerformanceChart";
 import { buildComparison } from "../lib/comparison";
 import { Icon } from "../components/Icon";
+import { Skeleton } from "../components/Skeleton";
 
 type GroupBy = "target" | "rendimento" | "asset" | "class" | "geography";
 
@@ -149,9 +150,7 @@ export function PortfolioPage() {
   if (isLoading)
     return (
       <main className="page">
-        <p className="muted" role="status">
-          Carregando
-        </p>
+        <Skeleton blocks={["title", "md", "line", "lg"]} />
       </main>
     );
 
@@ -243,9 +242,7 @@ export function PortfolioPage() {
 
       {by === "rendimento" &&
         (performance.isLoading ? (
-          <p className="muted" role="status">
-            Carregando
-          </p>
+          <Skeleton blocks={["lg"]} label="Carregando a curva de rendimento" />
         ) : performance.data ? (
           <PerformanceChart data={performance.data} window={perfWindow} onWindow={setPerfWindow} />
         ) : (

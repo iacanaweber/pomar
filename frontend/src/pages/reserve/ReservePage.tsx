@@ -9,6 +9,7 @@ import { Icon } from "../../components/Icon";
 import { AccountCard } from "./AccountCard";
 import { NewAccountForm } from "./NewAccountForm";
 import { ReserveFloorCard } from "./ReserveFloorCard";
+import { Skeleton } from "../../components/Skeleton";
 
 /** Chave do aviso único de "marque o que conta na carteira".
  *
@@ -60,11 +61,7 @@ export function ReservePage() {
       </button>
       <h1 className="page-title">Renda fixa</h1>
 
-      {isLoading && (
-        <p className="muted" role="status">
-          Carregando
-        </p>
-      )}
+      {isLoading && <Skeleton blocks={["md", "md", "lg", "lg"]} />}
       {error && (
         <div className="banner banner-error">
           <Icon name="alert" size={15} />{" "}

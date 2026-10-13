@@ -3,6 +3,7 @@ import { MutationError } from "../../components/MutationError";
 import { useDeleteEntry, useEntries } from "../../api/queries";
 import { isoToBR, money } from "../../lib/format";
 import { ENTRY_LABEL } from "./labels";
+import { Skeleton } from "../../components/Skeleton";
 
 /** Lista de lançamentos de uma conta, com remoção (corrigir erros). */
 export function EntriesList({ accountId }: { accountId: number }) {
@@ -10,9 +11,9 @@ export function EntriesList({ accountId }: { accountId: number }) {
   const del = useDeleteEntry();
   if (isLoading)
     return (
-      <p className="muted" style={{ padding: "0 14px 12px" }}>
-        Carregando
-      </p>
+      <div className="entries-skeleton">
+        <Skeleton blocks={["line", "line"]} label="Carregando lançamentos" />
+      </div>
     );
   const items = data?.items ?? [];
   if (!items.length)

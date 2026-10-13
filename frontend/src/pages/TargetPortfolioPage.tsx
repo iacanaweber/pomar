@@ -27,6 +27,7 @@ import {
 import { ALLOCATION_CLASSES, byWeightDesc, CLASS_LABEL, RENDA_FIXA } from "../lib/classes";
 import { num, parseBRL } from "../lib/format";
 import { Icon } from "../components/Icon";
+import { Skeleton } from "../components/Skeleton";
 
 const SUM_CLASS: Record<SumState, string> = { over: "sum-over", under: "sum-under", ok: "sum-ok" };
 
@@ -554,11 +555,7 @@ export function TargetPortfolioPage() {
         <Link to="/plano">Plantar →</Link>
       </p>
 
-      {preferences.isLoading && (
-        <p className="muted" role="status">
-          Carregando
-        </p>
-      )}
+      {preferences.isLoading && <Skeleton blocks={["lg", "md", "sm", "sm"]} />}
 
       {/* Sem isto a tela ficava com título, um link e NADA — uma página em branco que
           parecia carteira não configurada. */}

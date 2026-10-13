@@ -14,6 +14,7 @@ import type { RadarItem, WatchlistItem } from "../types";
 import { money, pct, shortDateTime } from "../lib/format";
 import { classLabel } from "../lib/classes";
 import { Icon } from "../components/Icon";
+import { Skeleton } from "../components/Skeleton";
 
 function StatusChip({ item }: { item: WatchlistItem }) {
   if (item.valid === 1)
@@ -181,7 +182,7 @@ export function WatchlistPage() {
         </div>
       )}
 
-      {isLoading && <p className="muted">Carregando</p>}
+      {isLoading && <Skeleton blocks={["sm", "sm", "sm"]} />}
 
       {!isLoading && items.length === 0 && <div className="banner banner-warn">Lista vazia.</div>}
 

@@ -14,6 +14,7 @@ import type { Fundamentals, LabelOut } from "../types";
 import { money, pct } from "../lib/format";
 import { classLabel, temMetricasDeAcao } from "../lib/classes";
 import { Icon } from "../components/Icon";
+import { Skeleton } from "../components/Skeleton";
 
 /** Evolução do Yield on Cost, a partir dos snapshots mensais: quanto a posição rende
  *  sobre o PREÇO PAGO, e para onde esse número foi desde o primeiro snapshot. */
@@ -162,9 +163,7 @@ export function AssetPage() {
   if (isLoading)
     return (
       <main className="page">
-        <p className="muted" role="status">
-          Carregando {ticker}…
-        </p>
+        <Skeleton blocks={["sm", "md", "md", "lg"]} label={`Carregando ${ticker}`} />
       </main>
     );
   if (error || !data)

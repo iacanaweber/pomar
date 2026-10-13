@@ -8,6 +8,7 @@ import { ThemeToggle } from "./components/ThemeToggle";
 import { LoginPage } from "./pages/LoginPage";
 import { PlanPage } from "./pages/PlanPage";
 import { PortfolioPage } from "./pages/PortfolioPage";
+import { PageSkeleton } from "./components/Skeleton";
 
 // Carregadas sob demanda. O critério é FREQUÊNCIA, não idade da tela: o que se abre em
 // toda sessão vem no bundle inicial; folha de detalhe e telas de configuração, não.
@@ -38,18 +39,15 @@ const TABS: { to: string; label: string; icon: IconName }[] = [
   { to: "/reserva", label: "Reserva", icon: "vault" },
 ];
 
-function PageFallback() {
-  return (
-    <main className="page">
-      <p className="muted">Carregando</p>
-    </main>
-  );
-}
-
 function AppShell() {
   const logout = useLogout();
   return (
     <>
+      {/* Primeira parada do Tab: sem ela, cada troca de tela obrigava a atravessar a marca,
+          o tema e as quatro abas antes de chegar ao conteúdo. */}
+      <a className="skip-link" href="#conteudo">
+        Pular para o conteúdo
+      </a>
       <header className="header">
         <div className="brand">
           <BrandMark size={26} />
@@ -80,17 +78,19 @@ function AppShell() {
         ))}
       </nav>
 
-      <Suspense fallback={<PageFallback />}>
-        <Routes>
-          <Route path="/plano" element={<PlanPage />} />
-          <Route path="/carteira" element={<PortfolioPage />} />
-          <Route path="/watchlist" element={<WatchlistPage />} />
-          <Route path="/alvo" element={<TargetPortfolioPage />} />
-          <Route path="/ativo/:ticker" element={<AssetPage />} />
-          <Route path="/reserva" element={<ReservePage />} />
-          <Route path="*" element={<Navigate to="/plano" replace />} />
-        </Routes>
-      </Suspense>
+      <div id="conteudo" tabIndex={-1} className="conteudo">
+        <Suspense fallback={<PageSkeleton />}>
+          <Routes>
+            <Route path="/plano" element={<PlanPage />} />
+            <Route path="/carteira" element={<PortfolioPage />} />
+            <Route path="/watchlist" element={<WatchlistPage />} />
+            <Route path="/alvo" element={<TargetPortfolioPage />} />
+            <Route path="/ativo/:ticker" element={<AssetPage />} />
+            <Route path="/reserva" element={<ReservePage />} />
+            <Route path="*" element={<Navigate to="/plano" replace />} />
+          </Routes>
+        </Suspense>
+      </div>
 
       <footer className="footer">
         <button className="link-button footer-exit" onClick={() => logout.mutate()}>
@@ -105,13 +105,7 @@ function AppShell() {
 export default function App() {
   const auth = useAuthStatus();
   if (auth.isLoading) {
-    return (
-      <main className="page">
-        <p className="muted" role="status">
-          Carregando…
-        </p>
-      </main>
-    );
+    return <PageSkeleton />;
   }
   // Sem resposta do backend não se sabe se há sessão. Renderizar o app inteiro nesse
   // caso era afirmar que sim: cada aba abria e falhava por conta própria, com cinco

@@ -375,6 +375,15 @@ a:visited {
 /* A display fica nos TRÊS níveis de página — marca, título e seção — e para por aí.
    Subtítulo de cartão (h3) segue na Plex: ali o texto é rótulo funcional, não manchete,
    e serifa em tudo viraria ruído. */
+/* Título não deixa palavra órfã na última linha; parágrafo evita viúva. */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+p {
+  text-wrap: pretty;
+}
 h2 {
   font-family: var(--font-display);
   font-size: var(--fs-section);
@@ -1509,12 +1518,118 @@ select {
   .card,
   .seg-btn,
   .tab,
-  .legend-item {
+  .legend-item,
+  .primary,
+  .btn-secondary,
+  .link-button,
+  .card-head,
+  .perf-legend-item,
+  .class-chip,
+  .header-action {
     transition:
       background 0.15s,
       color 0.15s,
-      border-color 0.15s;
+      transform 0.1s;
   }
+}
+
+/* ===== Resposta ao toque =====
+   Todo controle reage em dois tempos: o hover muda o FUNDO (nunca a borda, que não
+   existe mais) e o toque AFUNDA 1px. Sem isso o botão de 60 segundos do plano parecia
+   não ter sido apertado até o banner de status aparecer. O afundar é transform, então
+   não mexe no layout; com movimento reduzido ele simplesmente não anima. */
+.primary:hover:not(:disabled) {
+  background: var(--green-light);
+}
+.seg-btn:hover:not(.seg-on),
+.perf-legend-item:hover:not(:disabled):not(.perf-on),
+.class-chip:hover:not(.class-chip-on),
+.card-head:not(.card-head-static):hover {
+  background: var(--hover);
+}
+.link-button:hover:not(:disabled) {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.primary:active:not(:disabled),
+.btn-secondary:active,
+.seg-btn:active,
+.perf-legend-item:active:not(:disabled),
+.class-chip:active,
+.legend-item:active,
+.tab:active,
+.header-action:active {
+  transform: translateY(1px);
+}
+
+/* ===== Esqueleto de carregamento ===== */
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-16);
+}
+.skeleton-block {
+  background: var(--card);
+  border-radius: var(--radius);
+}
+.skeleton-title {
+  width: 40%;
+  height: 32px;
+  background: var(--track);
+  border-radius: var(--radius-sm);
+}
+.skeleton-line {
+  height: 20px;
+  background: var(--track);
+  border-radius: var(--radius-sm);
+}
+.skeleton-sm {
+  height: 64px;
+}
+.skeleton-md {
+  height: 120px;
+}
+.skeleton-lg {
+  height: 240px;
+}
+.entries-skeleton {
+  padding: 0 14px 12px;
+}
+.entries-skeleton .skeleton {
+  gap: var(--sp-8);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .skeleton-block {
+    animation: skeleton-pulse 1.4s ease-in-out infinite;
+  }
+}
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ===== Pular para o conteúdo ===== */
+.skip-link {
+  position: absolute;
+  left: var(--sp-16);
+  top: var(--sp-8);
+  z-index: 60;
+  padding: var(--sp-12) var(--sp-16);
+  background: var(--green);
+  color: var(--on-accent);
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  transform: translateY(-200%);
+}
+.skip-link:visited {
+  color: var(--on-accent);
+}
+.skip-link:focus {
+  transform: none;
+}
+.conteudo:focus {
+  outline: none;
 }
 
 /* ===== v4: renda realizada, radar, marcos, planos e reserva ===== */
