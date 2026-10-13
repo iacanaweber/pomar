@@ -39,6 +39,7 @@ from app.services import legacy as legacy_svc
 from app.services import reserve as reserve_svc
 from app.services.allocation import aligned_value_by_class, allocate, class_needs
 from app.services.analysis import analyze_asset, resolve_bazin_target_yield
+from app.services.groups import also_tickers, expand_all_baskets
 from app.services.portfolio_service import get_enriched_portfolio
 from app.services.reserve_service import resolve_floor
 from app.services.universe import build_universe
@@ -141,20 +142,34 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # parte da carteira alvo, e cobrar uma cesta dela seria ruído.
     selected = list(req.classes or ALLOCATION_CLASSES)
     all_baskets = prefs.get("class_targets") or {}
+    # Expande o formato {weight, also} → formato plano + mapa de grupos
+    flat_baskets, groups_by_class = expand_all_baskets(all_baskets)
     # A classe RENDA_FIXA continua fora de INVESTABLE_CLASSES: ela tem o próprio degrau na
     # cascata e a compra dela não disputa orçamento com a bolsa. Mas a cesta dela pode ter
     # TICKERS (um ETF de renda fixa), e esses precisam de cotação e lote como qualquer
     # outro — daí as duas listas.
     baskets = {
-        c: b for c, b in all_baskets.items()
+        c: b for c, b in flat_baskets.items()
         if b and c in selected and c in INVESTABLE_CLASSES
     }
-    rf_tags, rf_tickers = indexers_svc.split_basket(all_baskets.get(RENDA_FIXA))
+    rf_tags, rf_tickers = indexers_svc.split_basket(flat_baskets.get(RENDA_FIXA))
     if RENDA_FIXA not in selected:
         rf_tickers = {}
     # O universo é o que precisa de COTAÇÃO — inclui os tickers da renda fixa. As tags
     # ficam de fora: pedir preço de "CDI" não é uma pergunta com resposta.
+    # Tickers `also` (legados de grupos) precisam de cotação para somar valor.
     universe_baskets = dict(baskets)
+    legacy_tickers = also_tickers(
+        {c: g for c, g in groups_by_class.items() if c in baskets}
+    )
+    for lt in legacy_tickers:
+        # Adiciona como peso-zero (só para fetch; não recebe compra)
+        for c, grps in groups_by_class.items():
+            if c not in baskets:
+                continue
+            for legacies in grps.values():
+                if lt in legacies:
+                    universe_baskets.setdefault(c, {})[lt] = 0.0
     if rf_tickers:
         universe_baskets[RENDA_FIXA] = rf_tickers
     skipped = [
@@ -307,7 +322,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
 
     held = {p.ticker: p.value for p in portfolio.positions}
     legacy_in_total = bool(prefs.get("legacy_in_total", True))
-    aligned = aligned_value_by_class(held, all_baskets, targets)
+    aligned = aligned_value_by_class(held, flat_baskets, targets, groups_by_class)
     # Com o legado na base, o patrimônio é o que a composição já somou — cada posição e
     # cada conta uma vez. Sem ele, a base é só o capital alinhado de bolsa, e aí a classe
     # renda fixa precisa entrar INTEIRA: nada dela sobrevive ao filtro do alinhado, porque
@@ -357,6 +372,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
     unallocated = allocate(
         aporte_rv, ranking, portfolio, prices, lots, targets, baskets,
         min_ticket=req.min_ticket, total_after=total_after,
+        groups=groups_by_class,
     )
 
     # 7b) o pedaço da renda fixa que é COTA. Segunda chamada ao MESMO alocador, num mundo
@@ -438,7 +454,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
     # inteira — senão a linha do ranking diria "100% da cesta" para um ETF que o usuário pôs
     # em 30%, e a frase de "p.p. abaixo do alvo" sairia de um alvo inventado.
     if rf_tickers:
-        cesta_rf = all_baskets.get(RENDA_FIXA) or {}
+        cesta_rf = flat_baskets.get(RENDA_FIXA) or {}
         peso_rf = sum(cesta_rf.values()) or 1.0
         valor_classe = rf_classe + split["rf_total"]
         for item in ranking:
@@ -505,7 +521,7 @@ async def plan(req: PlanRequest) -> PlanResponse:
         if split["rf_directed"] > 0:
             db = get_db()
             tags_conta = await labels_repo.assignments_by_subject(db, "indexer", "fi_account")
-            cesta = all_baskets.get(RENDA_FIXA) or {}
+            cesta = flat_baskets.get(RENDA_FIXA) or {}
             # duas grandezas: `atual` é o que EXISTE hoje (vai para a tela) e `regua` é o
             # que existirá depois do piso (mede o déficit). Confundi-las mandaria o peso
             # para a tag que o piso acabou de atender.

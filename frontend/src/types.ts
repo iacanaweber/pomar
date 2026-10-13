@@ -81,8 +81,9 @@ export interface Preferences {
   bazin_target_mode: string;
   bazin_target_yield?: number | null;
   /** Carteira alvo: peso (0..1) de cada item dentro da sua classe. Em RENDA_FIXA o item
-   *  é uma tag de indexador (CDI, IPCA…); nas demais, um ticker. */
-  class_targets: Record<string, Record<string, number>>;
+   *  é uma tag de indexador (CDI, IPCA…); nas demais, um ticker.
+   *  Um item pode ser `number` (peso simples) ou `{weight, also}` (grupo com legados). */
+  class_targets: Record<string, Record<string, number | { weight: number; also: string[] }>>;
   /** Piso da reserva: o mínimo que fica em renda fixa de resgate imediato. */
   reserve_floor_amount: number;
   reserve_floor_date: string | null;

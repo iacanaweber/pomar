@@ -321,6 +321,33 @@ def test_class_needs_classe_sem_meta_nao_pede_nada():
     assert needs["BDR"] == 0.0
 
 
+def test_groups_merge_legacy_into_buy_ticker():
+    """VWRA11 (legado) + MUND11 (buy) contam juntos; só MUND11 recebe compra."""
+    pf = _pf({"VWRA11": ("ETF", 8000.0), "MUND11": ("ETF", 2000.0)}, {"ETF": 1.0})
+    ranking = _ranking(("MUND11", "ETF"))
+    prices = {"MUND11": 10.0, "VWRA11": 100.0}
+    lots = {"MUND11": 1, "VWRA11": 1}
+    groups = {"ETF": {"MUND11": ["VWRA11"]}}
+    unallocated = allocate(
+        1000.0, ranking, pf, prices, lots, {"ETF": 1.0},
+        {"ETF": {"MUND11": 1.0}}, min_ticket=10.0, groups=groups,
+    )
+    mund = next(r for r in ranking if r.ticker == "MUND11")
+    assert mund.suggested is not None
+    assert mund.suggested.shares == 100  # 1000 / 10
+    assert abs(_spent(ranking) + unallocated - 1000.0) < 0.05
+
+
+def test_groups_aligned_value_includes_legacy():
+    """O valor alinhado deve somar VWRA11 + MUND11 para a classe ETF."""
+    from app.services.allocation import aligned_value_by_class
+    held = {"VWRA11": 8000.0, "MUND11": 2000.0}
+    baskets = {"ETF": {"MUND11": 1.0}}
+    groups = {"ETF": {"MUND11": ["VWRA11"]}}
+    result = aligned_value_by_class(held, baskets, {"ETF": 1.0}, groups)
+    assert result == {"ETF": 10000.0}
+
+
 def test_total_after_do_chamador_manda_e_o_default_reproduz_a_conta_de_sempre():
     """Sem o parâmetro, a base é a de sempre (carteira + aporte). Com ele, quem chama manda.
 

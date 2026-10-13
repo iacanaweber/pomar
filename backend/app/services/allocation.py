@@ -119,6 +119,7 @@ def aligned_value_by_class(
     held: Dict[str, float],
     class_baskets: Optional[Dict[str, Dict[str, float]]],
     targets: Optional[Dict[str, float]] = None,
+    groups: Optional[Dict[str, Dict[str, list]]] = None,
 ) -> Dict[str, float]:
     """Valor de cada classe que de fato SEGUE a carteira alvo (o legado fica de fora).
 
@@ -129,13 +130,21 @@ def aligned_value_by_class(
 
     Usa a cesta DECLARADA (não a filtrada por preço): um ticker do alvo cuja cotação falhou
     continua sendo capital alinhado — a falha é do provedor, não uma decisão de estratégia.
+
+    Quando há grupos, os tickers `also` contam como capital alinhado da classe.
     """
     alvos = targets or {}
+    grps = groups or {}
     out: Dict[str, float] = {}
     for c, basket in (class_baskets or {}).items():
         if not basket or alvos.get(c, 0.0) <= 0:
             continue
-        out[c] = sum(held.get(t, 0.0) for t, w in basket.items() if (w or 0) > 0)
+        total = sum(held.get(t, 0.0) for t, w in basket.items() if (w or 0) > 0)
+        # Somar os tickers legados de cada grupo
+        for legacies in (grps.get(c) or {}).values():
+            for leg in legacies:
+                total += held.get(leg, 0.0)
+        out[c] = total
     return out
 
 
@@ -171,6 +180,7 @@ def allocate(
     min_ticket: float = 100.0,
     legacy_in_total: bool = True,
     total_after: Optional[float] = None,
+    groups: Optional[Dict[str, Dict[str, list]]] = None,
 ) -> float:
     """Preenche `suggested` e os campos `basket_*` do ranking. Retorna a sobra não alocada.
 
@@ -204,6 +214,11 @@ def allocate(
         return round(max(0.0, aporte), 2)
 
     held = {p.ticker: p.value for p in portfolio.positions}
+    # Merge legacy tickers into buy tickers when groups are active
+    if groups:
+        from app.services.groups import merge_held as _merge_held
+        for c, grps in groups.items():
+            held = _merge_held(held, grps)
     chosen: Dict[str, int] = {}  # ticker -> cotas a comprar
     target_amounts: Dict[str, float] = {}
     spent_by_class: Dict[str, float] = {c: 0.0 for c in baskets}
@@ -211,7 +226,7 @@ def allocate(
 
     if aporte > 0:
         # 1) orçamento por classe, NEED-BASED sobre a carteira resultante
-        cur_value = aligned_value_by_class(held, class_baskets, targets)
+        cur_value = aligned_value_by_class(held, class_baskets, targets, groups)
         if total_after is None:
             base = portfolio.total_value if legacy_in_total else sum(cur_value.values())
             total_after = base + aporte

@@ -31,7 +31,7 @@ class PreferencesBody(BaseModel):
     )
     bazin_target_mode: Optional[str] = None
     bazin_target_yield: Optional[float] = None
-    class_targets: Optional[Dict[str, Dict[str, float]]] = None
+    class_targets: Optional[Dict[str, dict]] = None
     reserve_floor_amount: Optional[float] = Field(
         None, ge=0, description="Piso da reserva em R$ — o mínimo que fica em renda fixa LÍQUIDA."
     )
@@ -112,10 +112,13 @@ class PreferencesBody(BaseModel):
     @field_validator("class_targets")
     @classmethod
     def _class_targets_validos(
-        cls, v: Optional[Dict[str, Dict[str, float]]]
-    ) -> Optional[Dict[str, Dict[str, float]]]:
+        cls, v: Optional[Dict[str, dict]]
+    ) -> Optional[Dict[str, dict]]:
         """Carteira alvo por classe: {"FII": {"AAA11": 0.4, ...}}. Pesos somam 1 por classe;
         classe com dict vazio remove a cesta daquela classe.
+
+        Cada item pode ser um float (peso simples) ou {"weight": float, "also": [str]}
+        (grupo: o ticker-chave recebe compra, os `also` são legados que contam no peso).
 
         Os itens de `RENDA_FIXA` são TAGS DE INDEXADOR (CDI, IPCA, LCI…) e não tickers —
         mesma aritmética, outro tipo de item. A existência da tag não é validada aqui: uma
@@ -124,7 +127,9 @@ class PreferencesBody(BaseModel):
         """
         if v is None:
             return None
-        out: Dict[str, Dict[str, float]] = {}
+        out: Dict[str, dict] = {}
+        all_also: set[str] = set()
+        all_keys: set[str] = set()
         for raw_cls, weights in v.items():
             c = raw_cls.strip().upper()
             if c not in ALLOCATION_CLASSES:
@@ -133,15 +138,40 @@ class PreferencesBody(BaseModel):
                 )
             if not weights:
                 continue  # cesta removida
-            norm = {t.strip().upper(): float(w) for t, w in weights.items()}
-            if any(w <= 0 for w in norm.values()):
-                raise ValueError(f"pesos da carteira alvo de {c} devem ser > 0.")
-            total = sum(norm.values())
+            norm: dict = {}
+            total = 0.0
+            for raw_t, entry in weights.items():
+                t = raw_t.strip().upper()
+                all_keys.add(t)
+                if isinstance(entry, dict):
+                    w = float(entry.get("weight", 0))
+                    also = entry.get("also") or []
+                    if not isinstance(also, list) or not all(isinstance(a, str) for a in also):
+                        raise ValueError(f"'also' de {t} deve ser uma lista de tickers.")
+                    also_norm = [a.strip().upper() for a in also]
+                    for a in also_norm:
+                        if a in all_also:
+                            raise ValueError(f"ticker '{a}' aparece em mais de um grupo.")
+                        all_also.add(a)
+                    norm[t] = {"weight": w, "also": also_norm} if also_norm else w
+                else:
+                    w = float(entry)
+                    norm[t] = w
+                if w <= 0:
+                    raise ValueError(f"pesos da carteira alvo de {c} devem ser > 0.")
+                total += w
             if abs(total - 1.0) > 0.001:
                 raise ValueError(
                     f"pesos da carteira alvo de {c} somam {total * 100:.1f}%, deveriam somar 100%."
                 )
             out[c] = norm
+        # Um ticker `also` não pode ser chave de nenhuma cesta
+        overlap = all_also & all_keys
+        if overlap:
+            raise ValueError(
+                f"ticker(s) {', '.join(sorted(overlap))} aparece(m) como chave e como "
+                "'also' — um ticker só pode estar em um grupo."
+            )
         return out
 
 

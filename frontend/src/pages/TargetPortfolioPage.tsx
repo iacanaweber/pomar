@@ -30,6 +30,81 @@ import { Icon } from "../components/Icon";
 
 const SUM_CLASS: Record<SumState, string> = { over: "sum-over", under: "sum-under", ok: "sum-ok" };
 
+/** Tickers legados que contam para o mesmo peso-alvo (ex.: VWRA11 ao migrar para MUND11). */
+function AlsoEditor({
+  ticker,
+  also,
+  onChange,
+}: {
+  ticker: string;
+  also: string[];
+  onChange: (also: string[]) => void;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState("");
+
+  const add = () => {
+    const t = draft.trim().toUpperCase();
+    if (!t || also.includes(t) || t === ticker) return;
+    onChange([...also, t]);
+    setDraft("");
+    setAdding(false);
+  };
+
+  return (
+    <div className="also-editor">
+      {also.length > 0 && (
+        <span className="also-list muted">
+          {"inclui "}
+          {also.map((a) => (
+            <span key={a} className="also-tag">
+              {a}
+              <button
+                type="button"
+                className="link-button also-remove"
+                aria-label={`Remover ${a} do grupo de ${ticker}`}
+                onClick={() => onChange(also.filter((x) => x !== a))}
+              >
+                <Icon name="close" size={12} />
+              </button>
+            </span>
+          ))}
+        </span>
+      )}
+      {adding ? (
+        <span className="also-add-inline">
+          <input
+            className="also-input"
+            inputMode="text"
+            placeholder="Ticker legado"
+            value={draft}
+            autoFocus
+            aria-label={`Ticker legado para agrupar com ${ticker}`}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") { e.preventDefault(); add(); }
+              if (e.key === "Escape") setAdding(false);
+            }}
+            onBlur={() => { if (!draft.trim()) setAdding(false); }}
+          />
+          <button type="button" className="link-button" onClick={add} disabled={!draft.trim()}>
+            ok
+          </button>
+        </span>
+      ) : (
+        <button
+          type="button"
+          className="link-button also-add-btn"
+          onClick={() => setAdding(true)}
+          aria-label={`Agrupar outro ticker com ${ticker}`}
+        >
+          +legado
+        </button>
+      )}
+    </div>
+  );
+}
+
 /** Uma linha do editor: ticker, slider e campo — os três amarrados ao mesmo peso. */
 function WeightRow({
   row,
@@ -37,6 +112,7 @@ function WeightRow({
   state,
   snap,
   onChange,
+  onAlsoChange,
   onRemove,
 }: {
   row: Row;
@@ -45,6 +121,7 @@ function WeightRow({
   /** Valor que fecha os 100% neste slider — vira marca visual e destino magnético. */
   snap: number | null;
   onChange: (pct: number) => void;
+  onAlsoChange: (also: string[]) => void;
   onRemove: () => void;
 }) {
   // O campo tem estado próprio enquanto está sendo digitado: normalizar a cada tecla
@@ -114,6 +191,7 @@ function WeightRow({
       >
         <Icon name="close" size={18} />
       </button>
+      <AlsoEditor ticker={row.ticker} also={row.also ?? []} onChange={onAlsoChange} />
     </div>
   );
 }
@@ -129,7 +207,7 @@ function BasketEditor({
 }: {
   cls: string;
   rows: Row[];
-  saved: Record<string, number>;
+  saved: Record<string, number | { weight: number; also: string[] }>;
   onChange: (rows: Row[]) => void;
   onSaved: () => void;
 }) {
@@ -159,7 +237,15 @@ function BasketEditor({
   const ok = state === "ok";
   const dirty =
     rows.length !== Object.keys(saved).length ||
-    rows.some((r) => Math.abs((saved[r.ticker] ?? -1) * 100 - r.pct) > 0.001);
+    rows.some((r) => {
+      const s = saved[r.ticker];
+      const savedW = typeof s === "number" ? s : s?.weight ?? -1;
+      const savedAlso = typeof s === "object" && s !== null ? s.also : undefined;
+      return (
+        Math.abs(savedW * 100 - r.pct) > 0.001 ||
+        JSON.stringify(r.also ?? []) !== JSON.stringify(savedAlso ?? [])
+      );
+    });
 
   const addRow = () => {
     const t = newTicker.trim().toUpperCase();
@@ -185,7 +271,14 @@ function BasketEditor({
 
   const save = () => {
     const basket = Object.fromEntries(
-      rows.filter((r) => r.ticker.trim()).map((r) => [r.ticker, (r.pct || 0) / 100]),
+      rows
+        .filter((r) => r.ticker.trim())
+        .map((r) => [
+          r.ticker,
+          r.also?.length
+            ? { weight: (r.pct || 0) / 100, also: r.also }
+            : (r.pct || 0) / 100,
+        ]),
     );
     savePrefs.mutate(
       { class_targets: { ...(preferences.data?.class_targets ?? {}), [cls]: basket } },
@@ -210,6 +303,7 @@ function BasketEditor({
             state={state}
             snap={snapPointFor(rows, idx)}
             onChange={(pct) => onChange(rows.map((x, i) => (i === idx ? { ...x, pct } : x)))}
+            onAlsoChange={(also) => onChange(rows.map((x, i) => (i === idx ? { ...x, also } : x)))}
             onRemove={() => onChange(rows.filter((_, i) => i !== idx))}
           />
         ))}
@@ -395,9 +489,10 @@ export function TargetPortfolioPage() {
 
   const savedRows = useCallback(
     (cls: string): Row[] =>
-      Object.entries(savedBaskets[cls] ?? {}).map(([ticker, w]) => ({
+      Object.entries(savedBaskets[cls] ?? {}).map(([ticker, entry]) => ({
         ticker,
-        pct: round2(w * 100),
+        pct: round2((typeof entry === "number" ? entry : entry.weight) * 100),
+        also: typeof entry === "object" && entry !== null ? entry.also : undefined,
       })),
     [savedBaskets],
   );

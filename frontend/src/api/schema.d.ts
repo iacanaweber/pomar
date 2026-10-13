@@ -1983,7 +1983,7 @@ export interface components {
       /** Class Targets */
       class_targets?: {
         [key: string]: {
-          [key: string]: number;
+          [key: string]: number | { weight: number; also: string[] };
         };
       } | null;
       /**

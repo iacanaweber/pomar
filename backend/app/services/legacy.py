@@ -30,13 +30,18 @@ def legacy_positions(
     """
     cestas = class_baskets or {}
     alvos = targets or {}
-    no_alvo = {
-        normalize_ticker(t)
-        for c, b in cestas.items()
-        if b and alvos.get(c, 0.0) > 0
-        for t, w in b.items()
-        if w > 0
-    }
+    no_alvo: set[str] = set()
+    for c, b in cestas.items():
+        if not b or alvos.get(c, 0.0) <= 0:
+            continue
+        for t, entry in b.items():
+            w = float(entry.get("weight", 0)) if isinstance(entry, dict) else float(entry)
+            if w > 0:
+                no_alvo.add(normalize_ticker(t))
+            # tickers legados do grupo também estão no alvo
+            if isinstance(entry, dict):
+                for leg in entry.get("also") or []:
+                    no_alvo.add(normalize_ticker(leg))
     out = [
         {"ticker": normalize_ticker(p["ticker"]), "asset_class": p.get("asset_class"),
          "value": float(p.get("value") or 0.0)}

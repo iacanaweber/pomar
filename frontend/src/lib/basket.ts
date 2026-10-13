@@ -8,6 +8,7 @@
 export interface Row {
   ticker: string;
   pct: number;
+  also?: string[];
 }
 
 /** Tolerância da soma, em pontos percentuais — a mesma do validador do backend. */

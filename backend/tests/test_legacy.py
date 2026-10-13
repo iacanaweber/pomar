@@ -57,6 +57,18 @@ def test_posicao_zerada_nao_conta():
     assert legacy.legacy_positions([_pos("ZZZ3", "STOCK", 0.0)], BASKETS, TARGETS) == []
 
 
+def test_also_ticker_nao_e_legado():
+    """Ticker listado em `also` de um grupo não deve aparecer como legado."""
+    baskets_with_also = {
+        "ETF": {"MUND11": {"weight": 1.0, "also": ["VWRA11"]}},
+    }
+    itens = legacy.legacy_positions(
+        [_pos("VWRA11", "ETF", 8000), _pos("MUND11", "ETF", 2000)],
+        baskets_with_also, {"ETF": 1.0},
+    )
+    assert itens == []
+
+
 def test_sem_carteira_alvo_tudo_e_legado():
     itens = legacy.legacy_positions([_pos("AAA3", "STOCK", 100)], {}, {})
     assert [p["ticker"] for p in itens] == ["AAA3"]

@@ -119,7 +119,7 @@ export function buildComparison(
   positions: PositionLike[],
   totalValue: number,
   targets: Record<string, number>,
-  classTargets: Record<string, Record<string, number>>,
+  classTargets: Record<string, Record<string, number | { weight: number; also: string[] }>>,
   options: Options = {},
 ): Comparison {
   const rendaFixaAccounts = Math.max(0, options.rendaFixaValue ?? 0);
@@ -128,13 +128,22 @@ export function buildComparison(
 
   // peso-alvo de cada ticker sobre a carteira INTEIRA (meta da classe × peso na cesta)
   const targetPctByTicker = new Map<string, { cls: string; pct: number }>();
+  const alsoOf = new Map<string, string>(); // legacy ticker → buy ticker
   for (const cls of INVESTABLE_CLASSES) {
     const classPct = round2((targets[cls] ?? 0) * 100);
-    for (const [ticker, weight] of Object.entries(classTargets[cls] ?? {})) {
+    for (const [ticker, entry] of Object.entries(classTargets[cls] ?? {})) {
+      const weight = typeof entry === "number" ? entry : entry.weight;
       targetPctByTicker.set(ticker.toUpperCase(), {
         cls,
         pct: shareOfTotal(classPct, round2(weight * 100)),
       });
+      // Legacy tickers in `also` are grouped with the buy ticker — they must not
+      // appear as legacy positions. We record them with a special marker.
+      if (typeof entry === "object" && entry.also) {
+        for (const leg of entry.also) {
+          alsoOf.set(leg.toUpperCase(), ticker.toUpperCase());
+        }
+      }
     }
   }
 
@@ -147,6 +156,24 @@ export function buildComparison(
 
   const currentByTicker = new Map<string, PositionLike>();
   for (const p of rvPositions) currentByTicker.set(p.ticker.toUpperCase(), p);
+
+  // Fold legacy (also) tickers' value into their buy ticker for comparison purposes
+  for (const [legTicker, buyTicker] of alsoOf) {
+    const legPos = currentByTicker.get(legTicker);
+    if (!legPos) continue;
+    const buyPos = currentByTicker.get(buyTicker);
+    if (buyPos) {
+      currentByTicker.set(buyTicker, { ...buyPos, value: buyPos.value + legPos.value });
+    } else {
+      const target = targetPctByTicker.get(buyTicker);
+      currentByTicker.set(buyTicker, {
+        ticker: buyTicker,
+        asset_class: target?.cls ?? legPos.asset_class,
+        value: legPos.value,
+      });
+    }
+    currentByTicker.delete(legTicker);
+  }
 
   const patrimonio = round2(rvTotal + rendaFixaAccounts);
   const legacyValue = round2(

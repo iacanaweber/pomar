@@ -2031,6 +2031,28 @@ select {
   align-items: center;
   gap: 8px;
 }
+.also-editor {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: var(--fs-12);
+  padding-left: 4px;
+}
+.also-list { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.also-tag {
+  display: inline-flex; align-items: center; gap: 2px;
+  background: var(--line); border-radius: var(--radius-sm); padding: 1px 6px;
+}
+.also-remove { padding: 0; min-width: auto; }
+.also-add-btn { font-size: var(--fs-12); }
+.also-input {
+  width: 80px; padding: 2px 4px; font-size: var(--fs-12);
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--card); color: var(--ink);
+}
+.also-add-inline { display: inline-flex; align-items: center; gap: 4px; }
 .weight-ticker {
   font-weight: 700;
   font-size: var(--fs-14);
