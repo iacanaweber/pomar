@@ -71,17 +71,18 @@
      não-textual, como anel de foco). */
   --green: #17462a; /* casca — tinta de marca, valor monetário, link (10,79:1) */
   --green-light: #2c7245;
-  --leaf: #4e9e62; /* folha — anel de foco, borda ativa, barra (3,02:1 não-texto) */
+  --leaf: #4a9a5e; /* folha — anel de foco, barra (3,03:1 sobre --bg, 3,46:1 sobre --card) */
   --amber: #9e5e00; /* ver --seiva: mesmo valor, nome antigo mantido por ora */
-  --bg: #f4f6f1; /* terra — off-white com viés vegetal, um grau mais quente */
+  --bg: #eef1ea; /* terra — off-white com viés vegetal. Um degrau abaixo do --card (1,14:1):
+                   é esse degrau, e não uma borda, que separa o cartão do fundo. */
   --card: #ffffff;
   --ink: #182014;
-  --muted: #5b6a56; /* sombra (5,77:1 no card, 5,30:1 no fundo) */
+  --muted: #5b6a56; /* sombra (5,77:1 no card, 5,06:1 no fundo, 5,24:1 no --surface-soft) */
   --line: #e0e6dd;
 
   /* Os dois tons do eixo. --seiva é ocre profundo de propósito: terracota tem componente
      vermelha e no app vermelho já quer dizer erro. */
-  --seiva: #9e5e00; /* AGIR — falta, plante aqui (5,18:1 card / 4,76:1 fundo) */
+  --seiva: #9e5e00; /* AGIR — falta, plante aqui (5,18:1 card / 4,54:1 fundo) */
   --sereno: #38658c; /* LER — diagnóstico, sobra, já está no alvo (6,16:1 card) */
   /* ===== ESPAÇO — 8 degraus =====
      Os degraus são os MODOS REAIS do CSS (8px aparece 23×, 10px 17×, 12px 13×): nada foi
@@ -136,14 +137,18 @@
 
   /* ===== ELEVAÇÃO — 2 níveis =====
      Sombra fica reservada ao que REALMENTE sobrepõe conteúdo (tooltip, toast, barra
-     fixa). Card usa borda hairline: é o que dá semântica à elevação, e é a raiz do bug
-     do piso da reserva — no escuro, rgba(0,0,0,.5) sobre #171c14 não é relevo, é borrão. */
+     fixa). Card NÃO usa borda nem sombra: a superfície se separa por degrau de tom
+     (--bg → --card → --surface-soft). No escuro, rgba(0,0,0,.5) sobre o card não é
+     relevo, é borrão — e uma hairline em cada bloco transformava a tela numa pilha de
+     retângulos iguais. Estado selecionado é FUNDO (--chip-bg), não cor de borda. */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-2: 0 10px 28px rgba(0, 0, 0, 0.16);
   --shadow: var(--shadow-1); /* alias: as regras que já usam --shadow seguem válidas */
 
   /* Tokens semânticos (substituem os hex antes hardcoded — habilitam o dark mode). */
-  --surface-soft: #fafdfa;
+  /* Item DENTRO de cartão. Precisa de degrau visível sobre o --card (1,10:1) porque não
+     tem mais borda: o antigo #fafdfa (1,02:1) sumia. */
+  --surface-soft: #f2f5ef;
   --track: #eef2ee;
   /* Superfície do cartão de DIAGNÓSTICO. Neutro com viés frio, e não mais uma variação de
      verde: o verde no app inteiro quer dizer "dinheiro se move aqui", e esse cartão não
@@ -152,16 +157,18 @@
      barra sem calha não tem o que preencher. */
   --surface-diag: #dfe6f0;
   --track-diag: #c3d0e0;
-  --track-leaf: #cfe3cf;
+  --track-leaf: #c2dbc2;
   /* Cinza secundário DENTRO das superfícies tingidas. Tingir o fundo derruba o --muted
      normal para 3,98:1 sobre a fria e 4,10:1 sobre a verde — abaixo de AA. Este passa em
      4,63:1 na pior das duas. Escopo local: no --card branco o de sempre continua valendo. */
   --muted-tinted: #5a695c;
-  --chip-bg: #eaf2ea;
+  /* Superfície de DESTAQUE (selecionado, sugestão, desconto). Mais saturada que o --bg,
+     já que agora é ela, e não uma borda --leaf, que marca o destaque. muted-tinted 4,72:1. */
+  --chip-bg: #dcecda;
   --hover: #f3f7f3;
   --on-accent: #ffffff;
   --danger: #c62828;
-  --flag: #b54708;
+  --flag: #ad4307; /* 4,76:1 sobre --chip-bg (cartão com desconto), 5,86:1 no card */
   --warn-bg: #fff8e1;
   --warn-border: #ffe082;
   --warn-ink: #7a5c00;
@@ -212,8 +219,8 @@
   --green-light: #8ad196;
   --leaf: #5cb36f;
   --amber: #e8a33a;
-  --bg: #10140f;
-  --card: #171c14;
+  --bg: #0d110c;
+  --card: #1a2017; /* degrau de 1,15:1 sobre o --bg */
   --ink: #e7efe5;
   --muted: #9bb09b;
   --line: #283026;
@@ -221,14 +228,14 @@
   --sereno: #7fb0d8; /* LER (7,51:1) */
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-2: 0 10px 28px rgba(0, 0, 0, 0.6);
-  --surface-soft: #1c2218;
+  --surface-soft: #232b20; /* 1,14:1 sobre o --card */
   --track: #222a1f;
   --surface-diag: #1e242d;
   --track-diag: #2e3844;
   --track-leaf: #162216;
   --muted-tinted: var(--muted); /* no escuro o --muted já passa com folga (6,75:1) */
   --chip-bg: #233122;
-  --hover: #1f2a1c;
+  --hover: #212b1e;
   --on-accent: #0c120a;
   --danger: #ef5350;
   --flag: #ffb74d;
@@ -312,7 +319,6 @@ a:visited {
 .header {
   background: var(--card);
   color: var(--ink);
-  border-bottom: 1px solid var(--line);
   /* o padding-top absorve o notch quando o app roda em standalone */
   padding: env(safe-area-inset-top) 0 0;
 }
@@ -380,7 +386,6 @@ h3 {
 .controls {
   background: var(--card);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -453,12 +458,10 @@ select {
 }
 .banner-warn {
   background: var(--warn-bg);
-  border: 1px solid var(--warn-border);
   color: var(--warn-ink);
 }
 .banner-error {
   background: var(--err-bg);
-  border: 1px solid var(--err-border);
   color: var(--err-ink);
 }
 
@@ -468,7 +471,6 @@ select {
 .alloc {
   background: var(--card);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
   padding: var(--pad-card);
   margin: var(--sp-16) 0;
 }
@@ -503,7 +505,6 @@ select {
 .card {
   background: var(--card);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
   overflow: hidden;
 }
 .card-head {
@@ -622,7 +623,7 @@ select {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-2); /* taste-skill-ignore: sobrepõe conteúdo ou é marca de controle */
   font-weight: 400;
   font-size: var(--fs-12);
   line-height: 1.4;
@@ -639,7 +640,6 @@ select {
 .tip-src {
   opacity: 0.6;
   font-size: var(--fs-11);
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
   padding-top: 4px;
 }
 
@@ -655,8 +655,9 @@ select {
   left: 0;
   right: 0;
   bottom: 0;
-  border-top: 1px solid var(--line);
   padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+  /* A barra flutua de verdade sobre o conteúdo: é o único bloco parado com sombra. */
+  box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.07); /* taste-skill-ignore: barra fixa sobre conteúdo */
   padding-left: calc(8px + env(safe-area-inset-left));
   padding-right: calc(8px + env(safe-area-inset-right));
 }
@@ -736,7 +737,7 @@ select {
     margin: 0 auto;
     padding: 0 16px;
     background: var(--bg);
-    border-top: 0;
+    box-shadow: none; /* taste-skill-ignore: anula a sombra da barra fixa do celular */
   }
   .tab {
     flex-direction: row;
@@ -767,7 +768,6 @@ select {
   gap: 2px;
   background: var(--card);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
   padding: 16px;
   margin-bottom: 14px;
 }
@@ -804,14 +804,12 @@ select {
 .seg-on {
   background: var(--card);
   color: var(--green);
-  box-shadow: var(--shadow);
 }
 
 /* Pie + legend */
 .pf-chart {
   background: var(--card);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -884,7 +882,6 @@ select {
 .pf-drill {
   background: var(--card);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
   padding: 16px;
   margin-top: 14px;
 }
@@ -945,7 +942,6 @@ select {
   gap: 12px;
   background: var(--card);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
   padding: 16px;
   margin-top: 8px;
 }
@@ -1057,7 +1053,6 @@ select {
 .login-card {
   background: var(--card);
   border-radius: var(--radius);
-  border: 1px solid var(--line);
   padding: 24px;
 }
 /* Login: é a única tela onde a marca tem trabalho a fazer, então aqui ela vem grande. */
@@ -1109,7 +1104,6 @@ select {
   gap: 12px;
   padding: 12px;
   background: var(--surface-soft);
-  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
 }
 .adv-row {
@@ -1245,7 +1239,7 @@ select {
 .metric-na::before {
   background: none;
   border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px currentColor;
+  box-shadow: inset 0 0 0 1.5px currentColor; /* taste-skill-ignore: sobrepõe conteúdo ou é marca de controle */
 }
 .ceiling-block h3 {
   margin-top: 0;
@@ -1274,7 +1268,7 @@ select {
   border-radius: var(--radius-pill);
   font-weight: 700;
   font-size: var(--fs-14);
-  box-shadow: var(--shadow-2);
+  box-shadow: var(--shadow-2); /* taste-skill-ignore: sobrepõe conteúdo ou é marca de controle */
   z-index: 50;
 }
 
@@ -1360,7 +1354,6 @@ select {
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface-soft);
 }
@@ -1391,16 +1384,6 @@ select {
   --tag-deposit-fg: #9db8f0;
   --tag-withdrawal-bg: #3a1f1d;
   --tag-withdrawal-fg: #f0a49b;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --tag-balance-bg: #1d3320;
-    --tag-balance-fg: #86d992;
-    --tag-deposit-bg: #1b2740;
-    --tag-deposit-fg: #9db8f0;
-    --tag-withdrawal-bg: #3a1f1d;
-    --tag-withdrawal-fg: #f0a49b;
-  }
 }
 .reserve-entry-tag.tag-balance {
   background: var(--tag-balance-bg);
@@ -1525,7 +1508,6 @@ select {
 /* Radar de teto */
 .radar-banner {
   background: var(--chip-bg);
-  border: 1px solid var(--line);
   color: var(--ink);
 }
 .watchlist-radar-data {
@@ -1574,11 +1556,9 @@ select {
   flex-direction: column;
   gap: var(--sp-8);
   background: var(--chip-bg);
-  border-color: var(--leaf);
 }
 .reserve-goal.goal-met {
-  background: var(--surface-soft);
-  border-color: var(--line);
+  background: var(--card);
 }
 .reserve-goal .goal-head h3 {
   font-size: var(--fs-14);
@@ -1683,9 +1663,8 @@ select {
   column-gap: var(--sp-8);
   min-height: 56px;
   padding: var(--sp-10) var(--sp-12);
-  border: 2px solid var(--line);
   border-radius: var(--radius);
-  background: var(--card);
+  background: var(--surface-soft);
   cursor: pointer;
   min-width: 0;
   overflow-wrap: break-word;
@@ -1701,8 +1680,8 @@ select {
   min-width: 0;
 }
 .class-chip-on {
-  border-color: var(--leaf);
   background: var(--chip-bg);
+  --muted: var(--muted-tinted);
 }
 .class-chip input {
   width: 20px;
@@ -1809,8 +1788,11 @@ select {
 }
 
 /* Desconto sobre o preço-teto: destaque mesmo sem compra sugerida. */
+/* Sem borda: o destaque é a superfície verde, a mesma da sugestão de renda fixa. */
 .card-discount {
-  border: 2px solid var(--leaf);
+  background: var(--chip-bg);
+  --track: var(--track-leaf);
+  --muted: var(--muted-tinted);
 }
 .card-risk {
   width: 10px;
@@ -1891,7 +1873,9 @@ select {
 
 /* Gráfico: todas as barras dividem o MESMO trilho de 100% (a carteira inteira), então
    metade do trilho é metade da carteira — classes comparáveis a olho. */
+/* Sem borda, dois cartões encostados viram uma superfície só: a margem é o que os separa. */
 .tp-chart {
+  margin-bottom: var(--sp-16);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -2040,19 +2024,41 @@ select {
   font-size: var(--fs-12);
   padding-left: 4px;
 }
-.also-list { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.also-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+}
 .also-tag {
-  display: inline-flex; align-items: center; gap: 2px;
-  background: var(--line); border-radius: var(--radius-sm); padding: 1px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--line);
+  border-radius: var(--radius-sm);
+  padding: 1px 6px;
 }
-.also-remove { padding: 0; min-width: auto; }
-.also-add-btn { font-size: var(--fs-12); }
+.also-remove {
+  padding: 0;
+  min-width: auto;
+}
+.also-add-btn {
+  font-size: var(--fs-12);
+}
 .also-input {
-  width: 80px; padding: 2px 4px; font-size: var(--fs-12);
-  border: 1px solid var(--line); border-radius: var(--radius-sm);
-  background: var(--card); color: var(--ink);
+  width: 80px;
+  padding: 2px 4px;
+  font-size: var(--fs-12);
+  border: 1px solid var(--line); /* taste-skill-ignore: campo de formulário */
+  border-radius: var(--radius-sm);
+  background: var(--card);
+  color: var(--ink);
 }
-.also-add-inline { display: inline-flex; align-items: center; gap: 4px; }
+.also-add-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .weight-ticker {
   font-weight: 700;
   font-size: var(--fs-14);
@@ -2110,7 +2116,7 @@ select {
   border-radius: 50%;
   background: var(--green);
   border: 2px solid var(--card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); /* taste-skill-ignore: sobrepõe conteúdo ou é marca de controle */
 }
 .weight-slider::-moz-range-thumb {
   width: var(--thumb);
@@ -2118,7 +2124,7 @@ select {
   border-radius: 50%;
   background: var(--green);
   border: 2px solid var(--card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3); /* taste-skill-ignore: sobrepõe conteúdo ou é marca de controle */
 }
 .weight-slider.sum-over::-webkit-slider-thumb {
   background: var(--danger);
@@ -2141,7 +2147,6 @@ select {
   gap: 4px 12px;
   padding: 8px 10px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--line);
   background: var(--surface-soft);
   font-size: var(--fs-13);
 }
@@ -2160,21 +2165,17 @@ select {
   min-height: 0;
 }
 .basket-sum.sum-ok {
-  border-color: var(--leaf);
+  background: var(--chip-bg);
 }
 .basket-sum.sum-ok .basket-sum-value {
   color: var(--green);
 }
 .basket-sum.sum-over {
-  border-color: var(--danger);
   background: var(--err-bg);
 }
 .basket-sum.sum-over .basket-sum-value,
 .basket-sum.sum-over .basket-sum-note {
   color: var(--err-ink);
-}
-.basket-sum.sum-under {
-  border-color: var(--info);
 }
 .basket-sum.sum-under .basket-sum-value,
 .basket-sum.sum-under .basket-sum-note {
@@ -2198,7 +2199,7 @@ select {
   margin-left: -1.5px;
   border-radius: 2px;
   background: var(--muted);
-  box-shadow: 0 0 0 1px var(--card);
+  box-shadow: 0 0 0 1px var(--card); /* taste-skill-ignore: sobrepõe conteúdo ou é marca de controle */
   pointer-events: none;
 }
 .weight-snap.sum-over {
@@ -2218,6 +2219,7 @@ select {
 
 /* As duas barras 100% alinhadas: é o alinhamento que faz a diferença saltar aos olhos. */
 .cmp-bars {
+  margin-bottom: var(--sp-16);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -2424,7 +2426,7 @@ select {
   padding: var(--sp-12) var(--sp-16);
   background: var(--card);
   color: var(--green);
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: var(--radius-sm);
   font-size: var(--fs-14);
   font-weight: 600;
@@ -2433,7 +2435,6 @@ select {
 }
 .btn-secondary:hover {
   background: var(--hover);
-  border-color: var(--leaf);
 }
 
 /* Fora do alvo: sem eixo divergente e sem barra — não há alvo contra o qual medir. */
@@ -2472,13 +2473,11 @@ select {
    referência cíclica, que o CSS resolve para inválido — a calha simplesmente sumiria. */
 .fi-suggestion:not(.fi-quiet) {
   background: var(--chip-bg);
-  border-color: var(--leaf);
   --track: var(--track-leaf);
   --muted: var(--muted-tinted);
 }
 .fi-quiet {
-  background: var(--surface-soft);
-  border-color: var(--line);
+  background: var(--card);
 }
 .fi-amount {
   font-variant-numeric: tabular-nums;
@@ -2502,7 +2501,6 @@ select {
   padding: 10px;
   border-radius: var(--radius-sm);
   background: var(--surface-soft);
-  border: 1px solid var(--line);
 }
 /* A linha do piso sobe uma superfície: é a primeira instrução da cascata e a única que não
    admite substituto — só conta com resgate imediato serve. Qualificada por `li` de
@@ -2510,7 +2508,6 @@ select {
    e a regra seria descartada em silêncio. */
 .fi-indexers li.fi-line-floor {
   background: var(--card);
-  border-color: var(--leaf);
 }
 .fi-indexer-name {
   font-weight: 600;
@@ -2718,10 +2715,10 @@ select {
   gap: 6px;
   min-height: 44px;
   padding: 6px 10px;
-  border: 1px solid var(--line);
+  border: 0;
   border-radius: var(--radius-pill);
   font-size: var(--fs-12);
-  background: var(--card);
+  background: var(--surface-soft);
   color: var(--muted);
   cursor: pointer;
 }
@@ -2731,7 +2728,6 @@ select {
 }
 .perf-on {
   color: var(--ink);
-  border-color: var(--leaf);
   background: var(--chip-bg);
 }
 .perf-legend-hero {
@@ -2880,7 +2876,6 @@ select {
   line-height: 1.5;
   padding: var(--pad-card);
   background: var(--surface-soft);
-  border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 

@@ -7,7 +7,7 @@
   "scope": "/",
   "display": "standalone",
   "categories": ["finance"],
-  "background_color": "#f4f6f1",
+  "background_color": "#eef1ea",
   "theme_color": "#17462a",
   "icons": [
     {
