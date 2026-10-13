@@ -129,7 +129,7 @@ export function ReservePage() {
       )}
 
       {accounts.length > 0 && (
-        <ul className="cards">
+        <ul className="cards reserve-accounts">
           {accounts.map((a) => (
             <AccountCard
               key={a.id}

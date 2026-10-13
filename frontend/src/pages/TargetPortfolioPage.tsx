@@ -573,66 +573,73 @@ export function TargetPortfolioPage() {
 
       {prefs && (
         <>
-          <TargetPortfolioChart classes={chartData} />
+          {/* Desktop: a distribuição e as metas à esquerda, a composição de cada classe à
+              direita — mexer num peso e ver a barra mudar sem rolar a tela. */}
+          <div className="target-layout">
+            <div className="target-layout-side">
+              <TargetPortfolioChart classes={chartData} />
 
-          <ClassTargetsEditor
-            pct={effectivePct}
-            onChange={setClassPct}
-            onSaved={() => onSavedClass()}
-          />
-
-          <h2 className="section-title">Composição de cada classe</h2>
-          <ul className="cards">
-            {readOrder.map((cls) => {
-              const rows = rowsOf(cls);
-              const n = rows.length;
-              const sum = sumPct(rows);
-              const isOpen = open === cls;
-              const closed = Math.abs(sum - 100) <= 0.1;
-              return (
-                <li className="card" key={cls} id={cls}>
-                  <button
-                    className="basket-head"
-                    onClick={() => setOpen(isOpen ? null : cls)}
-                    aria-expanded={isOpen}
-                  >
-                    <span className="card-id">
-                      <span className="card-ticker">{CLASS_LABEL[cls]}</span>
-                      <span className="card-name">
-                        {n > 0 ? (
-                          <>
-                            {`${n} ativo${n > 1 ? "s" : ""} · soma ${num(sum)}% `}
-                            <Icon
-                              name={closed ? "check" : "alert"}
-                              size={13}
-                              className="icon-inline"
-                            />
-                            <span className="sr-only">
-                              {closed ? "fechada" : "não fecha em 100%"}
-                            </span>
-                          </>
-                        ) : (
-                          "sem composição"
-                        )}
-                      </span>
-                    </span>
-                    <span className="card-toggle">
-                      <Icon name="chevron" size={16} />
-                    </span>
-                  </button>
-                  {isOpen && (
-                    <BasketEditor
-                      cls={cls}
-                      rows={rows}
-                      saved={savedBaskets[cls] ?? {}}
-                      onChange={(next) => setDrafts((d) => ({ ...d, [cls]: next }))}
-                      onSaved={() => onSavedClass(cls)}
-                    />
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+              <ClassTargetsEditor
+                pct={effectivePct}
+                onChange={setClassPct}
+                onSaved={() => onSavedClass()}
+              />
+            </div>
+            <div className="target-layout-main">
+              <h2 className="section-title">Composição de cada classe</h2>
+              <ul className="cards">
+                {readOrder.map((cls) => {
+                  const rows = rowsOf(cls);
+                  const n = rows.length;
+                  const sum = sumPct(rows);
+                  const isOpen = open === cls;
+                  const closed = Math.abs(sum - 100) <= 0.1;
+                  return (
+                    <li className="card" key={cls} id={cls}>
+                      <button
+                        className="basket-head"
+                        onClick={() => setOpen(isOpen ? null : cls)}
+                        aria-expanded={isOpen}
+                      >
+                        <span className="card-id">
+                          <span className="card-ticker">{CLASS_LABEL[cls]}</span>
+                          <span className="card-name">
+                            {n > 0 ? (
+                              <>
+                                {`${n} ativo${n > 1 ? "s" : ""} · soma ${num(sum)}% `}
+                                <Icon
+                                  name={closed ? "check" : "alert"}
+                                  size={13}
+                                  className="icon-inline"
+                                />
+                                <span className="sr-only">
+                                  {closed ? "fechada" : "não fecha em 100%"}
+                                </span>
+                              </>
+                            ) : (
+                              "sem composição"
+                            )}
+                          </span>
+                        </span>
+                        <span className="card-toggle">
+                          <Icon name="chevron" size={16} />
+                        </span>
+                      </button>
+                      {isOpen && (
+                        <BasketEditor
+                          cls={cls}
+                          rows={rows}
+                          saved={savedBaskets[cls] ?? {}}
+                          onChange={(next) => setDrafts((d) => ({ ...d, [cls]: next }))}
+                          onSaved={() => onSavedClass(cls)}
+                        />
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </div>
         </>
       )}
     </main>

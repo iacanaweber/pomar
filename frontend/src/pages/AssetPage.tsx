@@ -250,7 +250,7 @@ export function AssetPage() {
       <AssetLabels ticker={asset.ticker} assetClass={asset.asset_class} />
 
       {legado && (
-        <>
+        <div className="asset-grid">
           <div className="alloc">
             <h3>Fundamentos</h3>
             <div className="fund-grid">
@@ -350,7 +350,7 @@ export function AssetPage() {
               Campo vazio: a fonte não trouxe o dado.
             </p>
           </div>
-        </>
+        </div>
       )}
 
       {!legado && (

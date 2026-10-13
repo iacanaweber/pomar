@@ -235,8 +235,12 @@ export function PortfolioPage() {
         <>
           {/* As barras resumem; a lista por ativo abaixo detalha. Mesmo objeto do
               Plantar, mesma conta — o desvio tem de bater entre as duas telas. */}
-          <HojeVsAlvo comparison={comparison} />
-          <PortfolioVsTarget comparison={comparison} />
+          <div className="pf-target-layout">
+            <div className="pf-target-diag">
+              <HojeVsAlvo comparison={comparison} />
+            </div>
+            <PortfolioVsTarget comparison={comparison} />
+          </div>
         </>
       )}
 

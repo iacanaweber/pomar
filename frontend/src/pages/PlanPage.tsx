@@ -65,79 +65,92 @@ export function PlanPage() {
           formulário abaixo responde. Esta tela não tinha título NENHUM — o primeiro
           heading era o h2 do RankedList, que só existe quando há compras a fazer. */}
       <h1 className="page-title">Plantar</h1>
-      {!portfolio.isPending && (
-        <HojeVsAlvo
-          comparison={comparison}
-          coberturaLegado={result?.legacy?.gap_coverage}
-          gapLegado={result?.legacy?.gap}
-        />
-      )}
-
-      <PlanControls
-        preferences={preferences.data}
-        preferencesPending={preferences.isPending}
-        loading={plan.isPending}
-        onSubmit={submit}
-      />
-
-      {/* O plano leva até 60 segundos. Sem região viva, quem usa leitor de tela aperta o
-          botão e nada mais é anunciado — nem o fim do cálculo. */}
-      <p className="sr-only" role="status">
-        {plan.isPending ? "Calculando o plano de aporte." : plan.isSuccess ? "Plano pronto." : ""}
-      </p>
-
-      {plan.isError && (
-        <div className="banner banner-error">
-          <Icon name="alert" size={15} />{" "}
-          {planError ? planError.userMessage : "Erro ao gerar o plano"}
-          {portfolioUnavailable && lastReq && (
-            <div style={{ marginTop: 6 }}>
-              <button
-                className="link-button"
-                onClick={() => plan.mutate({ ...lastReq, allow_empty_portfolio: true })}
-              >
-                Planejar sem a carteira (ignora posições existentes)
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {result && (
-        <>
-          {isRestored && (
-            <p className="muted plan-restored">
-              Último plano{result.created_at ? `, de ${shortDateTime(result.created_at)}` : ""}.
-            </p>
-          )}
-          {(result.classes_skipped ?? []).length > 0 && (
-            <div className="banner banner-warn">
-              <Icon name="alert" size={15} /> Sem composição definida:{" "}
-              {(result.classes_skipped ?? []).map((c) => classLabel(c)).join(", ")} — essas classes
-              ficaram de fora do plano.{" "}
-              <Link to={`/alvo#${(result.classes_skipped ?? [])[0]}`}>definir agora →</Link>
-            </div>
-          )}
-          {(result.warnings ?? []).length > 0 && (
-            <div className="banner banner-warn">
-              {(result.warnings ?? []).map((w, i) => (
-                <div key={i}>• {w}</div>
-              ))}
-            </div>
-          )}
-          {/* O diagnóstico subiu para o canteiro, no topo. Aqui fica só a ação, e dentro
-              dela a renda fixa vem antes por ser o primeiro degrau da cascata. */}
-          {result.fixed_income && (
-            <FixedIncomeSuggestionCard
-              suggestion={result.fixed_income}
-              reserve={result.reserve}
-              currency={result.currency}
-              planId={result.plan_id}
+      {/* No desktop (≥1024px) o diagnóstico vira coluna fixa à esquerda: a distância entre
+          as barras continua à vista enquanto se rola o plano, que é o que ele justifica.
+          No celular as duas colunas empilham na mesma ordem de antes. */}
+      <div className="plan-layout">
+        <aside className="plan-diag" aria-label="Hoje contra o alvo">
+          {!portfolio.isPending && (
+            <HojeVsAlvo
+              comparison={comparison}
+              coberturaLegado={result?.legacy?.gap_coverage}
+              gapLegado={result?.legacy?.gap}
             />
           )}
-          <RankedList plan={result} />
-        </>
-      )}
+        </aside>
+
+        <div className="plan-main">
+          <PlanControls
+            preferences={preferences.data}
+            preferencesPending={preferences.isPending}
+            loading={plan.isPending}
+            onSubmit={submit}
+          />
+
+          {/* O plano leva até 60 segundos. Sem região viva, quem usa leitor de tela aperta o
+          botão e nada mais é anunciado — nem o fim do cálculo. */}
+          <p className="sr-only" role="status">
+            {plan.isPending
+              ? "Calculando o plano de aporte."
+              : plan.isSuccess
+                ? "Plano pronto."
+                : ""}
+          </p>
+
+          {plan.isError && (
+            <div className="banner banner-error">
+              <Icon name="alert" size={15} />{" "}
+              {planError ? planError.userMessage : "Erro ao gerar o plano"}
+              {portfolioUnavailable && lastReq && (
+                <div style={{ marginTop: 6 }}>
+                  <button
+                    className="link-button"
+                    onClick={() => plan.mutate({ ...lastReq, allow_empty_portfolio: true })}
+                  >
+                    Planejar sem a carteira (ignora posições existentes)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {result && (
+            <>
+              {isRestored && (
+                <p className="muted plan-restored">
+                  Último plano{result.created_at ? `, de ${shortDateTime(result.created_at)}` : ""}.
+                </p>
+              )}
+              {(result.classes_skipped ?? []).length > 0 && (
+                <div className="banner banner-warn">
+                  <Icon name="alert" size={15} /> Sem composição definida:{" "}
+                  {(result.classes_skipped ?? []).map((c) => classLabel(c)).join(", ")} — essas
+                  classes ficaram de fora do plano.{" "}
+                  <Link to={`/alvo#${(result.classes_skipped ?? [])[0]}`}>definir agora →</Link>
+                </div>
+              )}
+              {(result.warnings ?? []).length > 0 && (
+                <div className="banner banner-warn">
+                  {(result.warnings ?? []).map((w, i) => (
+                    <div key={i}>• {w}</div>
+                  ))}
+                </div>
+              )}
+              {/* O diagnóstico subiu para o canteiro, no topo. Aqui fica só a ação, e dentro
+              dela a renda fixa vem antes por ser o primeiro degrau da cascata. */}
+              {result.fixed_income && (
+                <FixedIncomeSuggestionCard
+                  suggestion={result.fixed_income}
+                  reserve={result.reserve}
+                  currency={result.currency}
+                  planId={result.plan_id}
+                />
+              )}
+              <RankedList plan={result} />
+            </>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

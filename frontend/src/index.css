@@ -99,6 +99,13 @@
   --sp-24: 24px; /* separação entre seções */
   --pad-card: 16px; /* um lugar só para a briga 14px × 16px de recheio de card */
 
+  /* ===== LARGURA =====
+     Uma coluna de 820px até 1024. Acima disso o app abre para 1120px e as telas passam a
+     ter duas colunas (ver "Desktop em duas colunas", no fim do arquivo): numa tela de
+     1440px, a coluna única deixava mais da metade da largura vazia. Marca, abas e página
+     usam o MESMO valor, então as margens esquerdas se alinham sempre. */
+  --page-max: 820px;
+
   /* ===== TIPOGRAFIA — 7 degraus (antes: 15, vários separados por 1px) =====
      16px é piso inegociável em campo de formulário: abaixo disso o Safari iOS força zoom
      ao focar (ver o comentário em `select`, mais abaixo).
@@ -338,7 +345,7 @@ a:visited {
   align-items: center;
   gap: var(--sp-10);
   min-height: 52px;
-  max-width: 820px;
+  max-width: var(--page-max);
   margin: 0 auto;
   padding-right: calc(var(--sp-16) + env(safe-area-inset-right));
   padding-left: calc(var(--sp-16) + env(safe-area-inset-left));
@@ -368,7 +375,7 @@ a:visited {
 
 /* Layout */
 .page {
-  max-width: 820px;
+  max-width: var(--page-max);
   margin: 0 auto;
   padding: 16px calc(16px + env(safe-area-inset-right)) 16px calc(16px + env(safe-area-inset-left));
 }
@@ -748,7 +755,7 @@ select {
     position: sticky;
     top: 0;
     bottom: auto;
-    max-width: 820px;
+    max-width: var(--page-max);
     margin: 0 auto;
     padding: 0 16px;
     background: var(--bg);
@@ -1707,6 +1714,10 @@ select {
   font-size: var(--fs-14);
   color: var(--muted);
   margin-top: 4px;
+}
+/* Sem borda nos cartões, o botão "Adicionar conta" logo abaixo encostava no último. */
+.reserve-accounts {
+  margin-bottom: var(--sp-16);
 }
 .reserve-totals strong {
   color: var(--ink);
@@ -3132,4 +3143,67 @@ select {
 .ranked-progresso-fim {
   color: var(--green);
   font-weight: 600;
+}
+
+/* ===== Desktop em duas colunas (≥1024px) =====
+   Abaixo disso nenhum destes contêineres tem estilo: as colunas empilham na ordem do
+   código, que é a mesma ordem que a tela sempre teve no celular. */
+@media (min-width: 1024px) {
+  :root {
+    --page-max: 1120px;
+  }
+  /* Quatro abas esticadas em 1120px viravam alvos de 280px com o rótulo perdido no meio. */
+  .tab {
+    flex: 0 0 auto;
+    padding: 14px 20px;
+  }
+
+  /* Plantar e Carteira (Atual × alvo): o diagnóstico à esquerda, FIXO enquanto se rola a
+     ação ou o detalhe à direita. `top` = altura da barra de abas fixa + respiro. */
+  .plan-layout,
+  .pf-target-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: var(--sp-24);
+    align-items: start;
+  }
+  .plan-diag,
+  .pf-target-diag {
+    position: sticky;
+    top: 68px;
+  }
+  .plan-diag .cmp-bars,
+  .pf-target-diag .cmp-bars {
+    margin-bottom: 0;
+  }
+
+  /* Alvo: distribuição e metas por classe à esquerda, composição de cada classe à direita. */
+  .target-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--sp-24);
+    align-items: start;
+  }
+  .target-layout-main .section-title {
+    margin-top: 0;
+  }
+  /* Na coluna da direita o atalho alinha com a borda dos cartões, não com o meio. */
+  .pf-target-layout .cmp-access {
+    justify-content: flex-start;
+  }
+
+  /* Reserva e Ativo: cartões independentes entre si lado a lado. */
+  .reserve-accounts,
+  .asset-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: var(--sp-16);
+    align-items: start;
+  }
+  .asset-grid .alloc {
+    margin: 0;
+  }
+  .asset-grid {
+    margin-top: var(--sp-16);
+  }
 }
