@@ -152,9 +152,7 @@ export function NewAccountForm() {
           {dateInvalid && <span className="field-error">Use o formato dd/mm/aaaa.</span>}
         </label>
       </div>
-      <p className="note-desc" style={{ marginTop: 0 }}>
-        Use a data real da aplicação.
-      </p>
+      <p className="note-desc flush-top">Use a data real da aplicação.</p>
       {(create.isError || addEntry.isError) && (
         <div className="banner banner-error">
           <Icon name="alert" size={15} />{" "}

@@ -1599,10 +1599,7 @@ select {
 .skeleton-lg {
   height: 240px;
 }
-.entries-skeleton {
-  padding: 0 14px 12px;
-}
-.entries-skeleton .skeleton {
+.entries-pad .skeleton {
   gap: var(--sp-8);
 }
 @media (prefers-reduced-motion: no-preference) {
@@ -3205,5 +3202,65 @@ select {
   }
   .asset-grid {
     margin-top: var(--sp-16);
+  }
+}
+
+/* ===== Utilitários que substituem os style={{}} estáticos =====
+   O que era margem, tamanho ou peso fixo escrito no JSX escapava dos tokens (o
+   `fontSize: 12` ficava fora da escala e do piso de leitura). Estilo dinâmico, calculado
+   a partir de dado (largura de barra, cor de série, posição de marca), continua inline:
+   esse é o caso em que inline é a ferramenta certa. */
+.flush {
+  margin: 0;
+}
+.flush-top {
+  margin-top: 0;
+}
+.flush-bottom {
+  margin-bottom: 0;
+}
+/* Nota de apoio sob um bloco: fonte, campo vazio, regra de cálculo. */
+.fine-print {
+  font-size: var(--fs-13);
+}
+.weight-regular {
+  font-weight: 400;
+}
+.follow-up {
+  margin: var(--sp-6) 0 0;
+}
+.alloc-track-md {
+  height: 16px;
+}
+.alloc-track-lg {
+  height: 18px;
+}
+.alloc-tgt-lg {
+  top: -4px;
+  height: 26px;
+}
+.error-detail {
+  margin: var(--sp-8) 0 0;
+}
+.error-reload {
+  margin-top: var(--sp-12);
+}
+.entries-pad {
+  padding: 0 14px 12px;
+}
+.reserve-archived {
+  margin-top: var(--sp-16);
+}
+.reserve-archived-list {
+  margin-top: var(--sp-8);
+}
+.pie-slice {
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .pie-slice {
+    transition:
+      opacity 0.15s,
+      transform 0.15s;
   }
 }

@@ -239,7 +239,7 @@ export function PortfolioVsTarget({ comparison }: { comparison: Comparison }) {
           {money(targetBase)}
           {legacyValue > 0 &&
             (legacyInTotal
-              ? ", que inclui o que está fora do alvo — por isso a carteira segue subalocada até a venda."
+              ? ", que inclui o que está fora do alvo; por isso a carteira segue subalocada até a venda."
               : ", que exclui o que está fora do alvo.")}
         </p>
       </section>

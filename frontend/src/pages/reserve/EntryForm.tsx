@@ -61,7 +61,7 @@ export function EntryForm({ account, onDone }: { account: AccountSummary; onDone
           {dateInvalid && <span className="field-error">Use o formato dd/mm/aaaa.</span>}
         </label>
       </div>
-      <p className="note-desc" style={{ marginTop: 0 }}>
+      <p className="note-desc flush-top">
         {kind === "balance"
           ? "Saldo atual. Com um saldo anterior em outra data, o rendimento sai da diferença."
           : kind === "deposit"

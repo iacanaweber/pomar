@@ -11,17 +11,12 @@ export function EntriesList({ accountId }: { accountId: number }) {
   const del = useDeleteEntry();
   if (isLoading)
     return (
-      <div className="entries-skeleton">
+      <div className="entries-pad">
         <Skeleton blocks={["line", "line"]} label="Carregando lançamentos" />
       </div>
     );
   const items = data?.items ?? [];
-  if (!items.length)
-    return (
-      <p className="muted" style={{ padding: "0 14px 12px" }}>
-        Nenhum lançamento ainda.
-      </p>
-    );
+  if (!items.length) return <p className="muted entries-pad">Nenhum lançamento ainda.</p>;
   return (
     <ul className="reserve-entries">
       {items.map((e) => (

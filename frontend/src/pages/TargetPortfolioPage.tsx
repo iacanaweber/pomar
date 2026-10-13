@@ -157,7 +157,7 @@ function WeightRow({
           aria-label={
             snap == null
               ? `Peso de ${row.ticker} em ${label}`
-              : `Peso de ${row.ticker} em ${label} — fecha 100% em ${num(snap)}%`
+              : `Peso de ${row.ticker} em ${label}, fecha 100% em ${num(snap)}%`
           }
           onChange={(e) => {
             setDraft(null);
@@ -356,9 +356,9 @@ function BasketEditor({
                 <Icon name="check" size={14} className="icon-inline" /> fechado
               </>
             ) : state === "over" ? (
-              `passou ${num(round2(total - 100))} p.p. — precisa fechar em 100%`
+              `passou ${num(round2(total - 100))} p.p.; precisa fechar em 100%`
             ) : (
-              `faltam ${num(round2(100 - total))} p.p. — precisa fechar em 100%`
+              `faltam ${num(round2(100 - total))} p.p.; precisa fechar em 100%`
             )}
           </span>
           {!ok && (

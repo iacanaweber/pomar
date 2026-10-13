@@ -104,7 +104,7 @@ export function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefi
   if (!floor || floor.floor_nominal <= 0) {
     return (
       <div className="alloc reserve-goal">
-        <p className="muted" style={{ margin: 0 }}>
+        <p className="muted flush">
           Sem piso definido. Nenhum aporte é desviado para a renda fixa.
         </p>
         <button className="link-button" onClick={open}>
@@ -120,7 +120,7 @@ export function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefi
   return (
     <div className={`alloc reserve-goal ${floor.deficit > 0 ? "" : "goal-met"}`}>
       <div className="goal-head">
-        <h3 style={{ margin: 0 }}>
+        <h3 className="flush">
           <Tooltip metricKey="reserve_floor">
             <span>Piso da reserva</span>
           </Tooltip>
@@ -137,13 +137,13 @@ export function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefi
         aria-valuemax={100}
         aria-label={`Reserva líquida: ${filled}% do piso`}
       >
-        <div className="alloc-track" style={{ height: 18 }}>
+        <div className="alloc-track alloc-track-lg">
           {/* A cor sai do CSS (.goal-met), não de um style inline. */}
           <div className="alloc-cur" style={{ width: `${Math.min(100, filled)}%` }} />
         </div>
         <span className="goal-bar-label">{filled}% do piso</span>
       </div>
-      <p className="goal-status" style={{ marginBottom: 0 }}>
+      <p className="goal-status flush-bottom">
         Piso <strong>{money(floor.floor_corrected)}</strong> · reserva líquida{" "}
         <strong>{money(floor.liquid_reserve)}</strong>
         {floor.deficit > 0 ? (
@@ -156,19 +156,15 @@ export function ReserveFloorCard({ floor }: { floor: FloorStatus | null | undefi
         )}
       </p>
       {corrigido && (
-        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+        <p className="muted fine-print flush">
           Nominal {money(floor.floor_nominal)}, corrigido pelo IPCA desde{" "}
           {floor.floor_date ? isoToBR(floor.floor_date) : "—"}.
         </p>
       )}
       {floor.index === "ipca" && !floor.index_available && (
-        <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-          IPCA indisponível. Exibindo o piso nominal.
-        </p>
+        <p className="muted fine-print flush">IPCA indisponível. Exibindo o piso nominal.</p>
       )}
-      <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-        Só resgate imediato, e só o que conta na carteira.
-      </p>
+      <p className="muted fine-print flush">Só resgate imediato, e só o que conta na carteira.</p>
     </div>
   );
 }

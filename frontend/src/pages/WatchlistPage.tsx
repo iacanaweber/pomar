@@ -123,7 +123,7 @@ export function WatchlistPage() {
   return (
     <main className="page">
       <h1 className="page-title">Observando</h1>
-      <p className="muted" style={{ marginTop: 0 }}>
+      <p className="muted flush-top">
         Preço, DY e situação vs preço-teto de Bazin
         {radar.data ? ` (DY-alvo ${pct(radar.data.bazin_target_yield)})` : ""}. O aporte segue a{" "}
         <Link to="/alvo">carteira alvo</Link>.

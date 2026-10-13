@@ -144,7 +144,7 @@ export function ReservePage() {
       <NewAccountForm />
 
       {archived.length > 0 && (
-        <div style={{ marginTop: 16 }}>
+        <div className="reserve-archived">
           <button className="link-button" onClick={() => setShowArchived((v) => !v)}>
             <>
               <Icon name="chevron" size={14} />{" "}
@@ -152,7 +152,7 @@ export function ReservePage() {
             </>
           </button>
           {showArchived && (
-            <ul className="cards" style={{ marginTop: 8 }}>
+            <ul className="cards reserve-archived-list">
               {archived.map((a) => (
                 <li key={a.id} className="card reserve-archived-row">
                   <div className="reserve-card-head">

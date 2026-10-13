@@ -102,7 +102,7 @@ export function PlanPage() {
               <Icon name="alert" size={15} />{" "}
               {planError ? planError.userMessage : "Erro ao gerar o plano"}
               {portfolioUnavailable && lastReq && (
-                <div style={{ marginTop: 6 }}>
+                <div className="follow-up">
                   <button
                     className="link-button"
                     onClick={() => plan.mutate({ ...lastReq, allow_empty_portfolio: true })}
@@ -124,7 +124,7 @@ export function PlanPage() {
               {(result.classes_skipped ?? []).length > 0 && (
                 <div className="banner banner-warn">
                   <Icon name="alert" size={15} /> Sem composição definida:{" "}
-                  {(result.classes_skipped ?? []).map((c) => classLabel(c)).join(", ")} — essas
+                  {(result.classes_skipped ?? []).map((c) => classLabel(c)).join(", ")}. Essas
                   classes ficaram de fora do plano.{" "}
                   <Link to={`/alvo#${(result.classes_skipped ?? [])[0]}`}>definir agora →</Link>
                 </div>

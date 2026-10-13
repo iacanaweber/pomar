@@ -32,10 +32,10 @@ function YocEvolution({ ticker }: { ticker: string }) {
           <span>Evolução do Yield on Cost</span>
         </Tooltip>
       </h3>
-      <p style={{ marginTop: 0 }}>
+      <p className="flush-top">
         De <strong>{pct(first.yoc ?? 0)}</strong> em {first.month} para{" "}
         <strong>{pct(last.yoc ?? 0)}</strong> em {last.month}
-        {trend > 0.001 ? " — em alta." : trend < -0.001 ? " — em queda." : ""}
+        {trend > 0.001 ? ", em alta." : trend < -0.001 ? ", em queda." : ""}
       </p>
     </div>
   );
@@ -84,7 +84,7 @@ function AssetLabels({ ticker, assetClass }: { ticker: string; assetClass: strin
 
   return (
     <div className="alloc asset-labels">
-      <h3 style={{ marginTop: 0 }}>Classificação</h3>
+      <h3 className="flush-top">Classificação</h3>
       <div className="adv-row">
         <label className="field">
           <span>Cesta na carteira alvo</span>
@@ -118,14 +118,12 @@ function AssetLabels({ ticker, assetClass }: { ticker: string; assetClass: strin
           </select>
         </label>
       </div>
-      <p className="muted" style={{ fontSize: 12, margin: 0 }}>
+      <p className="muted fine-print flush">
         {geo && geo.source !== "user"
           ? `Geografia: ${geo.name} (mapa do app).`
           : "Geografia definida manualmente."}
       </p>
-      <p className="muted" style={{ fontSize: 12, margin: 0 }}>
-        Cesta manual tem precedência sobre a automática.
-      </p>
+      <p className="muted fine-print flush">Cesta manual tem precedência sobre a automática.</p>
       {/* Sem isto, mudar a cesta e falhar revertia no próximo refetch, sem explicação. */}
       <MutationError error={setAssignments.error} acao="salvar a classificação" />
     </div>
@@ -197,10 +195,8 @@ export function AssetPage() {
 
       <div className="asset-head">
         <div>
-          <h1 className="page-title" style={{ margin: 0 }}>
-            {asset.ticker}
-          </h1>
-          <p className="muted" style={{ margin: 0 }}>
+          <h1 className="page-title flush">{asset.ticker}</h1>
+          <p className="muted flush">
             {asset.name ?? asset.sector ?? asset.asset_class} · {asset.asset_class}
             {asset.sector ? ` · ${asset.sector}` : ""}
           </p>
@@ -262,15 +258,10 @@ export function AssetPage() {
                     <span className="muted">Dividend Yield</span>
                   </Tooltip>
                   <strong>
-                    {pct(f.dividend_yield)}{" "}
-                    <span className="muted" style={{ fontWeight: 400 }}>
-                      bruto
-                    </span>
+                    {pct(f.dividend_yield)} <span className="muted weight-regular">bruto</span>
                   </strong>
                   {f.dividend_yield_net != null && (
-                    <span className="muted" style={{ fontSize: 12 }}>
-                      {pct(f.dividend_yield_net)} líquido
-                    </span>
+                    <span className="muted fine-print">{pct(f.dividend_yield_net)} líquido</span>
                   )}
                 </div>
               )}
@@ -290,9 +281,7 @@ export function AssetPage() {
                 value={f.current_ratio != null ? f.current_ratio.toFixed(2) : null}
               />
             </div>
-            <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
-              Fonte: {asset.source}
-            </p>
+            <p className="muted fine-print flush-bottom">Fonte: {asset.source}</p>
           </div>
 
           <YocEvolution ticker={asset.ticker} />
@@ -346,9 +335,7 @@ export function AssetPage() {
                 value={analysis.payout_ratio != null ? pct(analysis.payout_ratio, 0) : null}
               />
             </div>
-            <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
-              Campo vazio: a fonte não trouxe o dado.
-            </p>
+            <p className="muted fine-print flush-bottom">Campo vazio: a fonte não trouxe o dado.</p>
           </div>
         </div>
       )}
@@ -357,7 +344,7 @@ export function AssetPage() {
         <p className="muted asset-sem-metricas">
           {classLabel(asset.asset_class)} não tem preço-teto, Yield on Cost nem fundamentos de
           empresa: essas contas partem de lucro e histórico de dividendo de uma companhia. O que
-          dirige a compra aqui é o peso na carteira alvo — <Link to="/alvo">ver no Alvo →</Link>
+          dirige a compra aqui é o peso na carteira alvo. <Link to="/alvo">ver no Alvo →</Link>
         </p>
       )}
     </main>

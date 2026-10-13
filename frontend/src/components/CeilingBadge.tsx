@@ -98,9 +98,9 @@ export function CeilingBadge({ ceiling, price, margin, belowCeiling, variant = "
             role="img"
             aria-label={`Preço atual ${money(price!)}, teto ${money(ceiling!)}`}
           >
-            <div className="alloc-track" style={{ height: 18 }}>
+            <div className="alloc-track alloc-track-lg">
               <div className="alloc-cur" style={{ width: `${curPct}%` }} />
-              <div className="alloc-tgt" style={{ left: `${tgtPct}%`, height: 26, top: -4 }} />
+              <div className="alloc-tgt alloc-tgt-lg" style={{ left: `${tgtPct}%` }} />
             </div>
             <div className="ceiling-bar-labels">
               <span>

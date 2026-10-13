@@ -25,12 +25,8 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="page">
           <div className="banner banner-error">
             <strong>Erro ao renderizar a tela.</strong>
-            <p style={{ margin: "8px 0 0" }}>{this.state.error.message}</p>
-            <button
-              className="primary"
-              style={{ marginTop: 12 }}
-              onClick={() => window.location.reload()}
-            >
+            <p className="error-detail">{this.state.error.message}</p>
+            <button className="primary error-reload" onClick={() => window.location.reload()}>
               Recarregar
             </button>
           </div>

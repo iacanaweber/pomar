@@ -121,13 +121,13 @@ export function HojeVsAlvo({
         groups={alvo}
         caption={
           Math.abs(targetSumPct - 100) > 0.5
-            ? `metas somam ${pctPts(targetSumPct, 2)} — ajuste na Carteira alvo`
+            ? `metas somam ${pctPts(targetSumPct, 2)}: ajuste na Carteira alvo`
             : "metas somam 100%"
         }
       />
       {legacyPct > 0.05 && (
         <p className="muted cmp-note">
-          {money(legacyValue)} ({pctPts(legacyPct)}) sem alvo definido — aparece em Hoje e não em
+          {money(legacyValue)} ({pctPts(legacyPct)}) sem alvo definido: aparece em Hoje e não em
           Alvo.
           {coberturaLegado != null && gapLegado != null && gapLegado > 0 && (
             <>

@@ -79,7 +79,7 @@ export function PieChart({
                 fill={s.color}
                 opacity={sel == null || isSel ? 1 : 0.45}
                 transform={`translate(${mx} ${my})`}
-                style={{ transition: "opacity .15s, transform .15s", cursor: "pointer" }}
+                className="pie-slice"
                 onMouseEnter={() => setHover(i)}
                 onMouseLeave={() => setHover(null)}
                 onClick={() => onActive(active === i ? null : i)}

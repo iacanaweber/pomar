@@ -326,7 +326,7 @@ export function PortfolioPage() {
                 );
               })}
           </ul>
-          <p className="muted" style={{ fontSize: 12 }}>
+          <p className="muted fine-print">
             Retorno = valorização + proventos desde a compra (Ghostfolio).
           </p>
         </div>

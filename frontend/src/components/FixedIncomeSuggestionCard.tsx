@@ -39,7 +39,7 @@ function FloorBar({ reserve, currency }: { reserve: ReserveSuggestion; currency:
         aria-valuemax={100}
         aria-label={`Reserva líquida: ${filled}% do piso`}
       >
-        <div className="alloc-track" style={{ height: 16 }}>
+        <div className="alloc-track alloc-track-md">
           <div
             className="alloc-cur"
             style={{
@@ -54,7 +54,7 @@ function FloorBar({ reserve, currency }: { reserve: ReserveSuggestion; currency:
           {corrigido && " (corrigido pelo IPCA)"}
           {reserve.floor_index === "ipca" &&
             !reserve.floor_index_available &&
-            " (IPCA indisponível — valor nominal)"}
+            " (IPCA indisponível, valor nominal)"}
         </span>
       </div>
     </div>
@@ -93,7 +93,7 @@ export function FixedIncomeSuggestionCard({
   return (
     <section className={`alloc fi-suggestion${quiet ? " fi-quiet" : ""}`}>
       <div className="goal-head">
-        <h3 style={{ margin: 0 }}>
+        <h3 className="flush">
           <Tooltip metricKey="reserve_floor">
             <span>Renda fixa</span>
           </Tooltip>
@@ -105,7 +105,7 @@ export function FixedIncomeSuggestionCard({
 
       {reserve && <FloorBar reserve={reserve} currency={currency} />}
 
-      <p className="goal-status" style={{ margin: "6px 0 0" }}>
+      <p className="goal-status follow-up">
         {noAlvo ? (
           // "nada a aplicar aqui" só é verdade quando não há linha nenhuma abaixo. O gap
           // aqui é o do PESO da classe, e o PISO pode estar em déficit ao mesmo tempo —
@@ -114,7 +114,7 @@ export function FixedIncomeSuggestionCard({
           // lançar.
           <span className="risk-verde">
             <Icon name="check" size={14} className="icon-inline" /> Peso da classe no alvo ou acima
-            {quiet ? " — nada a aplicar aqui." : "."}
+            {quiet ? ". Nada a aplicar aqui." : "."}
           </span>
         ) : (
           <>
@@ -171,11 +171,7 @@ export function FixedIncomeSuggestionCard({
         </ul>
       )}
 
-      {note && (
-        <p className="note-desc" style={{ margin: "6px 0 0" }}>
-          {note}
-        </p>
-      )}
+      {note && <p className="note-desc follow-up">{note}</p>}
     </section>
   );
 }
